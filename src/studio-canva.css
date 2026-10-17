@@ -1,0 +1,487 @@
+/**
+ * Bahasa visual studio ala referensi Canva (studio-canva.html),
+ * dipetakan ke editor slide: grid 3 kolom, palet, tab properti,
+ * strip alur slide, checklist validasi. Semua kelas diawali st- agar
+ * tidak menabrak CSS lama. Mikro-komponen (field, tombol, thumbnail)
+ * memakai ulang kelas App.css yang sudah ada.
+ */
+
+.st-scope {
+  --st-ink: #23312b;
+  --st-muted: #67766d;
+  --st-line: #e1e9e2;
+  --st-page: #f5f8f5;
+  --st-green: #a9e7ad;
+  --st-green-soft: #e9f8e9;
+  --st-green-ink: #267348;
+  --st-green-deep: #216d40;
+  --st-tool-active-bg: #e7f8e7;
+  --st-tool-active-border: #a9ddae;
+  --st-focus: #388e58;
+}
+
+.st-workspace {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 340px;
+  gap: 18px;
+  align-items: start;
+  width: 100%;
+}
+
+.st-panel {
+  background: #fff;
+  border: 1px solid var(--st-line);
+  border-radius: 15px;
+  box-shadow: 0 4px 18px rgba(27, 62, 37, 0.035);
+  padding: 19px;
+  min-width: 0;
+}
+
+.st-kicker {
+  display: block;
+  color: var(--st-green-ink);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.st-title {
+  color: var(--st-ink);
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.st-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.st-badge {
+  border-radius: 999px;
+  background: var(--st-green-soft);
+  color: var(--st-green-deep);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.st-divider {
+  height: 1px;
+  background: var(--st-line);
+  margin: 15px 0;
+  border: none;
+}
+
+/* Palet tambah interaksi */
+.st-tool {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-align: left;
+  border: 1px solid transparent;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 11px;
+  color: #43574a;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.st-tool:hover {
+  background: #eff9ef;
+}
+
+.st-tool.active {
+  background: var(--st-tool-active-bg);
+  border-color: var(--st-tool-active-border);
+  color: #246c42;
+  box-shadow: inset 3px 0 #65bb79;
+}
+
+.st-tool svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+
+.st-note {
+  color: var(--st-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+
+/* Daftar slide horizontal (filmstrip, hemat ruang vertikal) */
+.st-film {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  margin-top: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #a9ddae transparent;
+}
+
+.st-film-card {
+  flex: 0 0 auto;
+  width: 104px;
+  border-radius: 10px;
+  cursor: grab;
+}
+
+.st-film-card:active {
+  cursor: grabbing;
+}
+
+.st-film-card.st-drop-target .st-film-thumb {
+  outline: 2px dashed var(--st-focus);
+  outline-offset: 2px;
+}
+
+.st-film-thumb {
+  position: relative;
+  display: block;
+  width: 104px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--st-line);
+  background: #eef4ee;
+  padding: 0;
+}
+
+.st-film-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.st-film-card.active .st-film-thumb {
+  outline: 2px solid #65bb79;
+  outline-offset: 1px;
+}
+
+.st-film-num {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  background: rgba(20, 40, 25, 0.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+.st-film-name {
+  display: block;
+  font-size: 10px;
+  color: var(--st-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+  max-width: 104px;
+}
+
+.st-film-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.st-film-actions button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid var(--st-line);
+  background: #fff;
+  color: #43574a;
+}
+
+.st-film-actions button:hover:not(:disabled) {
+  background: #eff9ef;
+  border-color: #a9ddae;
+}
+
+.st-film-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.st-film-actions svg {
+  width: 13px;
+  height: 13px;
+}
+
+.st-empty {
+  padding: 26px 14px;
+  text-align: center;
+  border: 1px dashed #a8d5b0;
+  border-radius: 12px;
+  background: #f6fcf6;
+  color: var(--st-muted);
+  font-size: 12px;
+}
+
+/* Tengah: kepala + kanvas + strip alur */
+.st-central {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.st-center-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.st-center-head h2 {
+  color: var(--st-ink);
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.st-flow {
+  background: #fff;
+  border: 1px solid var(--st-line);
+  border-radius: 15px;
+  box-shadow: 0 4px 18px rgba(27, 62, 37, 0.035);
+  padding: 14px 18px;
+}
+
+.st-flow-title {
+  color: var(--st-ink);
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.st-flow-help {
+  color: var(--st-muted);
+  font-size: 11px;
+  margin: 2px 0 0;
+}
+
+.st-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.st-chip {
+  border: 1px solid #d6e8d9;
+  background: #f3faf3;
+  color: #386c45;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 700;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-chip:hover {
+  background: #edfaed;
+}
+
+.st-chip.selected {
+  background: #ddf6de;
+  border-color: #70b982;
+}
+
+.st-chip.st-add {
+  border-style: dashed;
+  background: #fff;
+}
+
+/* Tab properti */
+.st-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--st-line);
+  margin: 14px -19px 18px;
+  padding: 0 14px;
+}
+
+.st-tab {
+  white-space: nowrap;
+  padding: 11px 8px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: #69786e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.st-tab[aria-selected='true'] {
+  border-bottom-color: #70bf7d;
+  color: var(--st-green-deep);
+}
+
+/* Checklist validasi */
+.st-checks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-checks-head h3 {
+  color: var(--st-ink);
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.st-checks-summary {
+  font-size: 11px;
+  font-weight: 800;
+  color: #31814c;
+  white-space: nowrap;
+}
+
+.st-checks {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.st-checks .check-row {
+  border-radius: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.st-checks .check-row.st-bad {
+  background: #fff0ef;
+}
+
+/* Lipatan pengaturan cerita */
+.st-settings-toggle {
+  width: 100%;
+  border: 1px solid var(--st-line);
+  background: #f6fcf6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--st-green-deep);
+  text-align: left;
+}
+
+.st-settings-body {
+  padding-top: 12px;
+}
+
+/* Kanvas: drag elemen */
+.slide-canvas .canvas-element {
+  touch-action: none;
+}
+
+.slide-canvas .canvas-element.st-drag {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 5;
+}
+
+/* Input judul di topbar */
+.st-title-input {
+  font: inherit;
+  font-weight: 800;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 2px 8px;
+  margin-left: -8px;
+  max-width: 420px;
+  width: 100%;
+}
+
+.st-title-input:hover {
+  border-color: var(--st-line);
+}
+
+.st-title-input:focus {
+  background: #fff;
+  border-color: var(--st-focus);
+  outline: none;
+}
+
+.st-scope button:focus-visible,
+.st-scope input:focus-visible,
+.st-scope textarea:focus-visible,
+.st-scope select:focus-visible,
+.st-scope [tabindex]:focus-visible {
+  outline: 3px solid var(--st-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1150px) {
+  .st-workspace {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+
+  .st-right {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .st-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .st-central,
+  .st-left,
+  .st-right {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-scope *,
+  .st-scope *::before,
+  .st-scope *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Navigasi langkah bawah (pengganti strip tahap) */
+.st-stepnav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 2px 10px;
+}
+
+.st-stepnav-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}

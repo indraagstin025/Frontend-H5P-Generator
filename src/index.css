@@ -1,0 +1,73 @@
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #102419;
+  background: #f8faf7;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Typography tokens */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Newsreader', Georgia, Cambria, 'Times New Roman', serif;
+
+  /* Scholarly & Educational Palette inspired by logo.png */
+  --ink: #0d2116;
+  --ink-secondary: #1e3828;
+  --muted: #526b5b;
+  --muted-light: #768f80;
+  --line: #dae5db;
+  --line-strong: #bfd2c1;
+  --surface: #ffffff;
+  --soft: #f1f8ee;
+  --bg-canvas: #f8faf6;
+
+  /* Greens: Logo-Exact Hijau Muda Gradasi Hijau Tua */
+  --green-lime: #8cd629;      /* Hijau muda terang khas H5P pada logo */
+  --green-light: #7ecb22;     /* Hijau daun cerah */
+  --green-mid: #2e8b39;       /* Hijau transisi */
+  --green: #1b663b;          /* Hijau forest */
+  --green-deep: #0c3e25;      /* Hijau tua pekat khas Generator pada logo */
+  --green-darkest: #062314;   /* Deep pine */
+
+  /* Gradients: Hijau Muda → Hijau Tua */
+  --grad-lime-deep: linear-gradient(135deg, #8cd629 0%, #2e8b39 48%, #0c3e25 100%);
+  --grad-deep-lime: linear-gradient(135deg, #0c3e25 0%, #206d3d 55%, #8cd629 100%);
+  --grad-button: linear-gradient(135deg, #7ecb22 0%, #237841 45%, #0c3e25 100%);
+  --grad-button-hover: linear-gradient(135deg, #8cd629 0%, #2c8849 45%, #0f482c 100%);
+  --grad-soft: linear-gradient(135deg, #f3fbe9 0%, #ebf5ea 100%);
+  --grad-band: linear-gradient(125deg, #062314 0%, #0c3e25 45%, #185a35 78%, #7ecb22 130%);
+  --glow-lime: 0 0 20px rgba(140, 214, 41, 0.25);
+  --green-glow: rgba(140, 214, 41, 0.2);
+
+  /* Academic Accents */
+  --amber: #b45309;
+  --amber-subtle: #fef7ed;
+  --amber-border: #fed7aa;
+  --blue-subtle: #eff6ff;
+  --blue-border: #bfdbfe;
+  --blue-text: #1d4ed8;
+
+  /* Elevation */
+  --shadow-sm: 0 2px 8px rgba(16, 36, 25, 0.04);
+  --shadow: 0 12px 36px rgba(16, 36, 25, 0.07);
+  --shadow-lg: 0 22px 50px rgba(16, 36, 25, 0.11);
+  --shadow-xl: 0 30px 60px -12px rgba(16, 36, 25, 0.16);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+}
+
+* { box-sizing: border-box; }
+body { 
+  margin: 0; 
+  min-width: 320px; 
+  background-color: var(--bg-canvas);
+  color: var(--ink);
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: 0.38; }
