@@ -22,13 +22,28 @@ import { ValidationPanel } from './ValidationPanel';
 import type { Project } from '../constants/h5pModel';
 
 const KIND_LABEL: Record<ElementKind, string> = {
-  advancedText: 'Tulisan',
-  image: 'Gambar',
-  audio: 'Suara',
-  goToSlide: 'Tombol pindah',
-  multiChoice: 'Pilihan Ganda',
-  trueFalse: 'Benar / Salah',
-  blanks: 'Isian',
+  advancedText: 'Add Text',
+  link: 'Add Link',
+  image: 'Add Image',
+  shape: 'Add Shape',
+  video: 'Add Video',
+  audio: 'Audio',
+  goToSlide: 'Go To Slide',
+  blanks: 'Fill In The Blank',
+  singleChoice: 'Single Choice Set',
+  multiChoice: 'Multiple Choice',
+  trueFalse: 'True False Question',
+  dragDrop: 'Drag And Drop',
+  summary: 'Summary',
+  dragWords: 'Drag the Words',
+  markWords: 'Mark the Words',
+  dialogCards: 'Dialog Cards',
+  continuousText: 'Continuous Text',
+  exportableText: 'Exportable Text Area',
+  table: 'Table',
+  interactiveVideo: 'Interactive Video',
+  audioRecorder: 'Audio Recorder',
+  multimediaChoice: 'Multimedia Choice',
 };
 
 type QuizTab = 'konten' | 'jawaban' | 'penilaian' | 'umpanbalik';
@@ -110,11 +125,12 @@ export function PropertyPanel({
     );
   }
 
-  const pickMedia = (kind: 'image' | 'audio', file: File | undefined) => {
+  const pickMedia = (kind: 'image' | 'audio' | 'video', file: File | undefined) => {
     if (!file || !element) return;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
     const okImage = ['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext);
     const okAudio = ['mp3', 'wav'].includes(ext);
+    const okVideo = ['mp4', 'webm', 'ogv'].includes(ext);
     if (kind === 'image' && !okImage) {
       onNotice('Gambar harus .png/.jpg/.jpeg/.gif/.svg ya.');
       return;
@@ -123,8 +139,12 @@ export function PropertyPanel({
       onNotice('Suara harus .mp3/.wav ya.');
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      onNotice('File-nya kegedean, maksimal 10 MB.');
+    if (kind === 'video' && !okVideo) {
+      onNotice('Video harus .mp4/.webm/.ogv ya.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      onNotice('File-nya kegedean, maksimal 50 MB.');
       return;
     }
     const url = URL.createObjectURL(file);
@@ -163,6 +183,78 @@ export function PropertyPanel({
           Nama (boleh dikosongkan)
           <input value={element.title} onChange={(e) => patch({ title: e.target.value })} />
         </label>
+        {element.kind === 'advancedText' && (
+          <label className="field-label">
+            Isi teks
+            <textarea rows={4} value={element.text} onChange={(e) => patch({ text: e.target.value })} />
+          </label>
+        )}
+        {element.kind === 'link' && (
+          <>
+            <label className="field-label">
+              URL
+              <input type="url" value={element.url} onChange={(e) => patch({ url: e.target.value })} />
+            </label>
+            <label className="field-label">
+              Teks link
+              <input value={element.linkText} onChange={(e) => patch({ linkText: e.target.value })} />
+            </label>
+          </>
+        )}
+        {element.kind === 'image' && (
+          <>
+            <label className="field-label">
+              File gambar
+              <input type="file" accept=".png,.jpg,.jpeg,.gif,.svg" onChange={(e) => pickMedia('image', e.target.files?.[0])} />
+            </label>
+            {element.objectUrl && <img className="media-preview" src={element.objectUrl} alt={element.alt} />}
+            <label className="field-label">
+              Deskripsi singkat gambar
+              <input value={element.alt} onChange={(e) => patch({ alt: e.target.value })} />
+            </label>
+          </>
+        )}
+        {element.kind === 'shape' && (
+          <>
+            <label className="field-label">
+              Jenis shape
+              <select value={element.shapeType} onChange={(e) => patch({ shapeType: e.target.value as 'circle' | 'square' | 'rectangle' | 'triangle' })}>
+                <option value="circle">Circle</option>
+                <option value="square">Square</option>
+                <option value="rectangle">Rectangle</option>
+                <option value="triangle">Triangle</option>
+              </select>
+            </label>
+            <label className="field-label">
+              Warna
+              <input type="color" value={element.color} onChange={(e) => patch({ color: e.target.value })} />
+            </label>
+          </>
+        )}
+        {element.kind === 'video' && (
+          <>
+            <label className="field-label">
+              File video
+              <input type="file" accept=".mp4,.webm,.ogv" onChange={(e) => pickMedia('video', e.target.files?.[0])} />
+            </label>
+            {element.objectUrl && (
+              <video className="media-preview" controls src={element.objectUrl} style={{ width: '100%', borderRadius: 6 }} />
+            )}
+            <label className="field-label">
+              Atau URL video
+              <input type="url" value={element.videoUrl} onChange={(e) => patch({ videoUrl: e.target.value })} />
+            </label>
+          </>
+        )}
+        {element.kind === 'audio' && (
+          <>
+            <label className="field-label">
+              File suara
+              <input type="file" accept=".mp3,.wav" onChange={(e) => pickMedia('audio', e.target.files?.[0])} />
+            </label>
+            {element.objectUrl && <audio className="media-preview" controls src={element.objectUrl}></audio>}
+          </>
+        )}
         {element.kind === 'goToSlide' && (
           <>
             <label className="field-label">
@@ -205,58 +297,50 @@ export function PropertyPanel({
             </label>
           </>
         )}
-        {element.kind === 'advancedText' && (
+        {(element.kind === 'dragWords' || element.kind === 'markWords' || element.kind === 'continuousText' || element.kind === 'exportableText') && (
           <label className="field-label">
-            Tulis ceritanya di sini
+            Teks
             <textarea rows={4} value={element.text} onChange={(e) => patch({ text: e.target.value })} />
           </label>
         )}
-        {element.kind === 'image' && (
+        {element.kind === 'summary' && (
+          <label className="field-label">
+            Intro ringkasan
+            <textarea rows={3} value={element.intro} onChange={(e) => patch({ intro: e.target.value })} />
+          </label>
+        )}
+        {element.kind === 'dialogCards' && (
+          <label className="field-label">
+            Deskripsi
+            <textarea rows={3} value={element.description} onChange={(e) => patch({ description: e.target.value })} />
+          </label>
+        )}
+        {element.kind === 'table' && (
           <>
             <label className="field-label">
-              File gambar
-              <input type="file" accept=".png,.jpg,.jpeg,.gif,.svg" onChange={(e) => pickMedia('image', e.target.files?.[0])} />
+              Baris
+              <input type="number" min={1} max={20} value={element.rows} onChange={(e) => patch({ rows: Number(e.target.value) })} />
             </label>
-            {element.objectUrl && <img className="media-preview" src={element.objectUrl} alt={element.alt} />}
             <label className="field-label">
-              Deskripsi singkat gambar
-              <input value={element.alt} onChange={(e) => patch({ alt: e.target.value })} />
+              Kolom
+              <input type="number" min={1} max={20} value={element.cols} onChange={(e) => patch({ cols: Number(e.target.value) })} />
             </label>
           </>
         )}
-        {element.kind === 'audio' && (
-          <>
-            <label className="field-label">
-              File suara
-              <input type="file" accept=".mp3,.wav" onChange={(e) => pickMedia('audio', e.target.files?.[0])} />
-            </label>
-            {element.objectUrl && <audio className="media-preview" controls src={element.objectUrl}></audio>}
-          </>
+        {element.kind === 'interactiveVideo' && (
+          <label className="field-label">
+            URL Video
+            <input type="url" value={element.videoUrl} onChange={(e) => patch({ videoUrl: e.target.value })} />
+          </label>
+        )}
+        {element.kind === 'audioRecorder' && (
+          <label className="field-label">
+            Deskripsi
+            <input value={element.description} onChange={(e) => patch({ description: e.target.value })} />
+          </label>
         )}
         {quiz && <QuizQuestionFields element={quiz} onPatch={patch} />}
-        {element.kind !== 'goToSlide' && !quiz && (
-          <>
-            <label className="check-row compact">
-              <input
-                type="checkbox"
-                checked={element.displayAsButton}
-                onChange={(e) => patch({ displayAsButton: e.target.checked })}
-              />
-              <span>Jadi tombol kecil (diklik baru kebuka)</span>
-            </label>
-            {element.displayAsButton && (
-              <label className="field-label">
-                Tulisan di tombolnya
-                <input
-                  value={element.buttonLabel}
-                  placeholder={KIND_LABEL[element.kind]}
-                  onChange={(e) => patch({ buttonLabel: e.target.value })}
-                />
-              </label>
-            )}
-          </>
-        )}
-        {quiz && (
+        {element.kind !== 'goToSlide' && (
           <>
             <label className="check-row compact">
               <input

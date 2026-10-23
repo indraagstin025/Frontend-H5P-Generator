@@ -187,6 +187,34 @@ export function PreviewPlayer({ project }: { project: Project }) {
       );
     }
     if (el.kind === 'advancedText') return <div key={el.id} className="pv-text">{el.text}</div>;
+    if (el.kind === 'link') {
+      return (
+        <a key={el.id} href={el.url} target="_blank" rel="noreferrer" className="pv-link" style={{ color: '#16a34a', textDecoration: 'underline' }}>
+          {el.linkText || el.url}
+        </a>
+      );
+    }
+    if (el.kind === 'shape') {
+      const isCircle = el.shapeType === 'circle';
+      return (
+        <div
+          key={el.id}
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: el.color || '#22c55e',
+            borderRadius: isCircle ? '50%' : '6px',
+          }}
+        />
+      );
+    }
+    if (el.kind === 'video') {
+      return el.objectUrl || el.videoUrl ? (
+        <video key={el.id} controls src={el.objectUrl || el.videoUrl} style={{ width: '100%', maxHeight: '100%', borderRadius: '6px' }} />
+      ) : (
+        <div key={el.id} className="pv-placeholder">[Video: {el.fileName || el.videoUrl || 'belum ada video'}]</div>
+      );
+    }
     if (el.kind === 'image') {
       return el.objectUrl ? (
         <img key={el.id} className="pv-image" src={el.objectUrl} alt={el.alt} />
@@ -202,8 +230,22 @@ export function PreviewPlayer({ project }: { project: Project }) {
       );
     }
     if (el.kind === 'multiChoice') return <McWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'singleChoice') {
+      return (
+        <McWidget
+          key={el.id}
+          el={{ ...el, kind: 'multiChoice', singleAnswer: true }}
+          {...quizProps(el)}
+        />
+      );
+    }
     if (el.kind === 'trueFalse') return <TfWidget key={el.id} el={el} {...quizProps(el)} />;
-    return <BlanksWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'blanks') return <BlanksWidget key={el.id} el={el} {...quizProps(el)} />;
+    return (
+      <div key={el.id} className="pv-placeholder">
+        [{el.kind}: {el.title || 'elemen interaktif'}]
+      </div>
+    );
   };
 
   const inlineEls = slide.elements.filter((e) => !e.displayAsButton || e.kind === 'goToSlide');
@@ -228,7 +270,7 @@ export function PreviewPlayer({ project }: { project: Project }) {
             {state.quizzes.map(({ slide: s, el }) => {
               const got = actions.scoreElement(el, state.answers[el.id] ?? null);
               const max = el.kind === 'blanks' ? extractBlankAnswers(el.text).length : 1;
-              const label = el.kind === 'multiChoice' || el.kind === 'trueFalse' ? el.question : el.text;
+              const label = 'question' in el ? el.question : el.text;
               return (
                 <div className="pv-summary-row" key={el.id}>
                   <span>
