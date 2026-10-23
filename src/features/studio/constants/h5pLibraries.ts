@@ -19,12 +19,27 @@ interface LibVersion {
 
 const LIBS: Record<ElementKind, LibVersion> = {
   advancedText: { machineName: 'H5P.AdvancedText', majorVersion: 1, minorVersion: 1 },
+  link: { machineName: 'H5P.Link', majorVersion: 1, minorVersion: 3 },
   image: { machineName: 'H5P.Image', majorVersion: 1, minorVersion: 1 },
+  shape: { machineName: 'H5P.Shape', majorVersion: 1, minorVersion: 0 },
+  video: { machineName: 'H5P.Video', majorVersion: 1, minorVersion: 6 },
   audio: { machineName: 'H5P.Audio', majorVersion: 1, minorVersion: 5 },
   goToSlide: { machineName: 'H5P.CoursePresentation', majorVersion: 1, minorVersion: 24 },
+  blanks: { machineName: 'H5P.Blanks', majorVersion: 1, minorVersion: 14 },
+  singleChoice: { machineName: 'H5P.SingleChoiceSet', majorVersion: 1, minorVersion: 11 },
   multiChoice: { machineName: 'H5P.MultiChoice', majorVersion: 1, minorVersion: 16 },
   trueFalse: { machineName: 'H5P.TrueFalse', majorVersion: 1, minorVersion: 8 },
-  blanks: { machineName: 'H5P.Blanks', majorVersion: 1, minorVersion: 14 },
+  dragDrop: { machineName: 'H5P.DragQuestion', majorVersion: 1, minorVersion: 14 },
+  summary: { machineName: 'H5P.Summary', majorVersion: 1, minorVersion: 10 },
+  dragWords: { machineName: 'H5P.DragText', majorVersion: 1, minorVersion: 10 },
+  markWords: { machineName: 'H5P.MarkTheWords', majorVersion: 1, minorVersion: 11 },
+  dialogCards: { machineName: 'H5P.Dialogcards', majorVersion: 1, minorVersion: 8 },
+  continuousText: { machineName: 'H5P.ContinuousText', majorVersion: 1, minorVersion: 2 },
+  exportableText: { machineName: 'H5P.ExportableTextArea', majorVersion: 1, minorVersion: 3 },
+  table: { machineName: 'H5P.Table', majorVersion: 1, minorVersion: 1 },
+  interactiveVideo: { machineName: 'H5P.InteractiveVideo', majorVersion: 1, minorVersion: 22 },
+  audioRecorder: { machineName: 'H5P.AudioRecorder', majorVersion: 1, minorVersion: 0 },
+  multimediaChoice: { machineName: 'H5P.MultiMediaChoice', majorVersion: 0, minorVersion: 3 },
 };
 
 export function libraryFor(kind: ElementKind, cpMinor: number): LibVersion {

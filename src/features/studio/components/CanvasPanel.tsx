@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { ArrowLeftIcon, ArrowRightIcon, ChevronDownIcon } from '@radix-ui/react-icons';
 import type { Slide, SlideElement } from '../constants/h5pModel';
 
 function elementLabel(el: SlideElement): string {
@@ -7,16 +6,47 @@ function elementLabel(el: SlideElement): string {
     case 'goToSlide':
       return el.label || 'Tombol pilihan';
     case 'advancedText':
-      return el.text.slice(0, 28) || 'Tulisan';
+      return el.text.slice(0, 28) || 'Teks';
+    case 'link':
+      return el.linkText || el.url.slice(0, 28) || 'Link';
     case 'image':
       return el.fileName || 'Gambar';
+    case 'shape':
+      return `Shape (${el.shapeType})`;
+    case 'video':
+      return el.fileName || 'Video';
     case 'audio':
       return el.fileName || 'Suara';
-    case 'multiChoice':
-    case 'trueFalse':
-      return el.question.slice(0, 28) || 'Kuis';
     case 'blanks':
-      return el.text.slice(0, 28) || 'Isian';
+      return el.text.slice(0, 28) || 'Fill in the Blank';
+    case 'singleChoice':
+      return el.question.slice(0, 28) || 'Single Choice';
+    case 'multiChoice':
+      return el.question.slice(0, 28) || 'Multiple Choice';
+    case 'trueFalse':
+      return el.question.slice(0, 28) || 'True/False';
+    case 'dragDrop':
+      return el.question.slice(0, 28) || 'Drag & Drop';
+    case 'summary':
+      return 'Summary';
+    case 'dragWords':
+      return el.text.slice(0, 28) || 'Drag the Words';
+    case 'markWords':
+      return el.text.slice(0, 28) || 'Mark the Words';
+    case 'dialogCards':
+      return 'Dialog Cards';
+    case 'continuousText':
+      return el.text.slice(0, 28) || 'Continuous Text';
+    case 'exportableText':
+      return el.text.slice(0, 28) || 'Exportable Text';
+    case 'table':
+      return `Table (${el.rows}x${el.cols})`;
+    case 'interactiveVideo':
+      return 'Interactive Video';
+    case 'audioRecorder':
+      return 'Audio Recorder';
+    case 'multimediaChoice':
+      return el.question.slice(0, 28) || 'Multimedia Choice';
   }
 }
 
@@ -45,7 +75,7 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-export function CanvasPanel({ slide, total, selectedElementId, activeSurface, onSelectElement, onMoveElement, onPrev, onNext }: CanvasPanelProps) {
+export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveElement }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const drag = useRef<DragState | null>(null);
   const justDragged = useRef(false);
@@ -122,35 +152,6 @@ export function CanvasPanel({ slide, total, selectedElementId, activeSurface, on
 
   return (
     <div className="canvas-panel">
-      <div className="canvas-toolbar">
-        <div className="toolbar-breadcrumb">
-          <span>Slide {slide.order}</span>
-          <ChevronDownIcon />
-          <span className="muted">{slide.title}</span>
-        </div>
-        <div className="toolbar-actions">
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Slide sebelumnya"
-            title={activeSurface ? 'Terkunci — peserta harus klik tombol di slide' : 'Slide sebelumnya'}
-            disabled={slide.order === 1}
-            onClick={onPrev}
-          >
-            <ArrowLeftIcon />
-          </button>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Slide berikutnya"
-            title={activeSurface ? 'Terkunci — peserta harus klik tombol di slide' : 'Slide berikutnya'}
-            disabled={slide.order === total}
-            onClick={onNext}
-          >
-            <ArrowRightIcon />
-          </button>
-        </div>
-      </div>
       <div className="canvas-wrap">
         <div
           className={`slide-canvas ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
@@ -158,6 +159,36 @@ export function CanvasPanel({ slide, total, selectedElementId, activeSurface, on
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
           <div className="canvas-grid" aria-hidden="true"></div>
+
+          {!slide.backgroundUrl && (
+            <div className="canvas-slide-content">
+              {slide.chapter && (
+                <div className="canvas-chapter-badge">
+                  {slide.chapter}
+                </div>
+              )}
+              <div className="canvas-accent-bar" />
+              <div className="canvas-headline">
+                {slide.order === 1 ? (
+                  <>
+                    <div className="canvas-headline-row1">Pengenalan</div>
+                    <div className="canvas-headline-row2">
+                      <span className="canvas-headline-green">Ekosistem</span> H5P
+                    </div>
+                  </>
+                ) : (
+                  <div className="canvas-headline-row1">{slide.title}</div>
+                )}
+              </div>
+              <p className="canvas-subheadline">
+                {slide.order === 1
+                  ? 'Bangun pengalaman belajar yang interaktif, menarik, dan mudah dipahami.'
+                  : `Pelajari konsep materi pada slide ${slide.order} ini secara interaktif.`}
+              </p>
+              <div className="canvas-footer-tag">INTERACTIVE PRESENTATION</div>
+            </div>
+          )}
+
           {slide.elements.map((el) => (
             <button
               key={el.id}
@@ -190,19 +221,7 @@ export function CanvasPanel({ slide, total, selectedElementId, activeSurface, on
               {el.displayAsButton && <span className="canvas-element-badge">pop-up</span>}
             </button>
           ))}
-          {slide.elements.length === 0 && (
-            <div className="canvas-caption">Tambah tombol pilihan, tulisan, atau kuis dari panel kiri.</div>
-          )}
-          <span className="canvas-page">{String(slide.order).padStart(2, '0')}</span>
         </div>
-      </div>
-      <div className="canvas-status">
-        <span>
-          <span className="status-dot"></span> Ukuran {slide.aspect}
-          {activeSurface ? ' · Tombol next/back dimatikan' : ''}
-        </span>
-        <span>{slide.elements.length} isi interaktif</span>
-        <span className="status-right">100%</span>
       </div>
     </div>
   );

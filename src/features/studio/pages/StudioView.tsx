@@ -1,7 +1,7 @@
 /**
  * Route /studio — wizard 4 tahap: Upload → Susun → Coba → Unduh.
- * Layar Susun memakai bahasa visual referensi Canva (3 kolom).
- * Tombol kembali menghormati riwayat browser (state.from saat dibuka).
+ * Layar Susun memakai layout referensi gambar: 3 kolom
+ * (daftar slide kiri | canvas tengah | panel elemen kanan).
  */
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,12 +14,15 @@ import { H5PRealPlayer } from '../../preview/components/H5PRealPlayer';
 import { H5PServerPlayer } from '../../preview/components/H5PServerPlayer';
 import { PreviewPlayer } from '../../preview/components/PreviewPlayer';
 import { CanvasPanel } from '../components/CanvasPanel';
+import { ElementPanel } from '../components/ElementPanel';
 import { IngestStep } from '../components/IngestStep';
 import { PropertyPanel } from '../components/PropertyPanel';
-import { SlideFlowStrip } from '../components/SlideFlowStrip';
 import { StudioLeftPanel } from '../components/StudioLeftPanel';
 import { Topbar } from '../components/Topbar';
+import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
+import { buildH5p, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
+import { recordExport } from '../../exporter/api/exportHistory';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
@@ -29,15 +32,29 @@ export function StudioView() {
   const location = useLocation();
   const [step, setStep] = useState(() => {
     const requested = (location.state as { step?: number } | null)?.step;
-    return requested === 2 || requested === 3 || requested === 4 ? requested : 1;
+    return requested === 1 || requested === 3 || requested === 4 ? requested : 2;
   });
   const [previewMode, setPreviewMode] = useState<'simulasi' | 'asli' | 'server'>('simulasi');
   const [notice, setNotice] = useState('');
+  // Panel kanan aktif: 'elements' atau 'properties'
+  const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+
+  // Pilihan versi Course Presentation & status ekspor
+  const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
+  const [exporting, setExporting] = useState(false);
+
   // File titipan modal (dibaca sekali saat mount)
   const [initialFile] = useState<File | null>(() => peekPendingFile());
   useEffect(() => {
     takePendingFile();
   }, []);
+
+  // Saat elemen dipilih, otomatis buka panel properties
+  useEffect(() => {
+    if (state.selectedElement) {
+      setRightPanel('properties');
+    }
+  }, [state.selectedElement]);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -76,23 +93,53 @@ export function StudioView() {
     navigate(from);
   };
 
+  const handleExport = async () => {
+    if (project.slides.length === 0) {
+      showNotice('Belum ada slide untuk diekspor.');
+      return;
+    }
+    setExporting(true);
+    showNotice(`Mengemas file .h5p (v1.${cpMinor})...`);
+    try {
+      const { blob, bundled, missing } = await buildH5p(project, cpMinor);
+      const name = safeFileName(project.title);
+      downloadBlob(blob, name);
+      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
+      showNotice(
+        missing.length > 0
+          ? `${name} berhasil diunduh (v1.${cpMinor}). Pustaka lokal: ${bundled.length}.`
+          : `Berhasil! ${name} berhasil diunduh (${bundled.length} pustaka H5P).`,
+      );
+    } catch (err) {
+      showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <main className="app-shell">
+    <main className="hs-studio-shell">
       <Topbar
         projectTitle={project.title}
         savedLabel={savedLabel}
+        cpMinor={cpMinor}
+        onCpMinorChange={setCpMinor}
+        onExport={handleExport}
+        isExporting={exporting}
         onHome={goBack}
         onSave={() => {
           saveDraft();
           showNotice('Sudah kesimpan.');
         }}
+        onPreview={() => setStep(3)}
         onRenameTitle={(title) => {
           actions.setTitle(title);
           showNotice('Judul diganti — jangan lupa Simpan.');
         }}
       />
+
       {step === 1 && (
-        <section className="workspace single">
+        <section className="hs-step-section">
           <IngestStep
             initialFile={initialFile}
             onComplete={(next) => {
@@ -105,87 +152,104 @@ export function StudioView() {
       )}
 
       {step === 2 && (
-        <section className="workspace single st-scope">
-          <div className="st-workspace">
-            <StudioLeftPanel
-              slides={state.slides}
-              activeSlideId={state.activeSlideId}
-              selectedKind={state.selectedElement?.kind ?? null}
-              onAddElement={(kind) => {
-                actions.addElement(kind);
-                showNotice('Isi baru ditambah — atur di panel kanan.');
-              }}
-              onSelectSlide={actions.setActiveSlideId}
-              onAddSlide={actions.addSlide}
-              onDuplicateSlide={actions.duplicateSlide}
-              onDeleteSlide={(id) => {
-                actions.deleteSlide(id);
-                showNotice('Slide dihapus.');
-              }}
-              onReorderSlide={actions.reorderSlide}
-            />
-            <div className="st-central">
-              <div className="st-center-head">
-                <div>
-                  <span className="st-kicker">Ruang kerja / susun slide</span>
-                  <h2>Studio Susun Slide</h2>
-                </div>
-                <span className="st-badge">
-                  {hasSlides ? `${state.slides.length} slide` : 'Draf materi'}
-                </span>
-              </div>
-              {state.activeSlide ? (
-                <CanvasPanel
-                  slide={state.activeSlide}
-                  total={state.slides.length}
-                  selectedElementId={state.selectedElementId}
-                  activeSurface={project.settings.activeSurface}
-                  onSelectElement={actions.setSelectedElementId}
-                  onMoveElement={(id, x, y) => {
-                    const el = state.activeSlide?.elements.find((e) => e.id === id);
-                    if (el) actions.updateElement(id, { position: { ...el.position, x, y } });
-                  }}
-                  onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
-                  onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
-                />
-              ) : (
-                <div className="st-panel">
-                  <p className="muted">Belum ada slide. Upload file di langkah 1 atau tambah slide dari panel kiri.</p>
-                </div>
-              )}
-              {hasSlides && (
-                <SlideFlowStrip
-                  slides={state.slides}
-                  activeSlideId={state.activeSlideId}
-                  onSelect={actions.setActiveSlideId}
-                  onAdd={actions.addSlide}
-                />
-              )}
+        <div className="hs-studio-workspace">
+          {/* Kolom kiri: Daftar Slide */}
+          <StudioLeftPanel
+            slides={state.slides}
+            activeSlideId={state.activeSlideId}
+            onSelectSlide={actions.setActiveSlideId}
+            onAddSlide={actions.addSlide}
+            onDuplicateSlide={actions.duplicateSlide}
+            onDeleteSlide={(id) => {
+              actions.deleteSlide(id);
+              showNotice('Slide dihapus.');
+            }}
+            onReorderSlide={actions.reorderSlide}
+          />
+
+          {/* Kolom tengah: Canvas */}
+          <div className="hs-canvas-area">
+            {/* Edit mode indicator */}
+            <div className="hs-canvas-topbar">
+              <span className="hs-edit-mode-badge">EDIT MODE</span>
+              <span className="hs-canvas-hint">Klik elemen pada slide untuk mengedit</span>
             </div>
-            <PropertyPanel
-              key={state.selectedElement?.id ?? state.activeSlide?.id ?? 'empty'}
-              project={project}
-              slide={state.activeSlide}
-              slides={state.slides}
-              element={state.selectedElement}
-              settings={project.settings}
-              slideCount={state.slides.length}
-              onUpdateElement={actions.updateElement}
-              onDeleteElement={(id) => {
-                actions.deleteElement(id);
-                showNotice('Isi sudah dihapus.');
-              }}
-              onUpdateSlide={actions.updateSlide}
-              onUpdateKeyword={actions.updateKeywordMain}
-              onUpdateSettings={actions.updateSettings}
-              onNotice={showNotice}
-            />
+
+            {state.activeSlide ? (
+              <CanvasPanel
+                slide={state.activeSlide}
+                total={state.slides.length}
+                selectedElementId={state.selectedElementId}
+                activeSurface={project.settings.activeSurface}
+                onSelectElement={(id) => {
+                  actions.setSelectedElementId(id);
+                  if (id) setRightPanel('properties');
+                  else setRightPanel('elements');
+                }}
+                onMoveElement={(id, x, y) => {
+                  const el = state.activeSlide?.elements.find((e) => e.id === id);
+                  if (el) actions.updateElement(id, { position: { ...el.position, x, y } });
+                }}
+                onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
+                onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
+              />
+            ) : (
+              <div className="hs-canvas-empty">
+                <p>Belum ada slide. Upload file di langkah 1 atau tambah slide dari panel kiri.</p>
+              </div>
+            )}
           </div>
-        </section>
+
+          {/* Kolom kanan: Panel Elemen / Properti */}
+          <div className="hs-right-panel-container">
+            {rightPanel === 'elements' || !state.selectedElement ? (
+              <>
+                <ElementPanel
+                  onAddElement={(kind) => {
+                    actions.addElement(kind);
+                    showNotice('Elemen baru ditambah — atur propertinya.');
+                    setRightPanel('properties');
+                  }}
+                />
+              </>
+            ) : (
+              <div className="hs-properties-wrapper">
+                <div className="hs-panel-switch">
+                  <button
+                    type="button"
+                    className="hs-panel-switch-btn"
+                    onClick={() => setRightPanel('elements')}
+                  >
+                    ← Tambah Elemen
+                  </button>
+                </div>
+                <PropertyPanel
+                  key={state.selectedElement?.id ?? state.activeSlide?.id ?? 'empty'}
+                  project={project}
+                  slide={state.activeSlide}
+                  slides={state.slides}
+                  element={state.selectedElement}
+                  settings={project.settings}
+                  slideCount={state.slides.length}
+                  onUpdateElement={actions.updateElement}
+                  onDeleteElement={(id) => {
+                    actions.deleteElement(id);
+                    showNotice('Elemen sudah dihapus.');
+                    setRightPanel('elements');
+                  }}
+                  onUpdateSlide={actions.updateSlide}
+                  onUpdateKeyword={actions.updateKeywordMain}
+                  onUpdateSettings={actions.updateSettings}
+                  onNotice={showNotice}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {step === 3 && (
-        <section className="workspace single">
+        <section className="hs-step-section">
           <div className="step-panel">
             <div className="step-heading">
               <div>
@@ -242,33 +306,36 @@ export function StudioView() {
       )}
 
       {step === 4 && (
-        <section className="workspace single">
+        <section className="hs-step-section">
           <ExportStep project={project} onNotice={showNotice} />
         </section>
       )}
 
-      <nav className="st-stepnav" aria-label="Navigasi langkah">
-        <span className="muted">
-          Langkah {step} dari {WIZARD_STEPS.length} · {stepLabel}
-        </span>
-        <div className="st-stepnav-actions">
-          {step > 1 && (
-            <button className="secondary-button" type="button" onClick={() => setStep(step - 1)}>
-              Kembali
-            </button>
-          )}
-          {canNext && (
-            <button
-              className="primary-button"
-              type="button"
-              title={step === 1 && !hasSlides ? 'Upload file dulu sampai jadi slide' : undefined}
-              onClick={() => setStep(step + 1)}
-            >
-              Lanjut ke {nextLabel}
-            </button>
-          )}
-        </div>
-      </nav>
+      {/* Navigasi langkah bawah (hanya di luar layar Susun agar tampilan Studio persis seperti referensi) */}
+      {step !== 2 && (
+        <nav className="hs-step-nav" aria-label="Navigasi langkah">
+          <span className="muted">
+            Langkah {step} dari {WIZARD_STEPS.length} · {stepLabel}
+          </span>
+          <div className="hs-step-nav-actions">
+            {step > 1 && (
+              <button className="secondary-button" type="button" onClick={() => setStep(step - 1)}>
+                Kembali
+              </button>
+            )}
+            {canNext && (
+              <button
+                className="primary-button"
+                type="button"
+                title={step === 1 && !hasSlides ? 'Upload file dulu sampai jadi slide' : undefined}
+                onClick={() => setStep(step + 1)}
+              >
+                Lanjut ke {nextLabel}
+              </button>
+            )}
+          </div>
+        </nav>
+      )}
 
       <Toast message={notice} />
     </main>

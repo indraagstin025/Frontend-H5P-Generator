@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProject } from '../features/studio/hooks/useProject';
 import type { ProjectStore } from '../features/studio/hooks/useProject';
 import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
+import { createProject, createSlide } from '../features/studio/constants/h5pModel';
 import type { Project } from '../features/studio/constants/h5pModel';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
@@ -38,18 +39,50 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     restored.current = true;
     try {
       const id = sessionStorage.getItem(CURRENT_KEY);
-      if (!id) return;
       const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
-      if (!raw) return;
-      const items = JSON.parse(raw) as Array<{ id: string; snapshot: Project }>;
-      const found = items.find((p) => p.id === id);
-      if (found) {
-        actions.replaceProject(found.snapshot);
-        setCurrentId(found.id);
-        setSavedLabel('Dipulihkan dari sesi');
+      const items = raw ? (JSON.parse(raw) as Array<{ id: string; snapshot: Project }>) : [];
+
+      if (id && items.length > 0) {
+        const found = items.find((p) => p.id === id);
+        if (found) {
+          actions.replaceProject(found.snapshot);
+          setCurrentId(found.id);
+          setSavedLabel('Tersimpan otomatis');
+          return;
+        }
       }
+
+      if (items.length > 0 && items[0]) {
+        actions.replaceProject(items[0].snapshot);
+        setCurrentId(items[0].id);
+        sessionStorage.setItem(CURRENT_KEY, items[0].id);
+        setSavedLabel('Tersimpan otomatis');
+        return;
+      }
+
+      // Proyek awal default persis seperti di gambar referensi
+      const sample = createProject('Pengenalan H5P Interaktif', '16:9', null);
+      const s1 = createSlide(1, 'Pengenalan Ekosistem', '16:9');
+      s1.chapter = 'BAB 01 - DASAR';
+      s1.tone = 'lime';
+
+      const s2 = createSlide(2, 'Apa Itu H5P?', '16:9');
+      s2.chapter = 'BAB 01 - DASAR';
+      s2.tone = 'forest';
+
+      const s3 = createSlide(3, 'Cek pemahamanmu', '16:9');
+      s3.chapter = 'BAB 01 - DASAR';
+      s3.tone = 'mint';
+
+      sample.slides = [s1, s2, s3];
+
+      actions.replaceProject(sample);
+      setCurrentId(sample.id);
+      sessionStorage.setItem(CURRENT_KEY, sample.id);
+      store.save(sample);
+      setSavedLabel('Tersimpan otomatis');
     } catch {
-      // abaikan — pengguna mulai dari daftar materi
+      // abaikan jika gagal akses storage
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
