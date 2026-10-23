@@ -41,7 +41,7 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
     const finalTitle = title.trim() || (file ? baseName(file.name) : 'Modul baru');
     if (file) {
       setPendingFile(file);
-      openProject(createProject(finalTitle, '16:9', file.name), pathname);
+      openProject(createProject(finalTitle, '16:9', file.name), pathname, { step: 1 });
     } else {
       openProject(createProject(finalTitle, aspect, null), pathname, { step: 2 });
     }
