@@ -138,6 +138,6 @@ export async function convertViaServer(
     project,
     serverProjectId: projectId,
     backgroundReady,
-    jobMessage: backgroundReady ? '' : 'Latar presisi belum ada (server render belum aktif) — gradien dipakai dulu.',
+    jobMessage: backgroundReady ? '' : 'Latar presisi belum ada (server render belum aktif), gradien dipakai dulu.',
   };
 }

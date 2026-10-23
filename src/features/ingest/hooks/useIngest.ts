@@ -64,7 +64,7 @@ export function useIngest(onDone: (slides: Slide[], info: ConvertInfo) => void) 
         const built = buildSlidesFromPptx(info);
         slides = built.slides;
         counts = built.counts;
-        setStatus(`Ketemu ${counts.hotspots} link, ${counts.notes} catatan, ${counts.media} gambar/suara, ${counts.quizzes} draf kuis — dipasang otomatis…`);
+        setStatus(`Ketemu ${counts.hotspots} tautan, ${counts.notes} catatan, ${counts.media} gambar/suara, dan ${counts.quizzes} draf kuis. Semua dipasang otomatis…`);
       } else {
         const info = await inspectPdf(file);
         count = info.pageCount;
