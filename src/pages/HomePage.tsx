@@ -1,6 +1,6 @@
 /**
- * Route /dashboard dan /materi — Kerangka UI Dashboard Profesional
- * Tema: Hijau Muda Solid (Tidak Transparan), Terstruktur & Ramah Aksesibilitas
+ * Route /dashboard dan /materi - Kerangka UI Dashboard Profesional
+ * Tema: hijau hutan dan off-white, selaras dengan landing page
  */
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -67,7 +67,7 @@ export function HomePage() {
             <div className="db-brand-text">
               <span className="db-brand-title">H5P Generator</span>
               <div className="db-brand-sub">
-                <span className="db-brand-tag">v1.26 · LMS Ready</span>
+                <span className="db-brand-tag">Ruang kreasi pembelajaran</span>
               </div>
             </div>
           </div>
@@ -79,7 +79,7 @@ export function HomePage() {
               onClick={openNewModal}
             >
               <PlusIcon />
-              <span>+ Buat Materi Baru</span>
+              <span>Buat materi baru</span>
             </button>
           </div>
 
@@ -151,11 +151,11 @@ export function HomePage() {
         <div className="db-main">
           <header className="db-topbar">
             <div className="db-topbar-title">
-              <h1>{tab === 'dashboard' ? 'Dashboard Utama' : 'Materi Pembelajaran Saya'}</h1>
+              <h1>{tab === 'dashboard' ? 'Dashboard' : 'Materi saya'}</h1>
               <p>
                 {tab === 'dashboard'
-                  ? 'Ringkasan aktivitas pembuatan konten pembelajaran interaktif & akses cepat LMS'
-                  : 'Kelola, cari materi tersimpan, gandakan, atau buka kembali berkas .h5p'}
+                  ? 'Ringkasan materi, riwayat ekspor, dan akses cepat ke ruang kerja.'
+                  : 'Kelola materi tersimpan, cari, gandakan, atau buka kembali berkas .h5p.'}
               </p>
             </div>
 
@@ -192,10 +192,11 @@ export function HomePage() {
               <button
                 type="button"
                 className="db-topbar-btn"
+                aria-label="Buat materi baru"
                 onClick={openNewModal}
               >
                 <PlusIcon />
-                <span>Materi Baru</span>
+                <span>Materi baru</span>
               </button>
 
               <span className="db-avatar" title="Akun Pemateri" aria-hidden="true">
@@ -209,6 +210,7 @@ export function HomePage() {
             <button
               type="button"
               className={`db-nav-btn ${activeNav === 'dashboard' ? 'active' : ''}`}
+              aria-current={activeNav === 'dashboard' ? 'page' : undefined}
               onClick={() => navigate('/dashboard')}
             >
               <DashboardIcon />
@@ -217,6 +219,7 @@ export function HomePage() {
             <button
               type="button"
               className={`db-nav-btn ${activeNav === 'materi' ? 'active' : ''}`}
+              aria-current={activeNav === 'materi' ? 'page' : undefined}
               onClick={() => navigate('/materi')}
             >
               <LayersIcon />
@@ -228,7 +231,7 @@ export function HomePage() {
               onClick={openNewModal}
             >
               <PlusIcon />
-              <span>Buat Materi</span>
+              <span>Buat materi</span>
             </button>
           </nav>
 
