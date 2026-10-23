@@ -237,7 +237,7 @@ export function HomePage() {
             {tab === 'dashboard' ? (
               <Dashboard
                 items={store.items}
-                onOpen={(p) => openProject(p, pathname)}
+                onOpen={(p) => openProject(p, pathname, { saved: true })}
                 onGoMaterials={() => navigate('/materi')}
                 onCreate={openNewModal}
                 query={query}
@@ -245,7 +245,7 @@ export function HomePage() {
             ) : (
               <ProjectsHome
                 items={store.items}
-                onOpen={(p) => openProject(p, pathname)}
+                onOpen={(p) => openProject(p, pathname, { saved: true })}
                 onDelete={store.remove}
                 onRename={store.rename}
                 onDuplicate={store.duplicate}

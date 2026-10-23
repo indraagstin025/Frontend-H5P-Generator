@@ -187,6 +187,19 @@ audio.media-preview { height: 34px; }
 .pv-summary-list { display: grid; gap: 6px; margin: 16px 0; text-align: left; }
 .pv-summary-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; color: #335541; background: #fff; }
 .pv-actions { display: flex; gap: 8px; justify-content: center; }
+.pv-mark-text { display: flex; flex-wrap: wrap; gap: 2px 4px; margin: 0; font-size: 13px; line-height: 1.9; color: #143e2a; }
+.pv-mark-word { border: none; border-bottom: 2px solid transparent; background: none; padding: 0 2px; color: inherit; font: inherit; cursor: pointer; border-radius: 3px; }
+.pv-mark-word:hover { background: #eef7e8; }
+.pv-mark-word.marked { background: #d9f0c8; border-bottom-color: var(--green-deep); font-weight: 700; }
+.pv-drag-list { display: grid; gap: 6px; }
+.pv-drag-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px; color: #335541; background: #fff; }
+.pv-drag-item select { max-width: 160px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
+.pv-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.pv-card { min-height: 90px; padding: 12px; border: 1px solid #b9dfc0; border-radius: 8px; background: #f4fbf1; color: #1f4e33; font-size: 12px; font-weight: 600; cursor: pointer; text-align: left; }
+.pv-card.flipped { background: #e3f4d8; border-color: var(--green-deep); }
+.pv-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
+.pv-table td { border: 1px solid var(--line); padding: 8px; color: #335541; }
+.pv-export-area { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 12px; resize: vertical; }
 
 /* ── Export & projects home ── */
 .check-list { display: grid; gap: 6px; margin: 16px 0; }

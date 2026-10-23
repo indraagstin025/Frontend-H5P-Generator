@@ -4,16 +4,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckIcon, Cross2Icon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { API_BASE_URL } from '../../../config/env';
-import { COURSE_PRESENTATION_MINORS, DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
-import { countBlanks } from '../../studio/constants/h5pModel';
+import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
+import { countBlanks, isQuizElement } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
 import { recordExport } from '../api/exportHistory';
 import { buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
 
 type ServerCheck = { ok: boolean; issues: string[]; mainLibrary: string | null } | null;
 
-export function ExportStep({ project, onNotice }: { project: Project; onNotice: (m: string) => void }) {
-  const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
+export function ExportStep({
+  project,
+  cpMinor,
+  onCpMinorChange,
+  onNotice,
+}: {
+  project: Project;
+  cpMinor: number;
+  onCpMinorChange: (minor: number) => void;
+  onNotice: (m: string) => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ name: string; sizeKb: number } | null>(null);
@@ -52,16 +61,55 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
         if (el.kind === 'goToSlide' && el.targetType === 'specified' && (el.targetSlide < 1 || el.targetSlide > n)) {
           list.push(`Slide ${s.order}: tombol “${el.label}” mengarah ke slide ${el.targetSlide} yang tidak ada.`);
         }
-        if (el.kind === 'multiChoice') {
-          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis pilihan ganda minimal 2 pilihan jawaban.`);
-          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis pilihan ganda belum ada jawaban yang benar.`);
+        if (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice') {
+          const label = el.kind === 'multiChoice' ? 'pilihan ganda' : el.kind === 'singleChoice' ? 'pilihan tunggal' : 'multimedia choice';
+          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis ${label} minimal 2 pilihan jawaban.`);
+          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis ${label} belum ada jawaban yang benar.`);
+          if (el.kind === 'singleChoice' && el.options.filter((o) => o.correct).length !== 1) {
+            list.push(`Slide ${s.order}: kuis pilihan tunggal harus punya tepat satu jawaban benar.`);
+          }
+          if (el.kind === 'singleChoice' && el.options.length > 4) {
+            list.push(`Slide ${s.order}: H5P Single Choice maksimal 4 pilihan jawaban.`);
+          }
           if (el.options.some((o) => !o.text.trim())) list.push(`Slide ${s.order}: ada pilihan jawaban yang masih kosong.`);
         }
-        if ((el.kind === 'multiChoice' || el.kind === 'trueFalse') && !el.question.trim()) {
+        if (
+          (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice' || el.kind === 'trueFalse' || el.kind === 'dragDrop') &&
+          !el.question.trim()
+        ) {
           list.push(`Slide ${s.order}: pertanyaan kuisnya masih kosong.`);
         }
-        if (el.kind === 'blanks' && countBlanks(el.text) === 0) {
-          list.push(`Slide ${s.order}: kuis isian belum punya jawaban *berbintang*.`);
+        if ((el.kind === 'blanks' || el.kind === 'dragWords' || el.kind === 'markWords') && countBlanks(el.text) === 0) {
+          list.push(`Slide ${s.order}: kuis ${el.kind === 'blanks' ? 'isian' : el.kind === 'dragWords' ? 'drag the words' : 'mark the words'} belum punya kata *berbintang*.`);
+        }
+        if (el.kind === 'dragDrop') {
+          if (el.zones.length === 0) list.push(`Slide ${s.order}: drag & drop belum punya zona tujuan.`);
+          if (el.items.length === 0) list.push(`Slide ${s.order}: drag & drop belum punya item.`);
+          if (el.zones.some((z) => !z.label.trim())) list.push(`Slide ${s.order}: ada zona drag & drop yang masih kosong.`);
+          if (el.items.some((it) => !it.text.trim())) list.push(`Slide ${s.order}: ada item drag & drop yang masih kosong.`);
+          if (el.items.some((it) => !el.zones.some((z) => z.id === it.zoneId))) {
+            list.push(`Slide ${s.order}: ada item drag & drop yang belum punya zona jawaban.`);
+          }
+        }
+        if (el.kind === 'summary') {
+          if (el.statements.length < 2) list.push(`Slide ${s.order}: summary minimal butuh 2 pernyataan.`);
+          if (!el.statements.some((st) => st.correct)) list.push(`Slide ${s.order}: summary belum ada pernyataan yang benar.`);
+          if (el.statements.some((st) => !st.text.trim())) list.push(`Slide ${s.order}: ada pernyataan summary yang masih kosong.`);
+        }
+        if (el.kind === 'dialogCards') {
+          if (el.cards.length === 0) list.push(`Slide ${s.order}: dialog cards belum punya kartu.`);
+          if (el.cards.some((c) => !c.front.trim() || !c.back.trim())) {
+            list.push(`Slide ${s.order}: ada kartu dialog yang sisi depan/belakangnya kosong.`);
+          }
+        }
+        if (el.kind === 'table' && (el.rows < 1 || el.cols < 1)) {
+          list.push(`Slide ${s.order}: tabel minimal 1 baris dan 1 kolom.`);
+        }
+        if (el.kind === 'video' && !el.file && !el.videoUrl.trim()) {
+          list.push(`Slide ${s.order}: video belum ada file atau URL-nya.`);
+        }
+        if (el.kind === 'interactiveVideo' && !el.videoUrl.trim()) {
+          list.push(`Slide ${s.order}: interactive video belum ada URL video.`);
         }
         if ((el.kind === 'image' || el.kind === 'audio') && !el.file && !el.objectUrl) {
           list.push(`Slide ${s.order}: ${el.kind === 'image' ? 'Gambar' : 'Suara'} belum ada file-nya.`);
@@ -75,8 +123,8 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
     const list: string[] = [];
     for (const s of project.slides) {
       for (const el of s.elements) {
-        if ((el.kind === 'image' || el.kind === 'audio') && !el.file && el.objectUrl) {
-          list.push(`Slide ${s.order}: gambar/suara dari file impor harus diupload ulang biar ikut ke paket (draf tidak menyimpan file aslinya).`);
+        if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && !el.file && el.objectUrl) {
+          list.push(`Slide ${s.order}: media dari file impor harus diupload ulang biar ikut ke paket (draf tidak menyimpan file aslinya).`);
           break;
         }
       }
@@ -86,7 +134,7 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
   }, [project]);
 
   const manifest = useMemo(() => toManifest(project, cpMinor), [project, cpMinor]);
-  const quizCount = project.slides.flatMap((s) => s.elements).filter((e) => e.kind === 'multiChoice' || e.kind === 'trueFalse' || e.kind === 'blanks').length;
+  const quizCount = project.slides.flatMap((s) => s.elements).filter(isQuizElement).length;
 
   const doServerCheck = async () => {
     if (issues.length > 0 || checking) return;
@@ -147,7 +195,7 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
 
       <label className="field-label">
         Versi Course Presentation di LMS kamu
-        <select value={cpMinor} onChange={(e) => setCpMinor(Number(e.target.value))}>
+        <select value={cpMinor} onChange={(e) => onCpMinorChange(Number(e.target.value))}>
           {COURSE_PRESENTATION_MINORS.map((m) => (
             <option key={m} value={m}>
               v1.{m} (samakan dengan LMS)

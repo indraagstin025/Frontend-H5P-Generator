@@ -48,7 +48,7 @@ export function useProjectStore() {
         ...s,
         backgroundUrl: null,
         elements: s.elements.map((e) => {
-          if ((e.kind === 'image' || e.kind === 'audio') && e.file) {
+          if (e.kind === 'image' || e.kind === 'audio' || e.kind === 'video') {
             return { ...e, file: null, objectUrl: null } as typeof e;
           }
           return e;
@@ -111,7 +111,9 @@ export function useProjectStore() {
         ...s,
         backgroundUrl: null,
         elements: s.elements.map((e) =>
-          e.kind === 'image' || e.kind === 'audio' ? { ...e, objectUrl: null } : e,
+          e.kind === 'image' || e.kind === 'audio' || e.kind === 'video'
+            ? { ...e, objectUrl: null, file: null }
+            : e,
         ),
       }));
       const meta: StoredProjectMeta = {

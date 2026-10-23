@@ -42,32 +42,38 @@ export function Topbar({
     <header className="hs-topbar">
       {/* Kiri: Logo + Judul */}
       <div className="hs-topbar-left">
-        <div className="hs-topbar-logo" onClick={onHome} role="button" tabIndex={0} title="Kembali ke daftar materi">
-          <div className="hs-logo-text">
+        <button
+          className="hs-topbar-logo"
+          type="button"
+          onClick={onHome}
+          title="Kembali ke daftar materi"
+        >
+          <span className="hs-logo-icon">H5P</span>
+          <span className="hs-logo-text">
             <span className="hs-logo-title">H5P Studio</span>
-            <div className="hs-project-subline">
-              {onRenameTitle ? (
-                <input
-                  className="hs-project-title-input"
-                  value={draft}
-                  aria-label="Judul materi"
-                  title="Klik untuk ganti judul"
-                  onChange={(e) => setDraft(e.target.value)}
-                  onBlur={commit}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                    if (e.key === 'Escape') setDraft(projectTitle);
-                  }}
-                />
-              ) : (
-                <span className="hs-project-subtitle">{projectTitle}</span>
-              )}
-              <span className="hs-subtitle-dot">·</span>
-              <span className="hs-saved-label">
-                {savedLabel === 'Belum disimpan' ? 'Belum disimpan' : 'Tersimpan otomatis'}
-              </span>
-            </div>
-          </div>
+          </span>
+        </button>
+        <div className="hs-project-meta">
+          {onRenameTitle ? (
+            <input
+              className="hs-project-title-input"
+              value={draft}
+              aria-label="Judul materi"
+              title="Klik untuk ganti judul"
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setDraft(projectTitle);
+              }}
+            />
+          ) : (
+            <span className="hs-project-subtitle">{projectTitle}</span>
+          )}
+          <span className="hs-subtitle-dot">·</span>
+          <span className="hs-saved-label" title={savedLabel}>
+            {savedLabel}
+          </span>
         </div>
       </div>
 
@@ -99,7 +105,7 @@ export function Topbar({
           title="Unduh paket .h5p siap pakai ke LMS"
         >
           <DownloadIcon width={15} height={15} />
-          {isExporting ? 'Mengemas...' : 'Export H5P'}
+          <span className="hs-btn-text">{isExporting ? 'Mengemas...' : 'Export H5P'}</span>
         </button>
 
         {/* Tombol Pratinjau */}
@@ -110,7 +116,7 @@ export function Topbar({
           title="Pratinjau"
         >
           <EyeOpenIcon width={15} height={15} />
-          Pratinjau
+          <span className="hs-btn-text">Pratinjau</span>
         </button>
 
         {/* Tombol Simpan */}
@@ -125,7 +131,7 @@ export function Topbar({
             <path d="M11 14V9H4V14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M4 1V5H10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          Simpan
+          <span className="hs-btn-text">Simpan</span>
         </button>
       </div>
     </header>

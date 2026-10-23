@@ -168,18 +168,7 @@ export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveE
                 </div>
               )}
               <div className="canvas-accent-bar" />
-              <div className="canvas-headline">
-                {slide.order === 1 ? (
-                  <>
-                    <div className="canvas-headline-row1">Pengenalan</div>
-                    <div className="canvas-headline-row2">
-                      <span className="canvas-headline-green">Ekosistem</span> H5P
-                    </div>
-                  </>
-                ) : (
-                  <div className="canvas-headline-row1">{slide.title}</div>
-                )}
-              </div>
+              <div className="canvas-headline">{slide.title}</div>
               <p className="canvas-subheadline">
                 {slide.order === 1
                   ? 'Bangun pengalaman belajar yang interaktif, menarik, dan mudah dipahami.'

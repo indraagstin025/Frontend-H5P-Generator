@@ -8,25 +8,32 @@
  * Arsip ZIP hanya berisi entri berkas (tanpa entri direktori).
  */
 import { strToU8, strFromU8, unzipSync, zipSync } from 'fflate';
-import { actionLibrary } from '../../studio/constants/h5pLibraries';
-import { COURSE_PRESENTATION, DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
+import { actionLibraryFor, libraryForElement } from '../../studio/constants/h5pLibraries';
+import { COURSE_PRESENTATION } from '../../studio/constants/h5pLibraries';
 import {
-  countBlanks,
   createElement,
   createProject,
   createSlide,
-  extractBlankAnswers,
   uid,
 } from '../../studio/constants/h5pModel';
 import type {
   AspectRatio,
   BlanksElement,
-  ElementKind,
+  DialogCardsElement,
+  DragDropElement,
+  LinkElement,
+  MarkWordsElement,
   MultiChoiceElement,
+  MultimediaChoiceElement,
   Project,
+  ShapeElement,
+  SingleChoiceElement,
   Slide,
   SlideElement,
+  SummaryElement,
   TrueFalseElement,
+  VideoElement,
+  DragWordsElement,
 } from '../../studio/constants/h5pModel';
 
 const IMAGE_MIME: Record<string, string> = {
@@ -37,6 +44,7 @@ const IMAGE_MIME: Record<string, string> = {
   svg: 'image/svg+xml',
 };
 const AUDIO_MIME: Record<string, string> = { mp3: 'audio/mpeg', wav: 'audio/wav' };
+const VIDEO_MIME: Record<string, string> = { mp4: 'video/mp4', webm: 'video/webm', ogv: 'video/ogg' };
 
 export function sanitizeExt(name: string, fallback: string): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
@@ -70,15 +78,67 @@ function mcAnswerText(a: unknown): string {
   return '';
 }
 
+function splitLinkUrl(raw: string): { protocol: string; url: string } {
+  const url = raw.trim();
+  if (url.startsWith('https://')) return { protocol: 'https://', url: url.slice(8) };
+  if (url.startsWith('http://')) return { protocol: 'http://', url: url.slice(7) };
+  if (url.startsWith('/')) return { protocol: '/', url: url.slice(1) };
+  return { protocol: 'other', url };
+}
+
+function videoSource(
+  el: { fileName: string; file: File | null; videoUrl: string; title: string },
+  id: string,
+) {
+  if (el.file) {
+    const ext = sanitizeExt(el.fileName, 'mp4');
+    return fileRef(
+      `videos/el-${id.slice(0, 8)}.${ext}`,
+      VIDEO_MIME[ext] ?? 'video/mp4',
+      el.title || el.fileName,
+    );
+  }
+  const url = el.videoUrl.trim();
+  if (!url) return null;
+  const clean = url.split('?')[0].split('#')[0];
+  const ext = clean.split('.').pop()?.toLowerCase() ?? '';
+  return fileRef(url, VIDEO_MIME[ext] ?? 'video/mp4', el.title || url);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function tableHtml(el: { rows: number; cols: number }): string {
+  const rows = Math.max(1, Math.min(20, Math.round(el.rows)));
+  const cols = Math.max(1, Math.min(20, Math.round(el.cols)));
+  const body = Array.from({ length: rows }, () => `<tr>${'<td>&nbsp;</td>'.repeat(cols)}</tr>`).join('');
+  return `<table border="1" style="width:100%;border-collapse:collapse">${body}</table>`;
+}
+
 function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Array>): Record<string, unknown> | null {
   switch (el.kind) {
     case 'advancedText':
-      return { library: actionLibrary(el.kind, cpMinor), params: { text: el.text } };
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+    case 'link': {
+      const link = el as LinkElement;
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          title: link.linkText || link.title || link.url,
+          linkWidget: splitLinkUrl(link.url),
+        },
+      };
+    }
     case 'image': {
       const ext = sanitizeExt(el.fileName, 'png');
       const name = `images/el-${el.id.slice(0, 8)}.${ext}`;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
           file: fileRef(name, IMAGE_MIME[ext] ?? 'image/png', el.title || el.alt),
           alt: el.alt,
@@ -86,21 +146,84 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
         },
       };
     }
+    case 'shape': {
+      const shape = el as ShapeElement;
+      const type =
+        shape.shapeType === 'circle'
+          ? 'circle'
+          : shape.shapeType === 'vertical-line'
+            ? 'vertical-line'
+            : shape.shapeType === 'horizontal-line'
+              ? 'horizontal-line'
+              : 'rectangle';
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params:
+          type === 'circle' || type === 'rectangle'
+            ? {
+                type,
+                shape: {
+                  fillColor: shape.color,
+                  borderColor: '#1f2937',
+                  borderWidth: '2',
+                  borderStyle: 'solid',
+                  borderRadius: type === 'circle' ? '20' : '0',
+                },
+              }
+            : {
+                type,
+                line: { borderColor: shape.color, borderWidth: '4', borderStyle: 'solid' },
+              },
+      };
+    }
+    case 'video': {
+      const source = videoSource(el as VideoElement, el.id);
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          sources: source ? [source] : [],
+          visuals: { fit: true, controls: true },
+          playback: { autoplay: false, loop: false },
+        },
+      };
+    }
     case 'audio': {
       const ext = sanitizeExt(el.fileName, 'mp3');
       const name = `audios/el-${el.id.slice(0, 8)}.${ext}`;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
           files: [fileRef(name, AUDIO_MIME[ext] ?? 'audio/mpeg', el.title || name)],
           playerMode: 'minimalistic',
         },
       };
     }
-    case 'multiChoice': {
-      const m = el as MultiChoiceElement;
+    case 'singleChoice': {
+      const sc = el as SingleChoiceElement;
+      const answers = [...sc.options]
+        .sort((a, b) => Number(b.correct) - Number(a.correct))
+        .map((o) => o.text);
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          choices: [{ question: sc.question, answers }],
+          behaviour: {
+            autoContinue: true,
+            enableRetry: sc.enableRetry,
+            enableSolutionsButton: sc.showSolution,
+            passPercentage: 50,
+            soundEffectsEnabled: false,
+            timeoutCorrect: 2,
+            timeoutWrong: 5,
+          },
+        },
+      };
+    }
+    case 'multiChoice':
+    case 'multimediaChoice': {
+      const m = el as MultiChoiceElement | MultimediaChoiceElement;
+      return {
+        library: actionLibraryFor(el, cpMinor),
         params: {
           question: m.question,
           answers: m.options.map((o) => ({
@@ -112,34 +235,198 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
               notChosenFeedback: '',
             },
           })),
-          behaviour: behaviourOf(m, { singleAnswer: m.singleAnswer }),
+          behaviour: behaviourOf(m, {
+            // MultimediaChoice mengikuti jumlah jawaban benar (auto);
+            // MultiChoice tetap mengikuti sakelar singleAnswer.
+            type:
+              el.kind === 'multimediaChoice'
+                ? 'auto'
+                : (el as MultiChoiceElement).singleAnswer
+                  ? 'single'
+                  : 'multi',
+          }),
         },
       };
     }
     case 'trueFalse': {
       const t = el as TrueFalseElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
           question: t.question,
           correct: t.correctAnswer ? 'true' : 'false',
-          behaviour: behaviourOf(t),
+          behaviour: behaviourOf(t, {
+            feedbackOnCorrect: t.feedbackCorrect,
+            feedbackOnWrong: t.feedbackWrong,
+          }),
           confirmCheckDialog: false,
         },
       };
     }
     case 'blanks': {
       const b = el as BlanksElement;
-      const answers = extractBlankAnswers(b.text);
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          text: b.text,
-          questions: answers,
+          // H5P.Blanks membaca baris soal (dengan *jawaban*) dari `questions`.
+          text: '',
+          questions: [b.text],
           behaviour: behaviourOf(b, { enableCheckButton: true }),
         },
       };
     }
+    case 'dragDrop': {
+      const dd = el as DragDropElement;
+      const zones = dd.zones.length > 0 ? dd.zones : [{ id: 'zone-1', label: 'Zona 1' }];
+      const items = dd.items.length > 0 ? dd.items : [{ id: 'item-1', text: 'Item 1', zoneId: zones[0].id }];
+      const zoneIndex = new Map(zones.map((z, i) => [z.id, i]));
+      const taskWidth = 640;
+      const taskHeight = 420;
+      const dropZones = zones.map((zone, i) => ({
+        label: zone.label,
+        showLabel: true,
+        x: 16 + (i % 3) * 205,
+        y: 290 + Math.floor(i / 3) * 70,
+        width: 190,
+        height: 58,
+        correctElements: items
+          .map((it, itemIndex) => (it.zoneId === zone.id ? String(itemIndex) : null))
+          .filter((v): v is string => v !== null),
+        backgroundOpacity: 100,
+        single: true,
+        autoAlign: false,
+      }));
+      const elements = items.map((item, i) => ({
+        type: {
+          library: 'H5P.AdvancedText 1.1',
+          params: { text: `<p>${escapeHtml(item.text)}</p>` },
+          subContentId: item.id,
+        },
+        x: 16 + (i % 3) * 205,
+        y: 16 + Math.floor(i / 3) * 56,
+        width: 190,
+        height: 46,
+        dropZones: [String(zoneIndex.get(item.zoneId) ?? 0)],
+        backgroundOpacity: 100,
+        multiple: false,
+      }));
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          scoreShow: 'Tampilkan nilai',
+          submit: 'Periksa',
+          tryAgain: 'Coba lagi',
+          scoreExplanation: 'Penjelasan nilai',
+          question: {
+            settings: { size: { width: taskWidth, height: taskHeight } },
+            task: { elements, dropZones },
+          },
+          behaviour: {
+            enableRetry: dd.enableRetry,
+            enableCheckButton: true,
+            singlePoint: false,
+            applyPenalties: false,
+            dropZoneHighlighting: 'dragging',
+            autoAlignSpacing: 10,
+            enableFullScreen: false,
+            showScorePoints: true,
+            showTitle: false,
+          },
+        },
+      };
+    }
+    case 'summary': {
+      const sm = el as SummaryElement;
+      const ordered = [...sm.statements].sort((a, b) => Number(b.correct) - Number(a.correct));
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          intro: sm.intro,
+          summaries: [
+            {
+              statements: {
+                summary: ordered.map((s) => ({ text: s.text })),
+                tip: { tip: sm.feedbackCorrect },
+              },
+            },
+          ],
+        },
+      };
+    }
+    case 'dragWords': {
+      const dw = el as DragWordsElement;
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          taskDescription: dw.title || 'Lengkapi kalimat berikut',
+          textField: dw.text,
+          behaviour: behaviourOf(dw, { enableCheckButton: true }),
+        },
+      };
+    }
+    case 'markWords': {
+      const mw = el as MarkWordsElement;
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          taskDescription: mw.title || 'Tandai kata yang benar',
+          textField: mw.text,
+          behaviour: behaviourOf(mw, { enableCheckButton: true, showScorePoints: true }),
+        },
+      };
+    }
+    case 'dialogCards': {
+      const dc = el as DialogCardsElement;
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          title: dc.title || 'Dialog Cards',
+          mode: 'normal',
+          description: dc.description,
+          dialogs: dc.cards.map((card) => ({
+            question: { text: card.front, answer: card.back },
+          })),
+          behaviour: { scaleTextNotCard: true, randomCards: false, enableRetry: true },
+        },
+      };
+    }
+    case 'continuousText':
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+    case 'exportableText':
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          label: el.text,
+          index: 1,
+          exportNotSupported: 'Ekspor tidak didukung di browser ini.',
+        },
+      };
+    case 'table':
+      return { library: actionLibraryFor(el, cpMinor), params: { text: tableHtml(el) } };
+    case 'interactiveVideo': {
+      const source = videoSource(
+        {
+          fileName: '',
+          file: null,
+          videoUrl: el.videoUrl,
+          title: el.title,
+        },
+        el.id,
+      );
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          sources: source ? [source] : [],
+          visuals: { fit: true, controls: true },
+          playback: { autoplay: false, loop: false },
+        },
+      };
+    }
+    case 'audioRecorder':
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: { title: el.description || el.title || 'Audio Recorder' },
+      };
     case 'goToSlide':
       return null;
   }
@@ -218,26 +505,23 @@ export function toContentJson(
   };
 }
 
-export function usedKinds(project: Project): ElementKind[] {
-  const set = new Set<ElementKind>();
-  for (const s of project.slides) for (const el of s.elements) set.add(el.kind);
-  return [...set];
-}
-
 export function toManifest(project: Project, cpMinor: number) {
-  const kinds = usedKinds(project);
   const deps = new Map<string, { machineName: string; majorVersion: number; minorVersion: number }>();
   deps.set(COURSE_PRESENTATION.machineName, {
     machineName: COURSE_PRESENTATION.machineName,
     majorVersion: COURSE_PRESENTATION.majorVersion,
     minorVersion: cpMinor,
   });
-  for (const kind of kinds) {
-    if (kind === 'goToSlide') continue;
-    const lib = actionLibrary(kind, cpMinor);
-    const [machineName, ver] = lib.split(' ');
-    const [majorVersion, minorVersion] = ver.split('.').map(Number);
-    deps.set(machineName, { machineName, majorVersion, minorVersion });
+  for (const slide of project.slides) {
+    for (const el of slide.elements) {
+      if (el.kind === 'goToSlide') continue;
+      const lib = libraryForElement(el, cpMinor);
+      deps.set(lib.machineName, {
+        machineName: lib.machineName,
+        majorVersion: lib.majorVersion,
+        minorVersion: lib.minorVersion,
+      });
+    }
   }
   return {
     title: project.title,
@@ -500,9 +784,10 @@ export async function buildH5p(
   files['content/content.json'] = strToU8(JSON.stringify(toContentJson(project, cpMinor, bgRefs)));
   for (const slide of project.slides) {
     for (const el of slide.elements) {
-      if ((el.kind === 'image' || el.kind === 'audio') && el.file) {
-        const ext = sanitizeExt(el.fileName, el.kind === 'image' ? 'png' : 'mp3');
-        const dir = el.kind === 'image' ? 'images' : 'audios';
+      if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && el.file) {
+        const fallback = el.kind === 'image' ? 'png' : el.kind === 'audio' ? 'mp3' : 'mp4';
+        const ext = sanitizeExt(el.fileName, fallback);
+        const dir = el.kind === 'image' ? 'images' : el.kind === 'audio' ? 'audios' : 'videos';
         files[`content/${dir}/el-${el.id.slice(0, 8)}.${ext}`] = await fileToBytes(el.file);
       }
     }
@@ -553,7 +838,7 @@ function bytesToUrl(bytes: Uint8Array, mime: string): string {
 
 function mimeForPath(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  return IMAGE_MIME[ext] ?? AUDIO_MIME[ext] ?? 'application/octet-stream';
+  return IMAGE_MIME[ext] ?? AUDIO_MIME[ext] ?? VIDEO_MIME[ext] ?? 'application/octet-stream';
 }
 
 /**
@@ -617,8 +902,6 @@ export async function parseH5p(file: File): Promise<Project> {
     slide.elements = (cs.elements ?? []).map((e) => parseElement(e, cpSlides.length, entries));
     return slide;
   });
-  void DEFAULT_CP_MINOR;
-  void countBlanks;
   return project;
 }
 
@@ -732,13 +1015,23 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   }
   if (machine === 'H5P.Blanks') {
     const b = createElement('blanks', slideCount);
+    const qs = Array.isArray(params.questions) ? (params.questions as unknown[]) : [];
+    const text =
+      qs
+        .map((q) =>
+          typeof q === 'string'
+            ? q
+            : str((q as { question?: unknown } | null)?.question),
+        )
+        .filter((q) => q.length > 0)
+        .join('\n') || str(params.text, '');
     return {
       ...b,
       position,
       displayAsButton,
       buttonLabel,
       title,
-      text: str(params.text, ''),
+      text,
     };
   }
   const t = createElement('advancedText', slideCount);

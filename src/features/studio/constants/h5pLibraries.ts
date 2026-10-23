@@ -3,7 +3,7 @@
  * h5p-course-presentation (daftar action yang didukung).
  * CP_MINOR disetel di langkah Ekspor agar selaras dengan LMS Internal.
  */
-import type { ElementKind } from './h5pModel';
+import type { ElementKind, SlideElement } from './h5pModel';
 
 export const COURSE_PRESENTATION = { machineName: 'H5P.CoursePresentation', majorVersion: 1 } as const;
 
@@ -11,7 +11,7 @@ export const COURSE_PRESENTATION_MINORS = [22, 23, 24, 25, 26] as const;
 
 export const DEFAULT_CP_MINOR: (typeof COURSE_PRESENTATION_MINORS)[number] = 24;
 
-interface LibVersion {
+export interface LibVersion {
   machineName: string;
   majorVersion: number;
   minorVersion: number;
@@ -33,11 +33,11 @@ const LIBS: Record<ElementKind, LibVersion> = {
   summary: { machineName: 'H5P.Summary', majorVersion: 1, minorVersion: 10 },
   dragWords: { machineName: 'H5P.DragText', majorVersion: 1, minorVersion: 10 },
   markWords: { machineName: 'H5P.MarkTheWords', majorVersion: 1, minorVersion: 11 },
-  dialogCards: { machineName: 'H5P.Dialogcards', majorVersion: 1, minorVersion: 8 },
+  dialogCards: { machineName: 'H5P.Dialogcards', majorVersion: 1, minorVersion: 9 },
   continuousText: { machineName: 'H5P.ContinuousText', majorVersion: 1, minorVersion: 2 },
   exportableText: { machineName: 'H5P.ExportableTextArea', majorVersion: 1, minorVersion: 3 },
-  table: { machineName: 'H5P.Table', majorVersion: 1, minorVersion: 1 },
-  interactiveVideo: { machineName: 'H5P.InteractiveVideo', majorVersion: 1, minorVersion: 22 },
+  table: { machineName: 'H5P.Table', majorVersion: 1, minorVersion: 2 },
+  interactiveVideo: { machineName: 'H5P.InteractiveVideo', majorVersion: 1, minorVersion: 27 },
   audioRecorder: { machineName: 'H5P.AudioRecorder', majorVersion: 1, minorVersion: 0 },
   multimediaChoice: { machineName: 'H5P.MultiMediaChoice', majorVersion: 0, minorVersion: 3 },
 };
@@ -49,5 +49,27 @@ export function libraryFor(kind: ElementKind, cpMinor: number): LibVersion {
 
 export function actionLibrary(kind: ElementKind, cpMinor: number): string {
   const lib = libraryFor(kind, cpMinor);
+  return `${lib.machineName} ${lib.majorVersion}.${lib.minorVersion}`;
+}
+
+/**
+ * Library yang benar-benar dipakai saat ekspor.
+ * Multimedia Choice hanya punya opsi teks di model kita, sedangkan
+ * H5P.MultiMediaChoice mewajibkan media di setiap opsi — jadi turun ke
+ * H5P.MultiChoice. Interactive Video belum punya hotspot interaktif,
+ * jadi cukup dipaketkan sebagai H5P.Video.
+ */
+export function effectiveKindOf(el: SlideElement): ElementKind {
+  if (el.kind === 'multimediaChoice') return 'multiChoice';
+  if (el.kind === 'interactiveVideo') return 'video';
+  return el.kind;
+}
+
+export function libraryForElement(el: SlideElement, cpMinor: number): LibVersion {
+  return libraryFor(effectiveKindOf(el), cpMinor);
+}
+
+export function actionLibraryFor(el: SlideElement, cpMinor: number): string {
+  const lib = libraryForElement(el, cpMinor);
   return `${lib.machineName} ${lib.majorVersion}.${lib.minorVersion}`;
 }

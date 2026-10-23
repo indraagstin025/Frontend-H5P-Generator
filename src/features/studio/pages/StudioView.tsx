@@ -38,6 +38,8 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+  // Di layar kecil panel kanan jadi drawer
+  const [panelOpen, setPanelOpen] = useState(false);
 
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
@@ -107,8 +109,8 @@ export function StudioView() {
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
       showNotice(
         missing.length > 0
-          ? `${name} berhasil diunduh (v1.${cpMinor}). Pustaka lokal: ${bundled.length}.`
-          : `Berhasil! ${name} berhasil diunduh (${bundled.length} pustaka H5P).`,
+          ? `${name} terunduh (v1.${cpMinor}), tapi library ${missing.slice(0, 3).join(', ')} tidak ada lokal — pilih v1.26 untuk paket lengkap.`
+          : `Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).`,
       );
     } catch (err) {
       showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
@@ -173,6 +175,14 @@ export function StudioView() {
             <div className="hs-canvas-topbar">
               <span className="hs-edit-mode-badge">EDIT MODE</span>
               <span className="hs-canvas-hint">Klik elemen pada slide untuk mengedit</span>
+              <button
+                type="button"
+                className="hs-panel-toggle"
+                aria-expanded={panelOpen}
+                onClick={() => setPanelOpen((open) => !open)}
+              >
+                {panelOpen ? 'Tutup panel' : 'Panel elemen'}
+              </button>
             </div>
 
             {state.activeSlide ? (
@@ -183,8 +193,12 @@ export function StudioView() {
                 activeSurface={project.settings.activeSurface}
                 onSelectElement={(id) => {
                   actions.setSelectedElementId(id);
-                  if (id) setRightPanel('properties');
-                  else setRightPanel('elements');
+                  if (id) {
+                    setRightPanel('properties');
+                    setPanelOpen(true);
+                  } else {
+                    setRightPanel('elements');
+                  }
                 }}
                 onMoveElement={(id, x, y) => {
                   const el = state.activeSlide?.elements.find((e) => e.id === id);
@@ -201,7 +215,15 @@ export function StudioView() {
           </div>
 
           {/* Kolom kanan: Panel Elemen / Properti */}
-          <div className="hs-right-panel-container">
+          {panelOpen && (
+            <button
+              type="button"
+              className="hs-panel-backdrop"
+              aria-label="Tutup panel"
+              onClick={() => setPanelOpen(false)}
+            />
+          )}
+          <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
             {rightPanel === 'elements' || !state.selectedElement ? (
               <>
                 <ElementPanel
@@ -209,6 +231,7 @@ export function StudioView() {
                     actions.addElement(kind);
                     showNotice('Elemen baru ditambah — atur propertinya.');
                     setRightPanel('properties');
+                    setPanelOpen(true);
                   }}
                 />
               </>
@@ -294,6 +317,7 @@ export function StudioView() {
                   <H5PServerPlayer
                     key={`server-${project.id}-${project.updatedAt}`}
                     project={project}
+                    cpMinor={cpMinor}
                     onNotice={showNotice}
                   />
                 )}
@@ -307,7 +331,12 @@ export function StudioView() {
 
       {step === 4 && (
         <section className="hs-step-section">
-          <ExportStep project={project} onNotice={showNotice} />
+          <ExportStep
+            project={project}
+            cpMinor={cpMinor}
+            onCpMinorChange={setCpMinor}
+            onNotice={showNotice}
+          />
         </section>
       )}
 

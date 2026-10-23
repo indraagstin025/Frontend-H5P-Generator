@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { useProject } from '../features/studio/hooks/useProject';
 import type { ProjectStore } from '../features/studio/hooks/useProject';
 import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
-import { createProject, createSlide } from '../features/studio/constants/h5pModel';
 import type { Project } from '../features/studio/constants/h5pModel';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
@@ -19,7 +18,7 @@ interface StudioContextValue {
   actions: ProjectStore['actions'];
   currentId: string | null;
   savedLabel: string;
-  openProject: (project: Project, from: string, opts?: { step?: number }) => void;
+  openProject: (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => void;
   saveDraft: () => void;
 }
 
@@ -32,6 +31,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [savedLabel, setSavedLabel] = useState('Belum disimpan');
   const restored = useRef(false);
+  // Referensi proyek terakhir yang benar-benar disimpan ke localStorage.
+  const savedSnapshot = useRef<Project | null>(null);
+
+  useEffect(() => {
+    if (savedSnapshot.current !== null && savedSnapshot.current !== state.project) {
+      setSavedLabel('Belum disimpan');
+    }
+  }, [state.project]);
 
   // Refresh browser tidak kehilangan proyek yang sedang dibuka
   useEffect(() => {
@@ -46,41 +53,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const found = items.find((p) => p.id === id);
         if (found) {
           actions.replaceProject(found.snapshot);
+          savedSnapshot.current = found.snapshot;
           setCurrentId(found.id);
-          setSavedLabel('Tersimpan otomatis');
-          return;
+          setSavedLabel('Draf tersimpan');
         }
       }
-
-      if (items.length > 0 && items[0]) {
-        actions.replaceProject(items[0].snapshot);
-        setCurrentId(items[0].id);
-        sessionStorage.setItem(CURRENT_KEY, items[0].id);
-        setSavedLabel('Tersimpan otomatis');
-        return;
-      }
-
-      // Proyek awal default persis seperti di gambar referensi
-      const sample = createProject('Pengenalan H5P Interaktif', '16:9', null);
-      const s1 = createSlide(1, 'Pengenalan Ekosistem', '16:9');
-      s1.chapter = 'BAB 01 - DASAR';
-      s1.tone = 'lime';
-
-      const s2 = createSlide(2, 'Apa Itu H5P?', '16:9');
-      s2.chapter = 'BAB 01 - DASAR';
-      s2.tone = 'forest';
-
-      const s3 = createSlide(3, 'Cek pemahamanmu', '16:9');
-      s3.chapter = 'BAB 01 - DASAR';
-      s3.tone = 'mint';
-
-      sample.slides = [s1, s2, s3];
-
-      actions.replaceProject(sample);
-      setCurrentId(sample.id);
-      sessionStorage.setItem(CURRENT_KEY, sample.id);
-      store.save(sample);
-      setSavedLabel('Tersimpan otomatis');
     } catch {
       // abaikan jika gagal akses storage
     }
@@ -88,10 +65,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openProject = useCallback(
-    (project: Project, from: string, opts?: { step?: number }) => {
+    (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => {
       actions.replaceProject(project);
+      savedSnapshot.current = opts?.saved ? project : null;
       setCurrentId(project.id);
-      setSavedLabel('Belum disimpan');
+      setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
       try {
         sessionStorage.setItem(CURRENT_KEY, project.id);
       } catch {
@@ -104,6 +82,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const saveDraft = useCallback(() => {
     store.save(state.project);
+    savedSnapshot.current = state.project;
     setSavedLabel(
       `Tersimpan ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
     );

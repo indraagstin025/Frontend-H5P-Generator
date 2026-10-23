@@ -20,7 +20,15 @@ interface Attempt {
   createdAt: string;
 }
 
-export function H5PServerPlayer({ project, onNotice }: { project: Project; onNotice: (m: string) => void }) {
+export function H5PServerPlayer({
+  project,
+  cpMinor = DEFAULT_CP_MINOR,
+  onNotice,
+}: {
+  project: Project;
+  cpMinor?: number;
+  onNotice: (m: string) => void;
+}) {
   const [status, setStatus] = useState<Status>('idle');
   const [playerUrl, setPlayerUrl] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -32,7 +40,7 @@ export function H5PServerPlayer({ project, onNotice }: { project: Project; onNot
     setStatus('uploading');
     setError('');
     try {
-      const { blob } = await buildH5p(project, DEFAULT_CP_MINOR);
+      const { blob } = await buildH5p(project, cpMinor);
       const form = new FormData();
       form.append('package', blob, safeFileName(project.title));
       form.append('title', project.title);

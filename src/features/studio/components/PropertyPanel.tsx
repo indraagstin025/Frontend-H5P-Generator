@@ -4,7 +4,7 @@
  * lipatan pengaturan cerita, dan status validasi.
  */
 import { useState } from 'react';
-import { TrashIcon } from '@radix-ui/react-icons';
+import { PlusIcon, TrashIcon } from '@radix-ui/react-icons';
 import {
   QuizBehaviourFields,
   QuizFeedbackFields,
@@ -16,7 +16,7 @@ import type {
   Slide,
   SlideElement,
 } from '../constants/h5pModel';
-import { isQuizElement } from '../constants/h5pModel';
+import { isQuizElement, uid } from '../constants/h5pModel';
 import { StorySettings } from './StorySettings';
 import { ValidationPanel } from './ValidationPanel';
 import type { Project } from '../constants/h5pModel';
@@ -143,8 +143,8 @@ export function PropertyPanel({
       onNotice('Video harus .mp4/.webm/.ogv ya.');
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      onNotice('File-nya kegedean, maksimal 50 MB.');
+    if (file.size > (kind === 'video' ? 50 : 10) * 1024 * 1024) {
+      onNotice(`File-nya kegedean, maksimal ${kind === 'video' ? 50 : 10} MB.`);
       return;
     }
     const url = URL.createObjectURL(file);
@@ -218,11 +218,11 @@ export function PropertyPanel({
           <>
             <label className="field-label">
               Jenis shape
-              <select value={element.shapeType} onChange={(e) => patch({ shapeType: e.target.value as 'circle' | 'square' | 'rectangle' | 'triangle' })}>
-                <option value="circle">Circle</option>
-                <option value="square">Square</option>
+              <select value={element.shapeType} onChange={(e) => patch({ shapeType: e.target.value as 'circle' | 'rectangle' | 'vertical-line' | 'horizontal-line' })}>
                 <option value="rectangle">Rectangle</option>
-                <option value="triangle">Triangle</option>
+                <option value="circle">Circle</option>
+                <option value="vertical-line">Vertical line</option>
+                <option value="horizontal-line">Horizontal line</option>
               </select>
             </label>
             <label className="field-label">
@@ -310,10 +310,56 @@ export function PropertyPanel({
           </label>
         )}
         {element.kind === 'dialogCards' && (
-          <label className="field-label">
-            Deskripsi
-            <textarea rows={3} value={element.description} onChange={(e) => patch({ description: e.target.value })} />
-          </label>
+          <>
+            <label className="field-label">
+              Deskripsi
+              <textarea rows={2} value={element.description} onChange={(e) => patch({ description: e.target.value })} />
+            </label>
+            <span className="section-kicker">Kartu dialog</span>
+            <div className="option-list">
+              {element.cards.map((card) => (
+                <div className="dialog-card-row" key={card.id}>
+                  <input
+                    value={card.front}
+                    placeholder="Sisi depan…"
+                    onChange={(e) =>
+                      patch({
+                        cards: element.cards.map((c) => (c.id === card.id ? { ...c, front: e.target.value } : c)),
+                      })
+                    }
+                  />
+                  <input
+                    value={card.back}
+                    placeholder="Sisi belakang…"
+                    onChange={(e) =>
+                      patch({
+                        cards: element.cards.map((c) => (c.id === card.id ? { ...c, back: e.target.value } : c)),
+                      })
+                    }
+                  />
+                  <button
+                    type="button"
+                    aria-label="Hapus kartu"
+                    disabled={element.cards.length <= 1}
+                    onClick={() => patch({ cards: element.cards.filter((c) => c.id !== card.id) })}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              className="add-slide"
+              type="button"
+              onClick={() =>
+                patch({
+                  cards: [...element.cards, { id: uid(), front: 'Sisi depan baru', back: 'Sisi belakang baru' }],
+                })
+              }
+            >
+              <span aria-hidden="true"><PlusIcon /></span> Tambah kartu
+            </button>
+          </>
         )}
         {element.kind === 'table' && (
           <>

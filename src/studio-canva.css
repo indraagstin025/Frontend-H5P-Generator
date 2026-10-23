@@ -53,6 +53,16 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  min-width: 0;
+}
+
+.hs-project-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 .hs-topbar-logo {
@@ -477,6 +487,28 @@
   color: var(--hs-ink-muted);
 }
 
+.hs-panel-toggle {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--hs-green-border);
+  background: #fff;
+  color: var(--hs-green);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hs-panel-toggle:hover {
+  background: var(--hs-green-soft);
+}
+
+.hs-panel-backdrop {
+  display: none;
+}
+
 .hs-canvas-empty {
   flex: 1;
   display: flex;
@@ -673,6 +705,18 @@
   opacity: 0.75;
 }
 
+.dialog-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dialog-card-row input {
+  min-width: 0;
+}
+
 /* ===================== STEP SECTIONS (non-edit steps) ===================== */
 .hs-step-section {
   flex: 1;
@@ -832,6 +876,7 @@
   gap: 4px;
   transition: border-color 0.12s, box-shadow 0.12s;
   min-width: 0;
+  z-index: 2;
 }
 
 .canvas-element:hover {
@@ -1109,26 +1154,128 @@
   .hs-studio-workspace {
     grid-template-columns: 140px 1fr 250px;
   }
+  .hs-btn-preview,
+  .hs-btn-save {
+    padding: 7px 10px;
+  }
 }
 
 @media (max-width: 900px) {
   .hs-studio-workspace {
-    grid-template-columns: 120px 1fr;
+    grid-template-columns: 110px 1fr;
   }
   .hs-right-panel-container {
+    display: block;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(330px, 88vw);
+    max-width: 100%;
+    z-index: 300;
+    transform: translateX(102%);
+    transition: transform 0.2s ease;
+    box-shadow: -8px 0 24px rgba(16, 52, 34, 0.15);
+  }
+  .hs-right-panel-container.is-open {
+    transform: translateX(0);
+  }
+  .hs-panel-toggle {
+    display: inline-flex;
+  }
+  .hs-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0 0;
+    z-index: 290;
+    border: none;
+    background: rgba(15, 35, 24, 0.28);
+    cursor: pointer;
+    padding: 0;
+  }
+  .hs-canvas-hint {
+    display: none;
+  }
+  .hs-version-label {
+    display: none;
+  }
+  .hs-topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .hs-topbar-left {
+    gap: 8px;
+  }
+  .hs-project-title-input {
+    width: 150px;
+  }
+}
+
+@media (max-width: 700px) {
+  .hs-topbar {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+  }
+  .hs-topbar-right {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .hs-btn-export,
+  .hs-btn-preview,
+  .hs-btn-save {
+    padding: 6px 9px;
+  }
+  .hs-btn-text {
+    display: none;
+  }
+  .hs-project-title-input {
+    width: 130px;
+  }
+  .hs-edit-mode-badge {
     display: none;
   }
 }
 
 @media (max-width: 640px) {
   .hs-studio-workspace {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
   .hs-slide-list {
-    max-height: 180px;
     flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--hs-line);
+    max-height: 96px;
     overflow-x: auto;
+  }
+  .hs-slide-list-header {
+    display: none;
+  }
+  .hs-slide-list-items {
+    flex-direction: row;
+    padding: 6px;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .hs-slide-item {
+    flex: none;
+    width: 112px;
+  }
+  .hs-add-slide-btn {
+    margin: 6px;
+    white-space: nowrap;
+  }
+  .hs-canvas-area {
+    padding: 10px;
+  }
+  .hs-slide-num {
+    font-size: 9px;
+  }
+  .hs-step-section {
+    padding: 14px;
   }
 }
 

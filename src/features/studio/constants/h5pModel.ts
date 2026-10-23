@@ -75,7 +75,7 @@ export interface ImageElement extends BaseElement {
 
 export interface ShapeElement extends BaseElement {
   kind: 'shape';
-  shapeType: 'circle' | 'square' | 'rectangle' | 'triangle';
+  shapeType: 'circle' | 'rectangle' | 'vertical-line' | 'horizontal-line';
   color: string;
 }
 
@@ -136,14 +136,41 @@ export interface TrueFalseElement extends BaseElement, QuizBehaviour {
   correctAnswer: boolean;
 }
 
+export interface DragDropItem {
+  id: string;
+  text: string;
+  /** id zona jawaban yang benar */
+  zoneId: string;
+}
+
+export interface DragDropZone {
+  id: string;
+  label: string;
+}
+
 export interface DragDropElement extends BaseElement, QuizBehaviour {
   kind: 'dragDrop';
   question: string;
+  items: DragDropItem[];
+  zones: DragDropZone[];
 }
 
-export interface SummaryElement extends BaseElement {
+export interface SummaryStatement {
+  id: string;
+  text: string;
+  correct: boolean;
+}
+
+export interface SummaryElement extends BaseElement, QuizBehaviour {
   kind: 'summary';
   intro: string;
+  statements: SummaryStatement[];
+}
+
+export interface DialogCard {
+  id: string;
+  front: string;
+  back: string;
 }
 
 export interface DragWordsElement extends BaseElement, QuizBehaviour {
@@ -159,6 +186,7 @@ export interface MarkWordsElement extends BaseElement, QuizBehaviour {
 export interface DialogCardsElement extends BaseElement {
   kind: 'dialogCards';
   description: string;
+  cards: DialogCard[];
 }
 
 export interface ContinuousTextElement extends BaseElement {
@@ -409,16 +437,47 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
       };
     case 'trueFalse':
       return { ...base, kind, question: 'Pernyataan baru', correctAnswer: true, ...QUIZ_DEFAULTS };
-    case 'dragDrop':
-      return { ...base, kind, question: 'Drag item ke tempat yang sesuai', ...QUIZ_DEFAULTS };
+    case 'dragDrop': {
+      const zoneA = { id: uid(), label: 'Zona A' };
+      const zoneB = { id: uid(), label: 'Zona B' };
+      return {
+        ...base,
+        kind,
+        question: 'Drag item ke tempat yang sesuai',
+        zones: [zoneA, zoneB],
+        items: [
+          { id: uid(), text: 'Item 1', zoneId: zoneA.id },
+          { id: uid(), text: 'Item 2', zoneId: zoneB.id },
+        ],
+        ...QUIZ_DEFAULTS,
+      };
+    }
     case 'summary':
-      return { ...base, kind, intro: 'Ringkasan materi di slide ini.' };
+      return {
+        ...base,
+        kind,
+        intro: 'Ringkasan materi di slide ini.',
+        statements: [
+          { id: uid(), text: 'Pernyataan yang benar.', correct: true },
+          { id: uid(), text: 'Pernyataan yang salah.', correct: false },
+          { id: uid(), text: 'Pernyataan lain yang salah.', correct: false },
+        ],
+        ...QUIZ_DEFAULTS,
+      };
     case 'dragWords':
       return { ...base, kind, text: 'Drag *kata* ke tempat yang *tepat*.', ...QUIZ_DEFAULTS };
     case 'markWords':
-      return { ...base, kind, text: 'Tandai *kata kunci* dalam kalimat ini.', ...QUIZ_DEFAULTS };
+      return { ...base, kind, text: 'Tandai *kunci* dalam kalimat ini.', ...QUIZ_DEFAULTS };
     case 'dialogCards':
-      return { ...base, kind, description: 'Kartu dialog baru' };
+      return {
+        ...base,
+        kind,
+        description: 'Kartu dialog baru',
+        cards: [
+          { id: uid(), front: 'Pertanyaan kartu 1', back: 'Jawaban kartu 1' },
+          { id: uid(), front: 'Pertanyaan kartu 2', back: 'Jawaban kartu 2' },
+        ],
+      };
     case 'continuousText':
       return { ...base, kind, text: 'Tulis teks panjang di sini…' };
     case 'exportableText':
@@ -468,7 +527,18 @@ export function createProject(title: string, aspect: AspectRatio, sourceFileName
 /** Skor maksimum satu elemen kuis (cerminan perhitungan summary slide). */
 export function maxScoreOf(el: SlideElement): number {
   if (el.kind === 'blanks') return countBlanks(el.text);
-  if (el.kind === 'multiChoice' || el.kind === 'trueFalse') return 1;
+  if (el.kind === 'dragWords') return countBlanks(el.text);
+  if (el.kind === 'dragDrop') return el.items.length;
+  if (el.kind === 'markWords') return 1;
+  if (el.kind === 'summary') return 1;
+  if (
+    el.kind === 'multiChoice' ||
+    el.kind === 'singleChoice' ||
+    el.kind === 'trueFalse' ||
+    el.kind === 'multimediaChoice'
+  ) {
+    return 1;
+  }
   return 0;
 }
 
@@ -483,11 +553,38 @@ export function extractBlankAnswers(text: string): string[] {
   return matches.map((m) => m.slice(1, -1).trim()).filter((s) => s.length > 0);
 }
 
+export interface MarkWordToken {
+  word: string;
+  marked: boolean;
+}
+
+/** Pecah teks Mark the Words menjadi token; bintang menandai kata/frasa benar. */
+export function markWordTokens(text: string): MarkWordToken[] {
+  const cleaned = text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Selaras dengan pola H5P.MarkTheWords: frasa *dua kata* dihitung satu token.
+  return (cleaned.match(/ \*[^*]+\* |[^\s]+/g) ?? [])
+    .map((raw) =>
+      raw
+        .trim()
+        .replace(/^[[({⟨¿¡“"«„]+/, '')
+        .replace(/[",….:;?!\])}⟩»”]+$/, ''),
+    )
+    .filter((token) => token.length > 0)
+    .map((token) => ({
+      word: token.replace(/\*/g, ''),
+      marked: token.startsWith('*') && token.endsWith('*') && token.length > 2,
+    }));
+}
+
 export function isQuizElement(
   el: SlideElement
-): el is MultiChoiceElement | SingleChoiceElement | TrueFalseElement | BlanksElement | DragDropElement | DragWordsElement | MarkWordsElement | MultimediaChoiceElement {
+): el is MultiChoiceElement | SingleChoiceElement | TrueFalseElement | BlanksElement | DragDropElement | DragWordsElement | MarkWordsElement | MultimediaChoiceElement | SummaryElement {
   return [
     'multiChoice', 'singleChoice', 'trueFalse', 'blanks',
-    'dragDrop', 'dragWords', 'markWords', 'multimediaChoice'
+    'dragDrop', 'dragWords', 'markWords', 'multimediaChoice', 'summary'
   ].includes(el.kind);
 }
