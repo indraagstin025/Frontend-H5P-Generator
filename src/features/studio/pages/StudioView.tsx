@@ -103,14 +103,18 @@ export function StudioView() {
     setExporting(true);
     showNotice(`Mengemas file .h5p (v1.${cpMinor})...`);
     try {
-      const { blob, bundled, missing } = await buildH5p(project, cpMinor);
+      const { blob, bundled, missing, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
+      const mediaNote =
+        media.failed.length > 0
+          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
+          : '';
       showNotice(
-        missing.length > 0
+        (missing.length > 0
           ? `${name} terunduh (v1.${cpMinor}), tapi library ${missing.slice(0, 3).join(', ')} tidak ada lokal — pilih v1.26 untuk paket lengkap.`
-          : `Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).`,
+          : `Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).`) + mediaNote,
       );
     } catch (err) {
       showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');

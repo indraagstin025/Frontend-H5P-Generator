@@ -40,7 +40,10 @@ export function H5PServerPlayer({
     setStatus('uploading');
     setError('');
     try {
-      const { blob } = await buildH5p(project, cpMinor);
+      const { blob, media } = await buildH5p(project, cpMinor);
+      if (media.failed.length > 0) {
+        onNotice(`Sebagian media gagal diambil: ${media.failed[0]}`);
+      }
       const form = new FormData();
       form.append('package', blob, safeFileName(project.title));
       form.append('title', project.title);

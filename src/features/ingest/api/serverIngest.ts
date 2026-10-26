@@ -51,14 +51,25 @@ function mapElement(raw: Record<string, unknown>, _slideCount: number): SlideEle
     title: typeof raw.title === 'string' ? raw.title : '',
   };
   if (!kind || !base.position) return null;
-  if (kind === 'image' || kind === 'audio') {
+  if (kind === 'image' || kind === 'audio' || kind === 'video') {
     const assetUrl = typeof raw.assetUrl === 'string' ? raw.assetUrl : null;
     const url = absUrl(assetUrl);
+    const fileName = typeof raw.fileName === 'string' ? raw.fileName : '';
+    if (kind === 'video') {
+      return {
+        ...base,
+        kind,
+        fileName,
+        objectUrl: url,
+        videoUrl: typeof raw.videoUrl === 'string' ? raw.videoUrl : '',
+        file: null,
+      } as SlideElement;
+    }
     return {
       ...base,
       kind,
       alt: kind === 'image' && typeof raw.alt === 'string' ? raw.alt : '',
-      fileName: typeof raw.fileName === 'string' ? raw.fileName : '',
+      fileName,
       objectUrl: url,
       file: null,
     } as SlideElement;

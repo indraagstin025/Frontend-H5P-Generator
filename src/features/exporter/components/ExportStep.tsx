@@ -123,8 +123,13 @@ export function ExportStep({
     const list: string[] = [];
     for (const s of project.slides) {
       for (const el of s.elements) {
-        if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && !el.file && el.objectUrl) {
-          list.push(`Slide ${s.order}: media dari file impor harus diupload ulang biar ikut ke paket (draf tidak menyimpan file aslinya).`);
+        if (
+          (el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') &&
+          !el.file &&
+          el.objectUrl &&
+          !/^(https?:|blob:|data:)/i.test(el.objectUrl)
+        ) {
+          list.push(`Slide ${s.order}: media tidak bisa diambil ulang — unggah ulang berkasnya agar ikut ke paket.`);
           break;
         }
       }
@@ -160,19 +165,24 @@ export function ExportStep({
     if (issues.length > 0 || loading) return;
     setLoading(true);
     try {
-      const { blob, bundled, missing, backgrounds } = await buildH5p(project, cpMinor);
+      const { blob, bundled, missing, backgrounds, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       setResult({ name, sizeKb: Math.round(blob.size / 1024) });
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
       const bits: string[] = [];
       if (bundled.length > 0) bits.push(`${bundled.length} library ikut di dalam`);
+      if (media.bundled > 0) bits.push(`${media.bundled} media ikut di paket`);
       if (backgrounds.real > 0) bits.push(`${backgrounds.real} latar asli ikut di paket`);
       else bits.push('latar gradien (gambar asli tidak ketemu)');
+      const mediaNote =
+        media.failed.length > 0
+          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
+          : '';
       onNotice(
-        missing.length > 0
+        (missing.length > 0
           ? `${name} terdownload, tapi library ${missing.slice(0, 3).join(', ')} tidak ketemu lokal — pilih 1.26 untuk paket lengkap.`
-          : `${name} sudah terdownload (${bits.join(', ')}).`,
+          : `${name} sudah terdownload (${bits.join(', ')}).`) + mediaNote,
       );
     } catch (err) {
       onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
