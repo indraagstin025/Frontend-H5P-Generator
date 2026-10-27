@@ -36,17 +36,38 @@ export interface PreviewFile {
 }
 
 /** Simpan paket (hasil unzip .h5p) agar bisa di-fetch player. */
-export async function setPreviewPackage(key: string, files: Record<string, PreviewFile>): Promise<void> {
-  const worker = activeWorker();
-  if (!worker) throw new Error('Service worker pratinjau belum aktif.');
-  const entries = Object.entries(files).map(([path, f]): [string, ArrayBuffer, string] => {
-    const copy = f.data.slice().buffer as ArrayBuffer;
-    return [path, copy, f.mime];
+export function setPreviewPackage(key: string, files: Record<string, PreviewFile>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const worker = activeWorker();
+    if (!worker) return reject(new Error('Service worker pratinjau belum aktif.'));
+
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => {
+      channel.port1.close();
+      // Fallback lanjut jika timeout agar tidak menggantung selamanya
+      resolve();
+    }, 2000);
+
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      channel.port1.close();
+      if (event.data?.ok) {
+        resolve();
+      } else {
+        reject(new Error(event.data?.error ?? 'Gagal menyimpan paket ke service worker.'));
+      }
+    };
+
+    const entries = Object.entries(files).map(([path, f]): [string, ArrayBuffer, string] => {
+      const copy = f.data.slice().buffer as ArrayBuffer;
+      return [path, copy, f.mime];
+    });
+
+    worker.postMessage(
+      { type: 'H5P_PREVIEW_SET', key, files: entries },
+      [channel.port2, ...entries.map((e) => e[1])],
+    );
   });
-  worker.postMessage(
-    { type: 'H5P_PREVIEW_SET', key, files: entries },
-    entries.map((e) => e[1]),
-  );
 }
 
 export async function clearPreviewPackage(key: string): Promise<void> {

@@ -30,8 +30,15 @@ self.addEventListener('message', (event) => {
       }
     }
     store.set(msg.key, files);
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ ok: true });
+    }
   } else if (msg.type === 'H5P_PREVIEW_CLEAR' && typeof msg.key === 'string') {
-    store.delete(msg.key);
+    // Tunda penghapusan 10 detik agar re-mount cepat (misalnya di React StrictMode)
+    // tidak menghapus paket saat player sedang aktif memuat.
+    setTimeout(() => {
+      store.delete(msg.key);
+    }, 10000);
   }
 });
 
@@ -46,10 +53,11 @@ self.addEventListener('fetch', (event) => {
   const rest = pathname.slice(PREFIX.length);
   const slash = rest.indexOf('/');
   if (slash < 0) return;
-  const key = rest.slice(0, slash);
-  const path = rest.slice(slash + 1);
+  const key = decodeURIComponent(rest.slice(0, slash));
+  const rawPath = rest.slice(slash + 1);
+  const path = decodeURIComponent(rawPath);
   const files = store.get(key);
-  const entry = files ? files.get(path) : undefined;
+  const entry = files ? (files.get(path) || files.get(rawPath)) : undefined;
   if (entry) {
     event.respondWith(
       new Response(entry.data, {
@@ -61,6 +69,17 @@ self.addEventListener('fetch', (event) => {
       }),
     );
   } else {
-    event.respondWith(new Response('Not found', { status: 404 }));
+    const isJson = path.endsWith('.json');
+    event.respondWith(
+      new Response(
+        isJson ? JSON.stringify({ error: `Not found: ${path}` }) : 'Not found',
+        {
+          status: 404,
+          headers: {
+            'Content-Type': isJson ? 'application/json' : 'text/plain',
+          },
+        },
+      ),
+    );
   }
 });

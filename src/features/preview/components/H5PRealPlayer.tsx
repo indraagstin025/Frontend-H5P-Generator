@@ -100,8 +100,8 @@ export function H5PRealPlayer({ project }: { project: Project }) {
       // 1. Cari versi CoursePresentation yang tersedia (baru → lama).
       // Seed backend dari Hub memberi 1.26, sedangkan default ekspor (24)
       // mengikuti LMS — player pratinjau pakai yang ada saja.
-      // (Cek isi, bukan sekadar status: server SPA bisa menjawab
-      // index.html 200 untuk file yang tidak ada.)
+      // (Cek isi dan berkas runner JS/CSS, bukan sekadar status: server SPA bisa
+      // menjawab index.html 200 untuk berkas yang hilang.)
       let cpMinor: number | null = null;
       for (const m of [...COURSE_PRESENTATION_MINORS].sort((a, b) => b - a)) {
         try {
@@ -110,10 +110,41 @@ export function H5PRealPlayer({ project }: { project: Project }) {
           });
           if (probe.ok) {
             try {
-              const json = (await probe.json()) as { machineName?: string };
+              const json = (await probe.json()) as {
+                machineName?: string;
+                preloadedJs?: Array<{ path: string }>;
+                preloadedCss?: Array<{ path: string }>;
+              };
               if (json.machineName === 'H5P.CoursePresentation') {
-                cpMinor = m;
-                break;
+                // Pastikan berkas runtime (preloadedJs / preloadedCss) benar-benar ada di disk
+                const runtimeFiles = [
+                  ...(json.preloadedJs ?? []).map((j) => j.path),
+                  ...(json.preloadedCss ?? []).map((c) => c.path),
+                ];
+
+                let allFilesExist = runtimeFiles.length > 0;
+                for (const filePath of runtimeFiles) {
+                  try {
+                    const fileProbe = await fetch(
+                      `/h5p-libraries/H5P.CoursePresentation-1.${m}/${filePath}`,
+                      { cache: 'no-store' },
+                    );
+                    const contentType = fileProbe.headers.get('content-type') ?? '';
+                    // Jika file tidak ada, server SPA Vite mengembalikan index.html (text/html)
+                    if (!fileProbe.ok || contentType.includes('text/html')) {
+                      allFilesExist = false;
+                      break;
+                    }
+                  } catch {
+                    allFilesExist = false;
+                    break;
+                  }
+                }
+
+                if (allFilesExist) {
+                  cpMinor = m;
+                  break;
+                }
               }
             } catch {
               // lanjut ke versi berikut
@@ -144,7 +175,8 @@ export function H5PRealPlayer({ project }: { project: Project }) {
 
       // 3. Rakit paket + sajikan dari memori
       try {
-        const { blob } = await buildH5p(project, cpMinor);
+        // includeLibraries: false karena h5p-standalone sudah mengambil library langsung dari /h5p-libraries
+        const { blob } = await buildH5p(project, cpMinor, { includeLibraries: false });
         if (cancelled) return;
         const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
         const files: Record<string, PreviewFile> = {};
@@ -198,7 +230,7 @@ export function H5PRealPlayer({ project }: { project: Project }) {
       <div className="pv-setup">
         <strong>Player asli belum bisa jalan.</strong>
         <p className="muted">
-          Folder <code>frontend/public/h5p-libraries/</code> masih kosong — salin folder-folder library dari{' '}
+          Folder <code>frontend/public/h5p-libraries/</code> masih kosong atau berkas runtime library (seperti runner JS/CSS di <code>dist/</code>) belum lengkap — salin folder-folder library dari{' '}
           <code>backend/storage/h5p/libraries/</code> (sudah terisi otomatis saat seed, tanpa H5PEditor.*) ke sana,
           lalu muat ulang halaman ini. Sementara itu mode simulasi tetap bisa dipakai.
         </p>
