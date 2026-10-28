@@ -10,6 +10,7 @@ import type { ProjectStore } from '../features/studio/hooks/useProject';
 import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
 import type { Project } from '../features/studio/constants/h5pModel';
 import { hydrateElementMedia, getSlideBg, registerSlideBg } from '../features/studio/utils/mediaRegistry';
+import { apiFetch } from '../services/api';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
 
@@ -35,7 +36,7 @@ interface StudioContextValue {
   currentId: string | null;
   savedLabel: string;
   openProject: (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => void;
-  saveDraft: () => void;
+  saveDraft: () => Promise<void>;
 }
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -96,12 +97,27 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     [actions, navigate],
   );
 
-  const saveDraft = useCallback(() => {
+  const saveDraft = useCallback(async () => {
     store.save(state.project);
     savedSnapshot.current = state.project;
-    setSavedLabel(
-      `Tersimpan ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`,
-    );
+
+    const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    const id = state.project.id;
+
+    if (id && !id.startsWith('temp-') && !id.startsWith('local-')) {
+      try {
+        await apiFetch(`/projects/${id}/slides`, {
+          method: 'PUT',
+          body: { slides: state.project.slides },
+        });
+        setSavedLabel(`Tersimpan di server ${time}`);
+        return;
+      } catch (err) {
+        console.warn('Gagal sinkronisasi slide ke backend, tersimpan di lokal:', err);
+      }
+    }
+
+    setSavedLabel(`Tersimpan ${time}`);
   }, [store, state.project]);
 
   const value = useMemo(
