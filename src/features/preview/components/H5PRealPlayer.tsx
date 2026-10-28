@@ -58,6 +58,9 @@ function mimeFor(path: string): string {  const ext = path.split('.').pop()?.toL
   if (ext === 'svg') return 'image/svg+xml';
   if (ext === 'mp3') return 'audio/mpeg';
   if (ext === 'wav') return 'audio/wav';
+  if (ext === 'mp4') return 'video/mp4';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'ogv') return 'video/ogg';
   return 'application/octet-stream';
 }
 

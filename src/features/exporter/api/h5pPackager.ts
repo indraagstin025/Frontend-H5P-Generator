@@ -27,6 +27,7 @@ import type {
   Slide,
   SlideElement,
   TrueFalseElement,
+  VideoElement,
 } from '../../studio/constants/h5pModel';
 
 const IMAGE_MIME: Record<string, string> = {
@@ -37,6 +38,11 @@ const IMAGE_MIME: Record<string, string> = {
   svg: 'image/svg+xml',
 };
 const AUDIO_MIME: Record<string, string> = { mp3: 'audio/mpeg', wav: 'audio/wav' };
+const VIDEO_MIME: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogv: 'video/ogg',
+};
 
 export function sanitizeExt(name: string, fallback: string): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
@@ -94,6 +100,35 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
         params: {
           files: [fileRef(name, AUDIO_MIME[ext] ?? 'audio/mpeg', el.title || name)],
           playerMode: 'minimalistic',
+        },
+      };
+    }
+    case 'video': {
+      const v = el as VideoElement;
+      const ext = sanitizeExt(v.fileName || 'video.mp4', 'mp4');
+      const name = `videos/el-${v.id.slice(0, 8)}.${ext}`;
+      const sources: Array<Record<string, unknown>> = [];
+      if (v.file) {
+        sources.push(fileRef(name, VIDEO_MIME[ext] ?? 'video/mp4', v.title || name));
+      } else if (v.videoUrl) {
+        sources.push({
+          path: v.videoUrl,
+          mime: VIDEO_MIME[ext] ?? 'video/mp4',
+          copyright: { license: 'U' },
+        });
+      }
+      return {
+        library: actionLibrary(v.kind, cpMinor),
+        params: {
+          sources,
+          visuals: {
+            fit: true,
+            controls: true,
+          },
+          playback: {
+            autoplay: false,
+            loop: false,
+          },
         },
       };
     }
@@ -500,9 +535,9 @@ export async function buildH5p(
   files['content/content.json'] = strToU8(JSON.stringify(toContentJson(project, cpMinor, bgRefs)));
   for (const slide of project.slides) {
     for (const el of slide.elements) {
-      if ((el.kind === 'image' || el.kind === 'audio') && el.file) {
-        const ext = sanitizeExt(el.fileName, el.kind === 'image' ? 'png' : 'mp3');
-        const dir = el.kind === 'image' ? 'images' : 'audios';
+      if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && el.file) {
+        const ext = sanitizeExt(el.fileName, el.kind === 'image' ? 'png' : el.kind === 'audio' ? 'mp3' : 'mp4');
+        const dir = el.kind === 'image' ? 'images' : el.kind === 'audio' ? 'audios' : 'videos';
         files[`content/${dir}/el-${el.id.slice(0, 8)}.${ext}`] = await fileToBytes(el.file);
       }
     }
@@ -553,7 +588,7 @@ function bytesToUrl(bytes: Uint8Array, mime: string): string {
 
 function mimeForPath(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  return IMAGE_MIME[ext] ?? AUDIO_MIME[ext] ?? 'application/octet-stream';
+  return IMAGE_MIME[ext] ?? AUDIO_MIME[ext] ?? VIDEO_MIME[ext] ?? 'application/octet-stream';
 }
 
 /**
@@ -699,6 +734,24 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       title,
       fileName: path.split('/').pop() ?? '',
       objectUrl: path && audioBytes ? bytesToUrl(audioBytes, mimeForPath(path)) : null,
+      file: null,
+    };
+  }
+  if (machine === 'H5P.Video') {
+    const vd = createElement('video', slideCount);
+    const sources = (params.sources ?? []) as Array<{ path?: string }>;
+    const path = str(sources[0]?.path);
+    const isRemote = /^https?:\/\//i.test(path);
+    const videoBytes = !isRemote && path ? resolveContentEntry(entries, path) : undefined;
+    return {
+      ...vd,
+      position,
+      displayAsButton,
+      buttonLabel,
+      title,
+      videoUrl: isRemote ? path : '',
+      fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
+      objectUrl: !isRemote && path && videoBytes ? bytesToUrl(videoBytes, mimeForPath(path)) : null,
       file: null,
     };
   }
