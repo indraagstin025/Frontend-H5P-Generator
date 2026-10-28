@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Landing Page Khusus Pengajar & Tim Pelatihan LMS Internal Perusahaan (L&D / Corporate Training).
  * Berfokus pada kebutuhan nyata organisasi:
  * - Konversi dek materi pelatihan (.pptx) & SOP (.pdf) menjadi modul studi kasus bercabang.
@@ -36,83 +36,8 @@ type LandingPageProps = {
   onEnter: () => void;
 };
 
-type TrainingCategory = 'hse' | 'compliance' | 'operations' | 'onboarding';
 type MockupTab = 'employee' | 'trainer' | 'lms';
 type ScenarioStep = 'dilemma' | 'pathA' | 'pathB' | 'quiz';
-
-const TRAINING_MODULES: Record<
-  TrainingCategory,
-  {
-    categoryTitle: string;
-    moduleName: string;
-    overview: string;
-    highlights: string[];
-    scenarioHeading: string;
-    scenarioText: string;
-    decisionAction: string;
-  }
-> = {
-  hse: {
-    categoryTitle: 'Keselamatan & Kesehatan Kerja (K3 / HSE)',
-    moduleName: 'Protokol Tanggap Darurat Kebocoran Gas di Area Pabrik',
-    overview:
-      'Latih personel operasional dan teknisi lapangan dalam mengambil keputusan kritis saat terjadi anomali tekanan atau insiden bahan kimia, tanpa risiko kecelakaan nyata.',
-    highlights: [
-      'Alur percabangan tindakan darurat sesuai Standard Operating Procedure (SOP K3)',
-      'Balon dialog instruksi pengawas shift dan laporan petugas lapangan',
-      'Kuis validasi batas toleransi teknis dengan evaluasi kepatuhan seketika',
-    ],
-    scenarioHeading: 'Skenario Lapangan: Anomali Sensor Tekanan Pipa Unit B',
-    scenarioText:
-      'Sensor mendeteksi lonjakan tekanan gas melebihi 15 Bar pada shift malam. Petugas harus memutuskan apakah mengisolasi valve darurat atau menunggu inspeksi tim teknis.',
-    decisionAction: 'Keputusan: Eksekusi Valve Darurat vs Tunggu Tim Maintenance',
-  },
-  compliance: {
-    categoryTitle: 'Kepatuhan & Integritas Perusahaan (Compliance)',
-    moduleName: 'Pencegahan Konflik Kepentingan & Standar Anti-Gratifikasi',
-    overview:
-      'Tingkatkan pemahaman tata kelola perusahaan (GCG) dan etika bisnis bagi staf pengadaan, keuangan, dan manajerial melalui simulasi dilema kerja sehari-hari.',
-    highlights: [
-      'Studi kasus dilema penerimaan fasilitas vendor rekanan lelang',
-      'Pop-up pedoman kepatuhan internal dan pasal hukum tanpa menutup slide',
-      'Pelacakan sertifikasi kepatuhan wajib karyawan tahunan untuk kebutuhan audit',
-    ],
-    scenarioHeading: 'Skenario Etika: Penawaran Fasilitas Pribadi oleh Rekanan',
-    scenarioText:
-      'Vendor peserta tender menawarkan paket akomodasi liburan keluarga kepada panitia pengadaan. Bagaimana respons yang sesuai dengan Kebijakan Integritas Perusahaan?',
-    decisionAction: 'Keputusan: Tolak & Lapor Whistleblowing System vs Tolak Diam-diam',
-  },
-  operations: {
-    categoryTitle: 'SOP Operasional & Layanan Pelanggan',
-    moduleName: 'Standar Penanganan Eskalasi Keluhan Nasabah Prioritas',
-    overview:
-      'Standarisasi keterampilan front-liner dan staf operasional dalam menyelesaikan insiden layanan sesuai Service Level Agreement (SLA) internal perusahaan.',
-    highlights: [
-      'Preservasi bagan alir proses eskalasi dan matriks wewenang otorisasi',
-      'Simulasi percabangan dialog respons empati vs tindakan kompensasi',
-      'Kuis isian singkat kata kunci protokol keamanan verifikasi data nasabah',
-    ],
-    scenarioHeading: 'Skenario Layanan: Keterlambatan Transaksi Skala Besar',
-    scenarioText:
-      'Klien prioritas komplain atas keterlambatan settlement dana di luar jam kliring. Petugas harus menentukan jalur eskalasi otorisasi manual antar-divisi.',
-    decisionAction: 'Keputusan: Otorisasi Khusus Kepala Cabang vs Jalur Penyelidikan IT',
-  },
-  onboarding: {
-    categoryTitle: 'Orientasi Karyawan Baru (Corporate Onboarding)',
-    moduleName: 'Budaya Kerja, Keamanan Data & Kebijakan Dasar Perusahaan',
-    overview:
-      'Transformasikan materi orientasi karyawan baru yang tebal menjadi modul interaktif yang menyenangkan, memastikan pemahaman nilai organisasi dan tata tertib kerja.',
-    highlights: [
-      'Eksplorasi budaya nilai perusahaan (Core Values) secara mandiri',
-      'Uji pemahaman kebijakan keamanan informasi (Information Security Awareness)',
-      'Ringkasan skor orientasi otomatis masuk ke rekap evaluasi masa percobaan (Probation)',
-    ],
-    scenarioHeading: 'Skenario Keamanan: Email Phishing Mengatasnamakan Direksi',
-    scenarioText:
-      'Karyawan baru menerima pesan mendesak meminta file rekap gaji staf. Prosedur verifikasi internal apa yang wajib dilakukan sebelum merespons?',
-    decisionAction: 'Keputusan: Laporkan ke IT Helpdesk vs Konfirmasi Langsung ke Sekretariat',
-  },
-};
 
 const FAQ_ENTERPRISE = [
   {
@@ -138,13 +63,11 @@ const FAQ_ENTERPRISE = [
 ];
 
 export function LandingPage({ onEnter }: LandingPageProps) {
-  const [activeCategory, setActiveCategory] = useState<TrainingCategory>('hse');
   const [mockupTab, setMockupTab] = useState<MockupTab>('employee');
   const [scenarioStep, setScenarioStep] = useState<ScenarioStep>('dilemma');
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const training = TRAINING_MODULES[activeCategory];
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -161,52 +84,26 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <a href="#top" className="edu-brand" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
             <img src="/logo.png" alt="H5P Generator" className="edu-brand-logo-img" />
             <div className="edu-brand-text">
-              <span className="edu-brand-title">H5P Content Generator</span>
+              <span className="edu-brand-title">H5P Generator</span>
               <span className="edu-brand-sub">
-                LMS Internal Perusahaan <span className="tagline-dot">•</span> Diklat & L&D
+                Ruang kreasi pembelajaran interaktif
               </span>
             </div>
           </a>
 
-          <ul className="edu-nav-links">
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('perbandingan')}>
-                Tantangan Diklat
-              </span>
-            </li>
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('pilar')}>
-                Fitur Pembelajaran
-              </span>
-            </li>
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('peran')}>
-                3 Peran Pengguna
-              </span>
-            </li>
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('modul-pelatihan')}>
-                Skenario Pelatihan
-              </span>
-            </li>
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('alur-kerja')}>
-                Alur 5 Tahap
-              </span>
-            </li>
-            <li>
-              <span className="edu-nav-link" onClick={() => scrollToSection('faq')}>
-                FAQ LMS
-              </span>
-            </li>
-          </ul>
+          <nav className="edu-nav-links" aria-label="Navigasi beranda">
+            <a className="edu-nav-link" href="#alur-kerja">Cara kerja</a>
+            <a className="edu-nav-link" href="#pilar">Fitur</a>
+            <a className="edu-nav-link" href="#simulasi-hero">Contoh interaktif</a>
+            <a className="edu-nav-link" href="#faq">Bantuan</a>
+          </nav>
 
           <div className="edu-nav-actions">
             <span className="edu-badge-academic">
               <IdCardIcon /> Portal Pemateri Internal
             </span>
             <button className="edu-btn-primary" type="button" onClick={onEnter}>
-              <PlayIcon /> Buka Studio Modul <ArrowRightIcon />
+              <PlayIcon /> Buka studio <ArrowRightIcon />
             </button>
           </div>
         </div>
@@ -217,29 +114,26 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         <div className="edu-hero-grid">
           <div className="edu-hero-content">
             <div className="edu-tag-kicker">
-              <ReaderIcon /> Untuk Pengajar, Pemateri Internal & Tim L&D Perusahaan
+              <ReaderIcon /> UNTUK PENGAJAR & TIM PELATIHAN
             </div>
 
             <h1 className="edu-hero-title">
-              Ubah Slide Pelatihan Menjadi{' '}
-              <span className="edu-title-gradient">Modul Interaktif Berbasis Skenario Kerja.</span>
+              Materi Anda, jadi lebih{' '}
+              <span className="edu-title-gradient">interaktif dan mudah dipahami.</span>
             </h1>
 
-            <p className="edu-hero-desc">
-              Punya file presentasi (<code>.pptx</code>) atau dokumen (<code>.pdf</code>)? Upload ke sini, tambah tombol pilihan dan kuis di atasnya,
-              lalu download file <code>.h5p</code>-nya buat diupload ke LMS — nggak perlu bikin dari nol.
-            </p>
+            <p className="edu-hero-desc">Mulai dari presentasi PPTX atau dokumen PDF. Tambahkan interaksi dan kuis, lalu unduh materi dalam format H5P untuk digunakan di LMS Anda.</p>
 
             <div className="edu-hero-actions">
               <button className="edu-btn-primary" type="button" onClick={onEnter}>
-                <PlayIcon /> Buka Studio & Buat Modul
+                <PlayIcon /> Mulai buat materi
               </button>
               <button
                 className="edu-btn-secondary"
                 type="button"
                 onClick={() => scrollToSection('simulasi-hero')}
               >
-                <DesktopIcon /> Uji Simulasi Pelatihan
+                <DesktopIcon /> Coba contoh interaktif
               </button>
             </div>
 
@@ -248,7 +142,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 <span className="edu-trust-icon">
                   <LapTimerIcon />
                 </span>
-                <span>Bikin modul bisa selesai dalam &lt; 30 menit (kalau manual bisa 4–6 jam).</span>
+                <span>Mulai dari materi yang sudah Anda miliki.</span>
               </div>
               <div className="edu-trust-item">
                 <span className="edu-trust-icon">
@@ -260,7 +154,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                 <span className="edu-trust-icon">
                   <CheckCircledIcon />
                 </span>
-                <span>Nilai peserta otomatis masuk ke LMS (Moodle/Canvas).</span>
+                <span>Ekspor paket .h5p untuk LMS yang mendukung H5P.</span>
               </div>
             </div>
           </div>
@@ -281,14 +175,14 @@ export function LandingPage({ onEnter }: LandingPageProps) {
                     className={`edu-mockup-tab-btn ${mockupTab === 'employee' ? 'active' : ''}`}
                     onClick={() => setMockupTab('employee')}
                   >
-                    <PersonIcon /> Mode Karyawan (Simulasi)
+                    <PersonIcon /> Peserta
                   </button>
                   <button
                     type="button"
                     className={`edu-mockup-tab-btn ${mockupTab === 'trainer' ? 'active' : ''}`}
                     onClick={() => setMockupTab('trainer')}
                   >
-                    <GearIcon /> Mode Studio Pemateri
+                    <GearIcon /> Studio
                   </button>
                   <button
                     type="button"
@@ -629,8 +523,8 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* ── 4 Fitur Kunci Pelatihan Interaktif ── */}
       <section className="edu-section" id="pilar">
         <div className="edu-section-head">
-          <span className="edu-section-kicker">Metodologi L&D Terpadu</span>
-          <h2 className="edu-section-title">Empat hal yang bikin beda</h2>
+          <span className="edu-section-kicker">FITUR PEMBELAJARAN</span>
+          <h2 className="edu-section-title">Semua yang Anda butuhkan untuk membuat materi</h2>
           <p className="edu-section-sub">
             Semua yang dibutuhkan biar materi biasa jadi modul yang seru dikerjakan:
           </p>
@@ -743,69 +637,11 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ── Skenario Pelatihan Internal Perusahaan ── */}
-      <section className="edu-section" id="modul-pelatihan">
-        <div className="edu-section-head">
-          <span className="edu-section-kicker">Realisasi Program Pelatihan</span>
-          <h2 className="edu-section-title">Contoh Skenario Pelatihan di Lingkungan Perusahaan</h2>
-          <p className="edu-section-sub">
-            Lihat bagaimana berbagai divisi internal perusahaan menerapkan storytelling interaktif untuk meningkatkan kepatuhan dan kompetensi staf:
-          </p>
-        </div>
-
-        <div className="edu-subject-container">
-          <nav className="edu-subject-nav" aria-label="Pilihan Kategori Pelatihan">
-            {(
-              [
-                { key: 'hse', label: '🛡️ K3 & Keselamatan Kerja' },
-                { key: 'compliance', label: '📋 Kepatuhan & Anti-Gratifikasi' },
-                { key: 'operations', label: '⚙️ SOP Operasional & Layanan' },
-                { key: 'onboarding', label: '🚀 Orientasi Karyawan Baru' },
-              ] as const
-            ).map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={`edu-subject-tab-btn ${activeCategory === item.key ? 'active' : ''}`}
-                onClick={() => setActiveCategory(item.key)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="edu-subject-body">
-            <div className="edu-subject-meta">
-              <span className="edu-tag-kicker">{training.categoryTitle}</span>
-              <h3>{training.moduleName}</h3>
-              <p>{training.overview}</p>
-              <ul className="edu-subject-bullets">
-                {training.highlights.map((h, i) => (
-                  <li key={i}>
-                    <CheckIcon /> {h}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="edu-subject-preview-box">
-              <div className="edu-subject-preview-tag">Simulasi Dilema Kerja Nyata</div>
-              <h4>{training.scenarioHeading}</h4>
-              <p>{training.scenarioText}</p>
-              <div className="edu-subject-preview-action">
-                <span>{training.decisionAction}</span>
-                <ArrowRightIcon />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Alur Kerja 5 Tahap Pengajar / L&D ── */}
+{/* ── Alur Kerja 5 Tahap Pengajar / L&D ── */}
       <section className="edu-section" id="alur-kerja">
         <div className="edu-section-head">
           <span className="edu-section-kicker">Alur Kerja Terpandu</span>
-          <h2 className="edu-section-title">Lima langkah gampang</h2>
+          <h2 className="edu-section-title">Dari dokumen ke pembelajaran interaktif</h2>
           <p className="edu-section-sub">
             Dipandu dari file mentah sampai file siap upload ke LMS:
           </p>
@@ -889,7 +725,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
       {/* ── FAQ LMS Internal Perusahaan ── */}
       <section className="edu-section" id="faq">
         <div className="edu-section-head">
-          <span className="edu-section-kicker">Pusat Informasi Teknis</span>
+          <span className="edu-section-kicker">BUTUH BANTUAN?</span>
           <h2 className="edu-section-title">Pertanyaan yang sering ditanya</h2>
           <p className="edu-section-sub">
             Hal-hal teknis soal masukin file H5P ke LMS:
@@ -901,13 +737,13 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <div className={`edu-faq-item ${openFaq === idx ? 'open' : ''}`} key={idx}>
               <button
                 type="button"
-                className="edu-faq-question"
+                className="edu-faq-question" aria-expanded={openFaq === idx} aria-controls={`landing-faq-${idx}`}
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
               >
                 <span>{item.q}</span>
                 <ChevronDownIcon />
               </button>
-              {openFaq === idx && <div className="edu-faq-answer">{item.a}</div>}
+              {openFaq === idx && <div className="edu-faq-answer" id={`landing-faq-${idx}`}>{item.a}</div>}
             </div>
           ))}
         </div>
@@ -946,3 +782,6 @@ export function LandingPage({ onEnter }: LandingPageProps) {
     </div>
   );
 }
+
+
+

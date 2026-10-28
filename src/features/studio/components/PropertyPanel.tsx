@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Kolom kanan studio ala panel Canva: tab Konten/Jawaban/Penilaian/
  * Umpan balik untuk kuis, properti slide bila tidak ada yang dipilih,
  * lipatan pengaturan cerita, dan status validasi.
@@ -339,7 +339,6 @@ export function PropertyPanel({
             <input value={element.description} onChange={(e) => patch({ description: e.target.value })} />
           </label>
         )}
-        {quiz && <QuizQuestionFields element={quiz} onPatch={patch} />}
         {element.kind !== 'goToSlide' && (
           <>
             <label className="check-row compact">
@@ -450,3 +449,4 @@ export function PropertyPanel({
     </aside>
   );
 }
+

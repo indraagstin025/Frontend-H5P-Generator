@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { COURSE_PRESENTATION_MINORS, DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 
@@ -64,7 +64,7 @@ export function Topbar({
               )}
               <span className="hs-subtitle-dot">·</span>
               <span className="hs-saved-label">
-                {savedLabel === 'Belum disimpan' ? 'Belum disimpan' : 'Tersimpan otomatis'}
+                {savedLabel}
               </span>
             </div>
           </div>
@@ -131,3 +131,4 @@ export function Topbar({
     </header>
   );
 }
+
