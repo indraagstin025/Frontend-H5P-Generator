@@ -1205,6 +1205,161 @@
   border-style: dashed;
 }
 
+/* Pratinjau Visual Elemen Kanvas */
+.canvas-element.kind-image,
+.canvas-element.kind-video,
+.canvas-element.kind-shape {
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.canvas-element.kind-advancedText {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.75);
+  overflow: hidden;
+}
+
+.canvas-element.kind-goToSlide {
+  background: var(--hs-green-bg);
+  border-color: var(--hs-green-border);
+}
+
+.canvas-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  display: block;
+}
+
+.canvas-placeholder-preview {
+  width: 100%;
+  height: 100%;
+  background: rgba(240, 243, 240, 0.85);
+  border: 1px dashed var(--hs-green-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--hs-ink-muted);
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.canvas-video-preview,
+.canvas-video-mockup {
+  width: 100%;
+  height: 100%;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.canvas-video-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.canvas-play-icon {
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.canvas-video-name {
+  font-size: 10px;
+  color: #cbd5e1;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-audio-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.canvas-audio-icon {
+  font-size: 14px;
+  flex: none;
+}
+
+.canvas-shape-preview {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.canvas-shape-preview.shape-horizontal-line {
+  height: 4px !important;
+  margin: auto 0;
+}
+
+.canvas-shape-preview.shape-vertical-line {
+  width: 4px !important;
+  margin: 0 auto;
+}
+
+.canvas-text-preview {
+  width: 100%;
+  height: 100%;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--hs-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  text-align: left;
+}
+
+.canvas-text-placeholder {
+  color: var(--hs-ink-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.canvas-link-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--hs-green-dark);
+}
+
+.canvas-goto-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--hs-green-dark);
+}
+
+.canvas-button-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
 .canvas-element-label {
   font-size: 11px;
   font-weight: 600;
@@ -1610,4 +1765,82 @@
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+}
+
+/* ===================== CANVAS NAVIGATION BAR ===================== */
+.canvas-navigation-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(680px, 100%);
+  padding: 6px 14px;
+  margin-bottom: 8px;
+  background: #ffffff;
+  border: 1px solid var(--hs-line);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.canvas-nav-left,
+.canvas-nav-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.canvas-nav-right {
+  justify-content: flex-end;
+}
+
+.canvas-nav-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.canvas-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--hs-line);
+  background: #f8fafc;
+  color: var(--hs-ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.canvas-nav-btn:hover:not(:disabled) {
+  background: var(--hs-green-bg);
+  border-color: var(--hs-green);
+  color: var(--hs-green-dark);
+}
+
+.canvas-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.canvas-nav-page {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hs-ink);
+  white-space: nowrap;
+}
+
+.canvas-active-surface-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }

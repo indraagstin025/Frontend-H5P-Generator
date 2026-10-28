@@ -30,6 +30,42 @@ function renumber(slides: Slide[]): Slide[] {
   }));
 }
 
+function syncGoToTargets(prevSlides: Slide[], nextSlides: Slide[]): Slide[] {
+  const oldOrderToId = new Map<number, string>();
+  for (const s of prevSlides) {
+    oldOrderToId.set(s.order, s.id);
+  }
+
+  const idToNewOrder = new Map<string, number>();
+  for (const s of nextSlides) {
+    idToNewOrder.set(s.id, s.order);
+  }
+
+  return nextSlides.map((slide) => {
+    let changed = false;
+    const elements = slide.elements.map((el) => {
+      if (el.kind !== 'goToSlide' || el.targetType !== 'specified') {
+        return el;
+      }
+      const targetId = oldOrderToId.get(el.targetSlide);
+      let newTarget = targetId ? idToNewOrder.get(targetId) : undefined;
+
+      // Jika slide tujuan dihapus, arahkan ke slide valid terdekat
+      if (newTarget === undefined) {
+        newTarget = Math.max(1, Math.min(el.targetSlide, nextSlides.length));
+      }
+
+      if (newTarget !== el.targetSlide) {
+        changed = true;
+        return { ...el, targetSlide: newTarget };
+      }
+      return el;
+    });
+
+    return changed ? { ...slide, elements } : slide;
+  });
+}
+
 export function useProject(initial: Project | null, aspectFallback: AspectRatio = '16:9') {
   const [project, setProject] = useState<Project>(() => initial ?? createProject('Modul baru', aspectFallback, null));
   const [activeSlideId, setActiveSlideId] = useState<string | null>(() => initial?.slides[0]?.id ?? null);
@@ -93,7 +129,8 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
         elements: src.elements.map((e) => ({ ...e, id: `${e.id}-copy` }) as SlideElement),
       };
       const next = [...slides.slice(0, idx + 1), copy, ...slides.slice(idx + 1)];
-      setSlides(renumber(next));
+      const renumbered = renumber(next);
+      setSlides(syncGoToTargets(slides, renumbered));
       setActiveSlideId(copy.id);
     },
     [slides, setSlides],
@@ -102,7 +139,9 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   const deleteSlide = useCallback(
     (id: string) => {
       if (slides.length <= 1) return;
-      setSlides(renumber(slides.filter((s) => s.id !== id)));
+      const filtered = slides.filter((s) => s.id !== id);
+      const renumbered = renumber(filtered);
+      setSlides(syncGoToTargets(slides, renumbered));
     },
     [slides, setSlides],
   );
@@ -115,7 +154,8 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
       const next = [...slides];
       const [moved] = next.splice(idx, 1);
       next.splice(target, 0, moved);
-      setSlides(renumber(next));
+      const renumbered = renumber(next);
+      setSlides(syncGoToTargets(slides, renumbered));
     },
     [slides, setSlides],
   );
@@ -128,7 +168,8 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
       const next = [...slides];
       const [moved] = next.splice(idx, 1);
       next.splice(target, 0, moved);
-      setSlides(renumber(next));
+      const renumbered = renumber(next);
+      setSlides(syncGoToTargets(slides, renumbered));
     },
     [slides, setSlides],
   );

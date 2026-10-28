@@ -24,19 +24,23 @@ export function getStudioChecks(project: Project): StudioCheck[] {
         if (el.kind === 'goToSlide' && el.targetType === 'specified' && (el.targetSlide < 1 || el.targetSlide > n)) {
           flowOk = false;
         }
-        if (el.kind === 'multiChoice') {
+        if (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice') {
           if (
             !el.question.trim() ||
             el.options.length < 2 ||
             !el.options.some((o) => o.correct) ||
-            el.options.some((o) => !o.text.trim())
+            el.options.some((o) => !o.text.trim()) ||
+            (el.kind === 'singleChoice' && el.options.filter((o) => o.correct).length !== 1)
           ) {
             quizOk = false;
           }
         }
         if (el.kind === 'trueFalse' && !el.question.trim()) quizOk = false;
-        if (el.kind === 'blanks' && countBlanks(el.text) === 0) quizOk = false;
+        if (el.kind === 'blanks' && (countBlanks(el.text) === 0 || !el.text.trim())) quizOk = false;
+        if (el.kind === 'dragWords' && (countBlanks(el.text) === 0 || !el.text.trim())) quizOk = false;
+        if (el.kind === 'markWords' && (countBlanks(el.text) === 0 || !el.text.trim())) quizOk = false;
         if ((el.kind === 'image' || el.kind === 'audio') && !el.file && !el.objectUrl) mediaOk = false;
+        if (el.kind === 'video' && !el.file && !el.objectUrl && !el.videoUrl.trim()) mediaOk = false;
       }
     }
   } else {
