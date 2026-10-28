@@ -20,6 +20,7 @@ import { isQuizElement } from '../constants/h5pModel';
 import { StorySettings } from './StorySettings';
 import { ValidationPanel } from './ValidationPanel';
 import type { Project } from '../constants/h5pModel';
+import { registerMedia } from '../utils/mediaRegistry';
 
 const KIND_LABEL: Record<ElementKind, string> = {
   advancedText: 'Add Text',
@@ -148,6 +149,7 @@ export function PropertyPanel({
       return;
     }
     const url = URL.createObjectURL(file);
+    registerMedia(element.id, file, url);
     onUpdateElement(element.id, { fileName: file.name, objectUrl: url, file } as Partial<SlideElement>);
     onNotice(`${file.name} sudah kepasang.`);
   };

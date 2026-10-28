@@ -10,8 +10,19 @@ import type { ProjectStore } from '../features/studio/hooks/useProject';
 import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
 import { createProject, createSlide } from '../features/studio/constants/h5pModel';
 import type { Project } from '../features/studio/constants/h5pModel';
+import { hydrateElementMedia } from '../features/studio/utils/mediaRegistry';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
+
+function hydrateProject(p: Project): Project {
+  return {
+    ...p,
+    slides: p.slides.map((s) => ({
+      ...s,
+      elements: s.elements.map(hydrateElementMedia),
+    })),
+  };
+}
 
 interface StudioContextValue {
   store: ReturnType<typeof useProjectStore>;
@@ -45,7 +56,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       if (id && items.length > 0) {
         const found = items.find((p) => p.id === id);
         if (found) {
-          actions.replaceProject(found.snapshot);
+          actions.replaceProject(hydrateProject(found.snapshot));
           setCurrentId(found.id);
           setSavedLabel('Tersimpan otomatis');
           return;
@@ -53,7 +64,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       }
 
       if (items.length > 0 && items[0]) {
-        actions.replaceProject(items[0].snapshot);
+        actions.replaceProject(hydrateProject(items[0].snapshot));
         setCurrentId(items[0].id);
         sessionStorage.setItem(CURRENT_KEY, items[0].id);
         setSavedLabel('Tersimpan otomatis');
@@ -89,7 +100,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const openProject = useCallback(
     (project: Project, from: string, opts?: { step?: number }) => {
-      actions.replaceProject(project);
+      actions.replaceProject(hydrateProject(project));
       setCurrentId(project.id);
       setSavedLabel('Belum disimpan');
       try {

@@ -43,6 +43,7 @@ import type {
   TrueFalseElement,
   VideoElement,
 } from '../../studio/constants/h5pModel';
+import { getMedia } from '../../studio/utils/mediaRegistry';
 
 const IMAGE_MIME: Record<string, string> = {
   png: 'image/png',
@@ -123,15 +124,18 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
       const ext = sanitizeExt(v.fileName || 'video.mp4', 'mp4');
       const name = `videos/el-${v.id.slice(0, 8)}.${ext}`;
       const sources: Array<Record<string, unknown>> = [];
-      if (v.file) {
+      const file = v.file ?? getMedia(v.id)?.file;
+      if (file) {
         sources.push(fileRef(name, VIDEO_MIME[ext] ?? 'video/mp4', v.title || name));
       } else if (v.videoUrl) {
+        const isYt = v.videoUrl.includes('youtube.com') || v.videoUrl.includes('youtu.be');
         sources.push({
           path: v.videoUrl,
-          mime: VIDEO_MIME[ext] ?? 'video/mp4',
+          mime: isYt ? 'video/YouTube' : (VIDEO_MIME[ext] ?? 'video/mp4'),
           copyright: { license: 'U' },
         });
       }
+      if (sources.length === 0) return null;
       return {
         library: actionLibrary(v.kind, cpMinor),
         params: {
@@ -483,9 +487,7 @@ export function toCpElement(el: SlideElement, slideCount: number, cpMinor: numbe
     };
   }
   const action = toAction(el, cpMinor, assets);
-  if (!action) {
-    throw new Error(`Elemen bertipe "${(el as SlideElement).kind}" tidak menghasilkan konfigurasi action yang valid.`);
-  }
+  if (!action) return null;
   return { ...base, action };
 }
 
@@ -502,7 +504,9 @@ export function toContentJson(
   const assets = new Map<string, Uint8Array>();
   const n = project.slides.length;
   const slides = project.slides.map((s, idx) => ({
-    elements: s.elements.map((el) => toCpElement(el, n, cpMinor, assets)),
+    elements: s.elements
+      .map((el) => toCpElement(el, n, cpMinor, assets))
+      .filter((el): el is NonNullable<typeof el> => el !== null),
     keywords: s.keywords
       .filter((k) => k.main.trim().length > 0)
       .map((k) => ({ main: k.main, subs: k.subs.filter((x) => x.trim().length > 0) })),
@@ -619,8 +623,11 @@ function renderBackground(slide: Slide): Promise<Uint8Array> {
   });
 }
 
-async function fileToBytes(file: File): Promise<Uint8Array> {
-  return new Uint8Array(await file.arrayBuffer());
+async function fileToBytes(file: unknown): Promise<Uint8Array> {
+  if (file && typeof (file as Blob).arrayBuffer === 'function') {
+    return new Uint8Array(await (file as Blob).arrayBuffer());
+  }
+  return new Uint8Array(0);
 }
 
 const BG_FETCH_TIMEOUT_MS = 20_000;
@@ -817,10 +824,12 @@ export async function buildH5p(
   files['content/content.json'] = strToU8(JSON.stringify(toContentJson(project, cpMinor, bgRefs)));
   for (const slide of project.slides) {
     for (const el of slide.elements) {
-      if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && el.file) {
+      const rawCandidate = ('file' in el && el.file) ? el.file : getMedia(el.id)?.file;
+      const file = (rawCandidate && typeof (rawCandidate as Blob).arrayBuffer === 'function') ? rawCandidate : null;
+      if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && file) {
         const ext = sanitizeExt(el.fileName, el.kind === 'image' ? 'png' : el.kind === 'audio' ? 'mp3' : 'mp4');
         const dir = el.kind === 'image' ? 'images' : el.kind === 'audio' ? 'audios' : 'videos';
-        files[`content/${dir}/el-${el.id.slice(0, 8)}.${ext}`] = await fileToBytes(el.file);
+        files[`content/${dir}/el-${el.id.slice(0, 8)}.${ext}`] = await fileToBytes(file);
       }
     }
   }
