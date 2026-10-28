@@ -60,6 +60,7 @@ export function Topbar({
               value={draft}
               aria-label="Judul materi"
               title="Klik untuk ganti judul"
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}
               onKeyDown={(e) => {
