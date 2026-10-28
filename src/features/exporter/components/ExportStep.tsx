@@ -61,6 +61,9 @@ export function ExportStep({
         if (el.kind === 'goToSlide' && el.targetType === 'specified' && (el.targetSlide < 1 || el.targetSlide > n)) {
           list.push(`Slide ${s.order}: tombol “${el.label}” mengarah ke slide ${el.targetSlide} yang tidak ada.`);
         }
+        if (el.kind === 'link' && !el.url.trim()) {
+          list.push(`Slide ${s.order}: link URL belum diisi.`);
+        }
         if (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice') {
           const label = el.kind === 'multiChoice' ? 'pilihan ganda' : el.kind === 'singleChoice' ? 'pilihan tunggal' : 'multimedia choice';
           if (el.options.length < 2) list.push(`Slide ${s.order}: kuis ${label} minimal 2 pilihan jawaban.`);

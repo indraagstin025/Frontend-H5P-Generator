@@ -665,8 +665,11 @@ function toAction(
       };
     case 'goToSlide':
       return null;
+    default: {
+      const exhaustiveCheck: never = el;
+      throw new Error(`Tipe elemen tidak dikenal: ${(exhaustiveCheck as SlideElement).kind}`);
+    }
   }
-  return null;
 }
 
 export function toCpElement(
@@ -696,7 +699,11 @@ export function toCpElement(
       invisible: el.invisible,
     };
   }
-  return { ...base, action: toAction(el, cpMinor, media) };
+  const action = toAction(el, cpMinor, media);
+  if (!action) {
+    throw new Error(`Elemen bertipe "${(el as SlideElement).kind}" tidak menghasilkan konfigurasi action yang valid.`);
+  }
+  return { ...base, action };
 }
 
 export interface SlideBackgroundRef {
