@@ -20,12 +20,26 @@ import {
 } from '../../studio/constants/h5pModel';
 import type {
   AspectRatio,
+  AudioRecorderElement,
   BlanksElement,
+  ContinuousTextElement,
+  DialogCardsElement,
+  DragDropElement,
+  DragWordsElement,
   ElementKind,
+  ExportableTextElement,
+  InteractiveVideoElement,
+  LinkElement,
+  MarkWordsElement,
   MultiChoiceElement,
+  MultimediaChoiceElement,
   Project,
+  ShapeElement,
+  SingleChoiceElement,
   Slide,
   SlideElement,
+  SummaryElement,
+  TableElement,
   TrueFalseElement,
   VideoElement,
 } from '../../studio/constants/h5pModel';
@@ -77,6 +91,7 @@ function mcAnswerText(a: unknown): string {
 }
 
 function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Array>): Record<string, unknown> | null {
+  void assets;
   switch (el.kind) {
     case 'advancedText':
       return { library: actionLibrary(el.kind, cpMinor), params: { text: el.text } };
@@ -175,11 +190,274 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
         },
       };
     }
+    case 'link': {
+      const l = el as LinkElement;
+      let protocol = 'https://';
+      let cleanUrl = l.url || '';
+      if (/^https?:\/\//i.test(cleanUrl)) {
+        protocol = cleanUrl.toLowerCase().startsWith('https://') ? 'https://' : 'http://';
+        cleanUrl = cleanUrl.replace(/^https?:\/\//i, '');
+      } else if (cleanUrl.startsWith('/')) {
+        protocol = '/';
+        cleanUrl = cleanUrl.replace(/^\//, '');
+      }
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          title: l.linkText || l.title || 'Link',
+          linkWidget: {
+            protocol,
+            url: cleanUrl,
+          },
+        },
+      };
+    }
+    case 'shape': {
+      const s = el as ShapeElement;
+      const shapeTypeMap: Record<string, string> = {
+        circle: 'circle',
+        rectangle: 'rectangle',
+        square: 'rectangle',
+        triangle: 'rectangle',
+      };
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          type: shapeTypeMap[s.shapeType] ?? 'rectangle',
+          shape: {
+            fillColor: s.color || '#4CAF50',
+            borderWidth: 0,
+            borderStyle: 'solid',
+            borderColor: '#333333',
+            borderRadius: s.shapeType === 'circle' ? 50 : 0,
+          },
+        },
+      };
+    }
+    case 'singleChoice': {
+      const sc = el as SingleChoiceElement;
+      const sortedOptions = [...sc.options].sort((a, b) => (b.correct ? 1 : 0) - (a.correct ? 1 : 0));
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          choices: [
+            {
+              question: `<p>${sc.question || 'Pertanyaan'}</p>`,
+              answers: sortedOptions.map((o) => `<p>${o.text}</p>`),
+            },
+          ],
+          behaviour: {
+            timeoutCorrect: 2000,
+            timeoutWrong: 3000,
+            soundEffectsEnabled: true,
+            enableRetry: sc.enableRetry,
+            enableSolutionsButton: sc.showSolution,
+            passPercentage: 100,
+          },
+        },
+      };
+    }
+    case 'dragDrop': {
+      const dd = el as DragDropElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          scoreShow: 'Check',
+          tryAgain: 'Retry',
+          question: {
+            settings: {
+              size: { width: 620, height: 310 },
+            },
+            task: {
+              elements: [],
+              dropZones: [],
+            },
+          },
+          overallFeedback: [],
+          behaviour: behaviourOf(dd, {
+            preventResize: false,
+            singlePoint: false,
+            applyPenalties: true,
+            dropZoneHighlighting: 'dragging',
+            autoAlignSpacing: 2,
+          }),
+        },
+      };
+    }
+    case 'summary': {
+      const sm = el as SummaryElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          intro: `<p>${sm.intro || 'Ringkasan materi di slide ini.'}</p>`,
+          summaries: [
+            {
+              summary: [
+                { text: 'Pernyataan rangkuman benar' },
+                { text: 'Pernyataan rangkuman salah (distraktor)' },
+              ],
+            },
+          ],
+          overallFeedback: [],
+          solvedLabel: 'Solved!',
+          scoreLabel: 'Wrong answers:',
+        },
+      };
+    }
+    case 'dragWords': {
+      const dw = el as DragWordsElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          taskDescription: `<p>${dw.title || 'Drag the words into the correct boxes'}</p>`,
+          textField: dw.text || 'Drag *kata* ke tempat yang *tepat*.',
+          overallFeedback: [],
+          behaviour: behaviourOf(dw, {
+            instantFeedback: false,
+          }),
+        },
+      };
+    }
+    case 'markWords': {
+      const mw = el as MarkWordsElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          taskDescription: `<p>${mw.title || 'Click on all the correct words.'}</p>`,
+          textField: `<p>${mw.text || 'Tandai *kata kunci* dalam kalimat ini.'}</p>`,
+          overallFeedback: [],
+          behaviour: behaviourOf(mw),
+        },
+      };
+    }
+    case 'dialogCards': {
+      const dc = el as DialogCardsElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          title: `<p>${dc.title || 'Kartu Dialog'}</p>`,
+          description: `<p>${dc.description || 'Balik kartu untuk melihat jawaban.'}</p>`,
+          mode: 'normal',
+          dialogs: [
+            {
+              text: `<p style="text-align: center;">${dc.description || 'Pertanyaan kartu'}</p>`,
+              answer: '<p style="text-align: center;">Jawaban kartu</p>',
+            },
+          ],
+          behaviour: {
+            enableRetry: true,
+            scaleTextNotCard: false,
+            randomCards: false,
+            maxProficiency: 5,
+          },
+        },
+      };
+    }
+    case 'continuousText': {
+      const ct = el as ContinuousTextElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          text: ct.text.startsWith('<') ? ct.text : `<p>${ct.text || 'Teks narasi…'}</p>`,
+        },
+      };
+    }
+    case 'exportableText': {
+      const et = el as ExportableTextElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          label: `<p>${et.title || 'Catatan Peserta'}</p>`,
+          placeholderText: et.text || 'Tulis catatan Anda di sini…',
+          exportNotSupported: 'Export not supported on your device',
+          exportComments: false,
+        },
+      };
+    }
+    case 'table': {
+      const tb = el as TableElement;
+      const rCount = Math.max(1, Math.min(20, tb.rows || 3));
+      const cCount = Math.max(1, Math.min(20, tb.cols || 3));
+      let rowsHtml = '';
+      for (let r = 0; r < rCount; r++) {
+        rowsHtml += '<tr>';
+        for (let c = 0; c < cCount; c++) {
+          rowsHtml += r === 0 ? `<th>Header ${c + 1}</th>` : `<td>Baris ${r} Kol ${c + 1}</td>`;
+        }
+        rowsHtml += '</tr>';
+      }
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          text: `<figure class="table"><table class="h5p-table">${rowsHtml}</table></figure>`,
+        },
+      };
+    }
+    case 'interactiveVideo': {
+      const iv = el as InteractiveVideoElement;
+      const url = iv.videoUrl || '';
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          interactiveVideo: {
+            video: {
+              files: url ? [{ path: url, mime: 'video/mp4', copyright: { license: 'U' } }] : [],
+              startScreenOptions: {
+                title: iv.title || 'Interactive Video',
+                hideStartTitle: false,
+              },
+            },
+            assets: {
+              interactions: [],
+              bookmarks: [],
+            },
+          },
+        },
+      };
+    }
+    case 'audioRecorder': {
+      const ar = el as AudioRecorderElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          title: ar.description || ar.title || 'Rekam suara Anda',
+          l10n: {
+            recordAnswer: 'Record',
+            pause: 'Pause',
+            continue: 'Continue',
+            download: 'Download',
+            done: 'Done',
+            retry: 'Retry',
+          },
+        },
+      };
+    }
+    case 'multimediaChoice': {
+      const mm = el as MultimediaChoiceElement;
+      return {
+        library: actionLibrary(el.kind, cpMinor),
+        params: {
+          question: `<p>${mm.question || 'Pilih jawaban yang benar'}</p>`,
+          options: mm.options.map((o) => ({
+            media: null,
+            correct: o.correct,
+            tipsAndFeedback: {
+              tip: '',
+              chosenFeedback: o.correct ? mm.feedbackCorrect : mm.feedbackWrong,
+              notChosenFeedback: '',
+            },
+          })),
+          behaviour: behaviourOf(mm),
+        },
+      };
+    }
     case 'goToSlide':
       return null;
+    default: {
+      const exhaustiveCheck: never = el;
+      throw new Error(`Tipe elemen tidak dikenal: ${(exhaustiveCheck as SlideElement).kind}`);
+    }
   }
-  void assets;
-  return null;
 }
 
 export function toCpElement(el: SlideElement, slideCount: number, cpMinor: number, assets: Map<string, Uint8Array>) {
@@ -204,7 +482,11 @@ export function toCpElement(el: SlideElement, slideCount: number, cpMinor: numbe
       invisible: el.invisible,
     };
   }
-  return { ...base, action: toAction(el, cpMinor, assets) };
+  const action = toAction(el, cpMinor, assets);
+  if (!action) {
+    throw new Error(`Elemen bertipe "${(el as SlideElement).kind}" tidak menghasilkan konfigurasi action yang valid.`);
+  }
+  return { ...base, action };
 }
 
 export interface SlideBackgroundRef {

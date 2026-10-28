@@ -52,6 +52,19 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
         if (el.kind === 'goToSlide' && el.targetType === 'specified' && (el.targetSlide < 1 || el.targetSlide > n)) {
           list.push(`Slide ${s.order}: tombol “${el.label}” mengarah ke slide ${el.targetSlide} yang tidak ada.`);
         }
+        if (el.kind === 'singleChoice') {
+          if (el.options.length < 2) list.push(`Slide ${s.order}: single choice set minimal 2 pilihan jawaban.`);
+          if (el.options.some((o) => !o.text.trim())) list.push(`Slide ${s.order}: ada pilihan single choice yang masih kosong.`);
+          if (!el.question.trim()) list.push(`Slide ${s.order}: pertanyaan single choice masih kosong.`);
+        }
+        if (el.kind === 'multimediaChoice') {
+          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis multimedia choice minimal 2 pilihan jawaban.`);
+          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis multimedia choice belum ada jawaban yang benar.`);
+          if (!el.question.trim()) list.push(`Slide ${s.order}: pertanyaan kuis multimedia choice masih kosong.`);
+        }
+        if (el.kind === 'link' && !el.url.trim()) {
+          list.push(`Slide ${s.order}: link URL belum diisi.`);
+        }
         if (el.kind === 'multiChoice') {
           if (el.options.length < 2) list.push(`Slide ${s.order}: kuis pilihan ganda minimal 2 pilihan jawaban.`);
           if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis pilihan ganda belum ada jawaban yang benar.`);
@@ -65,6 +78,9 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
         }
         if ((el.kind === 'image' || el.kind === 'audio') && !el.file && !el.objectUrl) {
           list.push(`Slide ${s.order}: ${el.kind === 'image' ? 'Gambar' : 'Suara'} belum ada file-nya.`);
+        }
+        if (el.kind === 'video' && !el.file && !el.objectUrl && !el.videoUrl.trim()) {
+          list.push(`Slide ${s.order}: Video belum ada file atau URL-nya.`);
         }
       }
     }
