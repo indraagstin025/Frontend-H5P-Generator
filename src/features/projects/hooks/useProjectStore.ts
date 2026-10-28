@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { uid } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
+import { registerSlideBg } from '../../studio/utils/mediaRegistry';
 
 export const PROJECTS_STORAGE_KEY = 'h5p-generator:projects:v1';
 
@@ -42,16 +43,19 @@ function snapshotProject(project: Project): Project {
   return {
     ...project,
     updatedAt: new Date().toISOString(),
-    slides: project.slides.map((s) => ({
-      ...s,
-      backgroundUrl: persistentAssetUrl(s.backgroundUrl),
-      elements: s.elements.map((e) => {
-        if (e.kind === 'image' || e.kind === 'audio' || e.kind === 'video') {
-          return { ...e, file: null, objectUrl: persistentAssetUrl(e.objectUrl) } as typeof e;
-        }
-        return e;
-      }),
-    })),
+    slides: project.slides.map((s) => {
+      if (s.backgroundUrl) registerSlideBg(s.id, s.backgroundUrl);
+      return {
+        ...s,
+        backgroundUrl: persistentAssetUrl(s.backgroundUrl),
+        elements: s.elements.map((e) => {
+          if (e.kind === 'image' || e.kind === 'audio' || e.kind === 'video') {
+            return { ...e, file: null, objectUrl: persistentAssetUrl(e.objectUrl) } as typeof e;
+          }
+          return e;
+        }),
+      };
+    }),
   };
 }
 

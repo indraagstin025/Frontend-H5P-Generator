@@ -21,6 +21,18 @@ export function getMedia(elementId: string): MediaItem | undefined {
   return registry.get(elementId);
 }
 
+const bgRegistry = new Map<string, string>();
+
+/** Daftarkan URL latar belakang slide (blob atau http) */
+export function registerSlideBg(slideId: string, url: string): void {
+  bgRegistry.set(slideId, url);
+}
+
+/** Ambil URL latar belakang slide berdasarkan ID slide */
+export function getSlideBg(slideId: string): string | undefined {
+  return bgRegistry.get(slideId);
+}
+
 /** Pulihkan referensi file dan objectUrl pada elemen jika tersedia di cache memori */
 export function hydrateElementMedia(el: SlideElement): SlideElement {
   const cached = registry.get(el.id);
