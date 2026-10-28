@@ -78,7 +78,9 @@ export async function setPreviewPackage(key: string, files: Record<string, Previ
       reject(new Error('Penyaji pratinjau tidak merespons. Muat ulang halaman lalu coba lagi.'));
     }, SET_TIMEOUT_MS);
     channel.port1.onmessage = (event: MessageEvent<{ type?: string; ok?: boolean; error?: string }>) => {
-      if (event.data?.type !== ACK_TYPE) return;
+      // Terima ack versi lama ({ok}) maupun versi baru ({type, ok}) supaya
+      // halaman tidak menggantung saat SW lama masih mengendalikan tab.
+      if (event.data?.type !== ACK_TYPE && typeof event.data?.ok !== 'boolean') return;
       window.clearTimeout(timer);
       channel.port1.close();
       if (event.data.ok) {
@@ -110,6 +112,6 @@ export async function clearPreviewPackage(key: string): Promise<void> {
   try {
     activeWorker()?.postMessage({ type: 'H5P_PREVIEW_CLEAR', key });
   } catch {
-    // abaikan — pembersihan best-effort
+    // abaikan, pembersihan best-effort
   }
 }
