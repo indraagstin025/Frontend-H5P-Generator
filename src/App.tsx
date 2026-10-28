@@ -3,7 +3,7 @@ import './App.css';
 import { StudioProvider } from './context/StudioContext';
 import { StudioView } from './features/studio/pages/StudioView';
 import { HomePage } from './pages/HomePage';
-import { LandingPage } from './pages/LandingPageSarah';
+import { LandingPage } from './pages/LandingPage';
 
 function LandingRoute() {
   const navigate = useNavigate();
