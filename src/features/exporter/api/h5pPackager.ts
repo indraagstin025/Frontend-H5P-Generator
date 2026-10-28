@@ -1226,6 +1226,24 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       file: null,
     };
   }
+  if (machine === 'H5P.Video') {
+    const vd = createElement('video', slideCount);
+    const sources = (params.sources ?? []) as Array<{ path?: string }>;
+    const path = str(sources[0]?.path);
+    const isRemote = /^(https?:|data:|blob:)/i.test(path) || path.startsWith('//');
+    const videoBytes = !isRemote && path ? resolveContentEntry(entries, path) : undefined;
+    return {
+      ...vd,
+      position,
+      displayAsButton,
+      buttonLabel,
+      title,
+      videoUrl: isRemote ? path : '',
+      fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
+      objectUrl: !isRemote && path && videoBytes ? bytesToUrl(videoBytes, mimeForPath(path)) : null,
+      file: null,
+    };
+  }
   if (machine === 'H5P.MultiChoice') {
     const m = createElement('multiChoice', slideCount);
     const answers = (params.answers ?? []) as Array<{ text?: unknown; correct?: boolean }>;
