@@ -37,6 +37,7 @@ import type {
   VideoElement,
   DragWordsElement,
 } from '../../studio/constants/h5pModel';
+import { getMedia } from '../../studio/utils/mediaRegistry';
 
 const IMAGE_MIME: Record<string, string> = {
   png: 'image/png',
@@ -212,10 +213,11 @@ async function resolveMediaElement(el: MediaElement): Promise<ResolvedMedia | nu
   let bytes: Uint8Array;
   let mime = '';
   let names: string[] = [];
-  if (el.file) {
-    bytes = await fileToBytes(el.file);
-    mime = el.file.type;
-    names = [el.file.name, el.fileName];
+  const candidate = el.file ?? getMedia(el.id)?.file;
+  if (candidate && typeof (candidate as Blob).arrayBuffer === 'function') {
+    bytes = await fileToBytes(candidate);
+    mime = (candidate as File).type || '';
+    names = [(candidate as File).name, el.fileName].filter(Boolean);
   } else {
     if (!el.objectUrl) return null;
     const fetched = await fetchMediaBytes(el.objectUrl, MEDIA_MAX_BYTES[el.kind]);
@@ -247,7 +249,7 @@ async function resolveProjectMedia(project: Project): Promise<{
   const queue: Array<{ el: MediaElement; order: number }> = [];
   for (const slide of project.slides) {
     for (const el of slide.elements) {
-      if (isMediaElement(el) && (el.file || el.objectUrl)) queue.push({ el, order: slide.order });
+      if (isMediaElement(el) && (el.file || el.objectUrl || getMedia(el.id)?.file)) queue.push({ el, order: slide.order });
     }
   }
   let cursor = 0;
@@ -700,9 +702,7 @@ export function toCpElement(
     };
   }
   const action = toAction(el, cpMinor, media);
-  if (!action) {
-    throw new Error(`Elemen bertipe "${(el as SlideElement).kind}" tidak menghasilkan konfigurasi action yang valid.`);
-  }
+  if (!action) return null;
   return { ...base, action };
 }
 
@@ -719,7 +719,9 @@ export function toContentJson(
 ): Record<string, unknown> {
   const n = project.slides.length;
   const slides = project.slides.map((s, idx) => ({
-    elements: s.elements.map((el) => toCpElement(el, n, cpMinor, media)),
+    elements: s.elements
+      .map((el) => toCpElement(el, n, cpMinor, media))
+      .filter((el): el is NonNullable<typeof el> => el !== null),
     keywords: s.keywords
       .filter((k) => k.main.trim().length > 0)
       .map((k) => ({ main: k.main, subs: k.subs.filter((x) => x.trim().length > 0) })),
@@ -833,8 +835,11 @@ function renderBackground(slide: Slide): Promise<Uint8Array> {
   });
 }
 
-async function fileToBytes(file: File): Promise<Uint8Array> {
-  return new Uint8Array(await file.arrayBuffer());
+async function fileToBytes(file: unknown): Promise<Uint8Array> {
+  if (file && typeof (file as Blob).arrayBuffer === 'function') {
+    return new Uint8Array(await (file as Blob).arrayBuffer());
+  }
+  return new Uint8Array(0);
 }
 
 const BG_FETCH_TIMEOUT_MS = 20_000;
