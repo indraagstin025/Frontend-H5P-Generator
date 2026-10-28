@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { uid } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
+import { registerSlideBg } from '../../studio/utils/mediaRegistry';
 
 export const PROJECTS_STORAGE_KEY = 'h5p-generator:projects:v1';
 
@@ -44,16 +45,19 @@ export function useProjectStore() {
     const snapshot: Project = {
       ...project,
       updatedAt: new Date().toISOString(),
-      slides: project.slides.map((s) => ({
-        ...s,
-        backgroundUrl: null,
-        elements: s.elements.map((e) => {
-          if ((e.kind === 'image' || e.kind === 'audio') && e.file) {
-            return { ...e, file: null, objectUrl: null } as typeof e;
-          }
-          return e;
-        }),
-      })),
+      slides: project.slides.map((s) => {
+        if (s.backgroundUrl) registerSlideBg(s.id, s.backgroundUrl);
+        return {
+          ...s,
+          backgroundUrl: s.backgroundUrl && !s.backgroundUrl.startsWith('blob:') ? s.backgroundUrl : null,
+          elements: s.elements.map((e) => {
+            if ((e.kind === 'image' || e.kind === 'audio') && e.file) {
+              return { ...e, file: null, objectUrl: null } as typeof e;
+            }
+            return e;
+          }),
+        };
+      }),
     };
     const meta: StoredProjectMeta = {
       id: snapshot.id,
@@ -106,10 +110,10 @@ export function useProjectStore() {
       snap.updatedAt = now;
       snap.title = `${src.title} (salinan)`;
       snap.settings = { ...snap.settings, projectTitle: snap.title };
-      // URL blob tidak bertahan antar sesi — kosongkan, nama berkas dipertahankan
+      // URL blob tidak bertahan antar sesi — kosongkan jika blob, simpan jika URL server permanen
       snap.slides = snap.slides.map((s) => ({
         ...s,
-        backgroundUrl: null,
+        backgroundUrl: s.backgroundUrl && !s.backgroundUrl.startsWith('blob:') ? s.backgroundUrl : null,
         elements: s.elements.map((e) =>
           e.kind === 'image' || e.kind === 'audio' ? { ...e, objectUrl: null } : e,
         ),

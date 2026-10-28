@@ -10,17 +10,22 @@ import type { ProjectStore } from '../features/studio/hooks/useProject';
 import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
 import { createProject, createSlide } from '../features/studio/constants/h5pModel';
 import type { Project } from '../features/studio/constants/h5pModel';
-import { hydrateElementMedia } from '../features/studio/utils/mediaRegistry';
+import { hydrateElementMedia, getSlideBg, registerSlideBg } from '../features/studio/utils/mediaRegistry';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
 
 function hydrateProject(p: Project): Project {
   return {
     ...p,
-    slides: p.slides.map((s) => ({
-      ...s,
-      elements: s.elements.map(hydrateElementMedia),
-    })),
+    slides: p.slides.map((s) => {
+      const bg = s.backgroundUrl ?? getSlideBg(s.id) ?? null;
+      if (bg) registerSlideBg(s.id, bg);
+      return {
+        ...s,
+        backgroundUrl: bg,
+        elements: s.elements.map(hydrateElementMedia),
+      };
+    }),
   };
 }
 
