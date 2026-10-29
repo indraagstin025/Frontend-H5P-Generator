@@ -1,0 +1,535 @@
+/**
+ * Area Kanvas Slide Studio & Navigation Bar (styles/studio/canvasArea.css)
+ * Berisi container kanvas utama, kanvas slide 16:9/4:3, layer latar gambar,
+ * elemen visual interaktif (teks, gambar, audio, video, tombol, link),
+ * status bar, dan bilah navigasi slide (canvas navigation bar).
+ */
+
+/* ===================== AREA CANVAS TENGAH ===================== */
+.hs-canvas-area {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--hs-bg);
+  padding: 16px;
+  gap: 12px;
+}
+
+.hs-canvas-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+}
+
+.hs-edit-mode-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--hs-green);
+  background: var(--hs-green-soft);
+  border: 1px solid var(--hs-green-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+.hs-canvas-hint {
+  font-size: 11px;
+  color: var(--hs-ink-muted);
+}
+
+.hs-panel-toggle {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--hs-green-border);
+  background: #fff;
+  color: var(--hs-green);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hs-panel-toggle:hover {
+  background: var(--hs-green-soft);
+}
+
+.hs-panel-backdrop {
+  display: none;
+}
+
+.hs-canvas-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hs-ink-muted);
+  font-size: 13px;
+  text-align: center;
+  background: #fff;
+  border-radius: var(--hs-radius);
+  border: 1px solid var(--hs-line);
+  padding: 40px;
+}
+
+/* ===================== CANVAS PANEL ===================== */
+.canvas-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-wrap {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: transparent;
+}
+
+.slide-canvas {
+  position: relative;
+  width: min(680px, 100%);
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
+  background: #ffffff;
+  cursor: default;
+}
+
+.slide-canvas.tone-lime,
+.slide-canvas.tone-forest,
+.slide-canvas.tone-mint,
+.slide-canvas.tone-paper {
+  background: #ffffff;
+}
+
+.canvas-slide-content {
+  position: absolute;
+  inset: 0;
+  padding: 34px 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.canvas-chapter-badge {
+  display: inline-block;
+  background: #d8eedf;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin-bottom: 22px;
+}
+
+.canvas-accent-bar {
+  width: 36px;
+  height: 5px;
+  background: #f59e0b;
+  border-radius: 3px;
+  margin-bottom: 14px;
+}
+
+.canvas-headline {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.canvas-headline-green {
+  color: #15803d;
+}
+
+.canvas-subheadline {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0 0 auto;
+}
+
+.canvas-footer-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.canvas-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.canvas-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(38, 115, 72, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 115, 72, 0.04) 1px, transparent 1px);
+  background-size: 5% 5%;
+  pointer-events: none;
+}
+
+.canvas-element {
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: grab;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6px 10px;
+  gap: 4px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  min-width: 0;
+  z-index: 2;
+}
+
+.canvas-element:hover {
+  border-color: var(--hs-green-border);
+  box-shadow: 0 2px 8px rgba(38, 115, 72, 0.15);
+}
+
+.canvas-element.selected {
+  border-color: var(--hs-green);
+  box-shadow: 0 0 0 3px rgba(38, 115, 72, 0.2);
+}
+
+.canvas-element.st-drag {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 5;
+}
+
+.canvas-element.is-invisible {
+  background: rgba(255, 255, 255, 0.2);
+  border-style: dashed;
+}
+
+/* Pratinjau Visual Elemen Kanvas */
+.canvas-element.kind-image,
+.canvas-element.kind-video,
+.canvas-element.kind-shape {
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.canvas-element.kind-advancedText {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.75);
+  overflow: hidden;
+}
+
+.canvas-element.kind-goToSlide {
+  background: var(--hs-green-bg);
+  border-color: var(--hs-green-border);
+}
+
+.canvas-image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  display: block;
+}
+
+.canvas-placeholder-preview {
+  width: 100%;
+  height: 100%;
+  background: rgba(240, 243, 240, 0.85);
+  border: 1px dashed var(--hs-green-border);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--hs-ink-muted);
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.canvas-video-preview,
+.canvas-video-mockup {
+  width: 100%;
+  height: 100%;
+  background: #1e293b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.canvas-video-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.canvas-play-icon {
+  font-size: 18px;
+  opacity: 0.85;
+}
+
+.canvas-video-name {
+  font-size: 10px;
+  color: #cbd5e1;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvas-audio-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.canvas-audio-icon {
+  font-size: 14px;
+  flex: none;
+}
+
+.canvas-shape-preview {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.canvas-shape-preview.shape-horizontal-line {
+  height: 4px !important;
+  margin: auto 0;
+}
+
+.canvas-shape-preview.shape-vertical-line {
+  width: 4px !important;
+  margin: 0 auto;
+}
+
+.canvas-text-preview {
+  width: 100%;
+  height: 100%;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--hs-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  text-align: left;
+}
+
+.canvas-text-placeholder {
+  color: var(--hs-ink-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+.canvas-link-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--hs-green-dark);
+}
+
+.canvas-goto-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--hs-green-dark);
+}
+
+.canvas-button-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.canvas-element-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hs-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.canvas-element-badge {
+  font-size: 9px;
+  background: var(--hs-green);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 700;
+  flex: none;
+  pointer-events: none;
+}
+
+.canvas-caption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--hs-ink-muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.canvas-page {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--hs-ink-muted);
+  pointer-events: none;
+}
+
+.canvas-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--hs-line);
+  font-size: 11px;
+  color: var(--hs-ink-muted);
+  flex: none;
+  background: #fff;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4caf70;
+  margin-right: 2px;
+}
+
+.status-right {
+  margin-left: auto;
+}
+
+/* ===================== CANVAS NAVIGATION BAR ===================== */
+.canvas-navigation-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(680px, 100%);
+  padding: 6px 14px;
+  margin-bottom: 8px;
+  background: #ffffff;
+  border: 1px solid var(--hs-line);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.canvas-nav-left,
+.canvas-nav-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.canvas-nav-right {
+  justify-content: flex-end;
+}
+
+.canvas-nav-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.canvas-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--hs-line);
+  background: #f8fafc;
+  color: var(--hs-ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.canvas-nav-btn:hover:not(:disabled) {
+  background: var(--hs-green-bg);
+  border-color: var(--hs-green);
+  color: var(--hs-green-dark);
+}
+
+.canvas-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.canvas-nav-page {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hs-ink);
+  white-space: nowrap;
+}
+
+.canvas-active-surface-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
