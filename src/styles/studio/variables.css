@@ -1,0 +1,34 @@
+/**
+ * Token Desain & Variabel Tema Studio H5P (styles/studio/variables.css)
+ * Warna utama: hijau hutan dan off-white, diselaraskan dengan landing page dan dashboard.
+ */
+
+:root {
+  --hs-green: #267348;
+  --hs-green-mid: #388e58;
+  --hs-green-light: #4caf70;
+  --hs-green-soft: #e8f5ec;
+  --hs-green-softer: #f0f7f2;
+  --hs-green-border: #c8e6d2;
+  --hs-bg: #f0f4f0;
+  --hs-bg-card: #ffffff;
+  --hs-ink: #1a2e22;
+  --hs-ink-mid: #3d5445;
+  --hs-ink-muted: #6b8070;
+  --hs-line: #dde8e0;
+  --hs-shadow: 0 2px 12px rgba(30, 60, 40, 0.08);
+  --hs-shadow-lg: 0 4px 24px rgba(30, 60, 40, 0.12);
+  --hs-radius: 12px;
+  --hs-radius-sm: 8px;
+}
+
+/* Shell Utama Studio */
+.hs-studio-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  background: var(--hs-bg);
+  overflow: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
