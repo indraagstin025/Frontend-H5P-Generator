@@ -1,0 +1,336 @@
+/**
+ * Alur Kerja Tahapan Studio & Upload Ingest (styles/studio/stepWorkflow.css)
+ * Berisi styling alur tahapan non-edit (.hs-step-section), Langkah 1 unggah berkas (.hs-ingest),
+ * dropzone upload dock, progress bar konversi materi, kartu status konversi, dan navigasi bawah (.hs-step-nav).
+ */
+
+/* ===================== STEP SECTIONS (non-edit steps) ===================== */
+.hs-step-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* ===================== LANGKAH 1: UNGGAH ===================== */
+.hs-ingest {
+  /* Token diselaraskan dengan landing page: hijau hutan, off-white, garis tipis. */
+  --hi-green-primary: #226c46;
+  --hi-green-hover: #185337;
+  --hi-green-deep: #1e5a3a;
+  --hi-green-lightest: #f4f8f0;
+  --hi-green-light: #eaf1df;
+  --hi-green-border: #d7e1d6;
+  --hi-border: #e4eae2;
+  --hi-ink: #183c2c;
+  --hi-muted: #52665a;
+  --hi-muted-light: #5f7267;
+  --hi-danger: #a63d2c;
+  --hi-danger-soft: #fdf6f3;
+
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  color: var(--hi-ink);
+}
+
+.hs-ingest-head {
+  max-width: 720px;
+  margin-bottom: 20px;
+}
+
+.hs-ingest-kicker {
+  margin: 0;
+  color: var(--hi-green-primary);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hs-ingest-head h2 {
+  margin: 8px 0 6px;
+  color: var(--hi-ink);
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.hs-ingest-lede {
+  margin: 0;
+  color: var(--hi-muted);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.hs-ingest-lede code {
+  padding: 1px 5px;
+  border: 1px solid var(--hi-border);
+  border-radius: 5px;
+  background: #ffffff;
+  color: var(--hi-green-deep);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+/* Dropzone Studio memakai UploadDock bersama, jadi override di-scope ke .hs-ingest. */
+.hs-ingest .upload-dock {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 100px;
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px dashed var(--hi-green-border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(24, 60, 44, 0.03);
+}
+
+.hs-ingest .upload-dock:hover {
+  border-color: #c3d5c4;
+}
+
+.hs-ingest .upload-dock.dragging {
+  border-color: var(--hi-green-primary);
+  background: var(--hi-green-lightest);
+}
+
+.hs-ingest .upload-dock .upload-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  color: var(--hi-green-deep);
+  background: var(--hi-green-light);
+  box-shadow: none;
+}
+
+.hs-ingest .upload-dock .upload-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hs-ingest .upload-dock > div:nth-child(2) {
+  min-width: 0;
+}
+
+.hs-ingest .upload-dock strong {
+  color: var(--hi-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.hs-ingest .upload-dock span {
+  margin-top: 3px;
+  color: var(--hi-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hs-ingest .upload-dock .upload-button {
+  width: auto;
+  min-height: 40px;
+  margin: 0;
+  padding: 0 16px;
+  border: 1px solid var(--hi-green-primary);
+  border-radius: 9px;
+  color: #ffffff;
+  background: var(--hi-green-primary);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.hs-ingest .upload-dock .upload-button:hover {
+  border-color: var(--hi-green-hover);
+  background: var(--hi-green-hover);
+}
+
+.hs-ingest .upload-dock .upload-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Kartu progres konversi */
+.hs-convert {
+  margin-top: 16px;
+  padding: 16px 18px 14px;
+  border: 1px solid var(--hi-border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(24, 60, 44, 0.03);
+}
+
+.hs-convert.is-error {
+  border-color: #e8d3cc;
+  background: var(--hi-danger-soft);
+}
+
+.hs-convert-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hs-convert-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: var(--hi-green-deep);
+  background: var(--hi-green-lightest);
+}
+
+.hs-convert-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hs-convert.is-error .hs-convert-icon {
+  color: var(--hi-danger);
+  background: #f7e6e1;
+}
+
+.hs-convert-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.hs-convert-meta strong {
+  display: block;
+  overflow: hidden;
+  color: var(--hi-ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-convert-meta span {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--hi-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-convert.is-error .hs-convert-meta span {
+  color: var(--hi-danger);
+  white-space: normal;
+}
+
+.hs-convert-percent {
+  flex: none;
+  color: var(--hi-green-deep);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.hs-convert.is-error .hs-convert-percent {
+  color: var(--hi-danger);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hs-convert-track {
+  height: 6px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: #e7efe2;
+  overflow: hidden;
+}
+
+.hs-convert-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hi-green-primary);
+  transition: width 0.18s ease;
+}
+
+.hs-convert-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+  margin-top: 10px;
+}
+
+.hs-convert-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--hi-muted-light);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.hs-convert-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hi-green-primary);
+  animation: hs-ingest-pulse 1.6s ease-in-out infinite;
+}
+
+.hs-convert.is-error .hs-convert-dot {
+  background: var(--hi-danger);
+  animation: none;
+}
+
+.hs-convert-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  margin-left: auto;
+  padding: 0 11px;
+  border: 1px solid #e2c7bf;
+  border-radius: 8px;
+  color: var(--hi-danger);
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hs-convert-retry:hover {
+  background: #fbf1ee;
+}
+
+@keyframes hs-ingest-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ===================== NAVIGASI LANGKAH BAWAH ===================== */
+.hs-step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 20px;
+  background: #ffffff;
+  border-top: 1px solid var(--hs-line);
+  flex: none;
+  box-shadow: 0 -1px 4px rgba(30, 60, 40, 0.04);
+}
+
+.hs-step-nav-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
