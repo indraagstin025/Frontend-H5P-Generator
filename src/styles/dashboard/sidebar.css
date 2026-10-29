@@ -1,0 +1,284 @@
+/**
+ * Sidebar Navigasi Dashboard (styles/dashboard/sidebar.css)
+ * Berisi komponen navigasi samping, branding, user badge, dan tombol aksi.
+ */
+
+.db-sidebar {
+  width: 260px;
+  flex: none;
+  background-color: var(--db-surface);
+  border-right: 1px solid var(--db-border);
+  padding: 24px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.db-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 6px 20px;
+  border-bottom: 1px solid var(--db-border);
+  margin-bottom: 20px;
+}
+
+.db-brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: contain;
+  background-color: transparent;
+  border: 0;
+  padding: 0;
+  flex: none;
+}
+
+.db-brand-text {
+  min-width: 0;
+}
+
+.db-brand-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--db-green-darkest);
+  line-height: 1.25;
+}
+
+.db-brand-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.db-brand-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--db-muted);
+}
+
+.db-nav-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--db-muted-light);
+  padding: 0 12px;
+  margin: 0 0 8px;
+}
+
+.db-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.db-nav-btn {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--db-muted);
+  padding: 10px 12px;
+  border-radius: var(--db-radius-md);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.db-nav-btn-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.db-nav-btn svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: currentColor;
+}
+
+.db-nav-btn:hover {
+  background-color: var(--db-green-lightest);
+  color: var(--db-green-deep);
+  border-color: transparent;
+}
+
+.db-nav-btn.active {
+  background-color: var(--db-green-light);
+  color: var(--db-green-darkest);
+  border-color: transparent;
+}
+
+.db-nav-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3.5px;
+  background-color: var(--db-green-primary);
+  border-radius: 0 4px 4px 0;
+}
+
+.db-nav-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background-color: var(--db-surface);
+  color: var(--db-green-deep);
+  border: 1px solid var(--db-green-border);
+}
+
+.db-nav-btn.active .db-nav-badge {
+  background-color: var(--db-surface);
+  color: var(--db-green-darkest);
+  border-color: var(--db-green-border);
+}
+
+/* Sidebar Action & Widget */
+.db-sidebar-action {
+  margin: 14px 0;
+}
+
+.db-btn-sidebar-create {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: var(--db-green-primary);
+  color: #ffffff;
+  border: 1px solid var(--db-green-primary);
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.db-btn-sidebar-create:hover {
+  background-color: var(--db-green-primary-hover);
+  border-color: var(--db-green-primary-hover);
+}
+
+.db-sidebar-widget {
+  margin-top: auto;
+  margin-bottom: 14px;
+  padding: 14px;
+  background-color: var(--db-green-lightest);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+}
+
+.db-sidebar-widget-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--db-green-deep);
+  margin-bottom: 4px;
+}
+
+.db-sidebar-widget p {
+  font-size: 11px;
+  color: var(--db-muted);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.db-side-foot {
+  padding-top: 14px;
+  border-top: 1px solid var(--db-border);
+}
+
+.db-user-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  background-color: var(--db-canvas);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-md);
+}
+
+.db-user-info {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.db-avatar {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: var(--db-radius-sm);
+  background-color: var(--db-green-light);
+  color: var(--db-green-darkest);
+  border: 1px solid var(--db-border);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.db-user-info strong {
+  display: block;
+  font-size: 11.5px;
+  color: var(--db-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-user-info small {
+  display: block;
+  font-size: 10px;
+  color: var(--db-muted);
+  margin-top: 1px;
+}
+
+.db-btn-logout {
+  background: none;
+  border: none;
+  color: var(--db-muted);
+  padding: 6px;
+  border-radius: var(--db-radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.db-btn-logout:hover {
+  background-color: var(--db-green-light);
+  color: var(--db-green-deep);
+}
