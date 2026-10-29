@@ -22,7 +22,7 @@ type NewMaterialModalProps = {
 };
 
 export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
-  const { openProject } = useStudio();
+  const { openProject, store } = useStudio();
   const { pathname } = useLocation();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
@@ -107,6 +107,13 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
             </p>
             <UploadDock
               onAccepted={(f) => {
+                const existingProj = store.items.find((p) => p.sourceFileName === f.name);
+                if (existingProj) {
+                  const msg = `Berkas "${f.name}" sudah pernah digunakan pada materi "${existingProj.title}". Silakan gunakan nama berkas lain atau lanjutkan materi yang ada.`;
+                  setError(msg);
+                  onNotice(msg);
+                  return;
+                }
                 setFile(f);
                 setError('');
                 setTitle((prev) => prev || baseName(f.name));
