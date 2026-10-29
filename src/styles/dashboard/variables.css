@@ -1,0 +1,48 @@
+/**
+ * Token Desain & Variabel Tema Dashboard (styles/dashboard/variables.css)
+ * Tema: hijau hutan dan off-white, diselaraskan dengan landing page.
+ * Semua kelas diawali dengan .db- agar terisolasi dengan rapi.
+ */
+
+.db-scope {
+  /* Token diselaraskan dengan landing page: hijau hutan, off-white, garis tipis. */
+  --db-canvas: #fbfcf9;
+  --db-surface: #ffffff;
+
+  --db-green-lightest: #f4f8f0;
+  --db-green-light: #eaf1df;
+  --db-green-light-hover: #e2ebd6;
+  --db-green-light-active: #dbe7ce;
+
+  --db-green-border: #d7e1d6;
+  --db-green-border-subtle: #e4eae2;
+  --db-border: #e4eae2;
+
+  --db-green-primary: #226c46;
+  --db-green-primary-hover: #185337;
+  --db-green-deep: #1e5a3a;
+  --db-green-darkest: #183c2c;
+
+  --db-ink: #183c2c;
+  --db-muted: #52665a;
+  --db-muted-light: #5f7267;
+
+  --db-radius-sm: 8px;
+  --db-radius-md: 10px;
+  --db-radius-lg: 14px;
+  --db-radius-xl: 18px;
+
+  --db-shadow-xs: 0 1px 2px rgba(24, 60, 44, 0.03);
+  --db-shadow-sm: 0 8px 24px -12px rgba(24, 60, 44, 0.14);
+  --db-shadow-md: 0 24px 60px -24px rgba(24, 60, 44, 0.24);
+}
+
+/* Shell & Layout */
+.db-shell {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--db-canvas);
+  color: var(--db-ink);
+  font-family: inherit;
+}
