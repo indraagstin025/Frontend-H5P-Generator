@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { UploadDock } from '../../ingest/components/UploadDock';
 import { useIngest } from '../../ingest/hooks/useIngest';
 import type { ConvertInfo } from '../../ingest/hooks/useIngest';
-import { convertViaServer } from '../../ingest/api/serverIngest';
+import { convertViaServer, isUploadValidationError } from '../../ingest/api/serverIngest';
 import { createProject } from '../constants/h5pModel';
 import type { Project, Slide } from '../constants/h5pModel';
 
@@ -68,9 +68,17 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
               : `${project.slides.length} slide dari ${file.name} sudah jadi, tinggal rapikan.${jobMessage ? ` ${jobMessage}` : ''}`,
           );
         })
-        .catch(() => {
-          // Backend mati / render gagal → fallback lokal (tanpa latar presisi)
+        .catch((err: unknown) => {
           setServerActive(false);
+          if (isUploadValidationError(err)) {
+            // Berkas ditolak server karena password-protected, duplikat nama/isi, atau format tidak valid
+            const msg = err instanceof Error ? err.message : 'Berkas ditolak oleh validasi server.';
+            setServerProgress(0);
+            setServerStatus(msg);
+            onNotice(msg);
+            return;
+          }
+          // Backend mati / server offline / error jaringan -> fallback lokal
           onNotice('Server tidak terjangkau, pakai ubah lokal dulu (tanpa gambar latar asli).');
           void ingest.actions.convert(file);
         });
@@ -113,6 +121,9 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
         <p className="hs-ingest-lede">
           Unggah presentasi (<code>.pptx</code>) atau dokumen (<code>.pdf</code>), maksimal 50 MB dan 60 slide.
           Tautan antar-slide otomatis jadi tombol, catatan pembicara jadi cerita, dan judul diambil dari nama file.
+        </p>
+        <p className="field-hint" style={{ marginTop: '6px', color: '#52796f' }}>
+          💡 <strong>Tips:</strong> Pada dokumen PDF, slide umumnya tersusun sebagai gambar flat. Jika Anda ingin teks slide dapat diedit sepenuhnya per baris atau kata, disarankan mengunggah berkas asli <code>.pptx</code>.
         </p>
       </header>
 
