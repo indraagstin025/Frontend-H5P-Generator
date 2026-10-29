@@ -3,9 +3,13 @@
  */
 import { apiUpload } from '../../../services/apiUpload';
 import { ALLOWED_EXTENSIONS, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '../constants/uploadLimits';
+import { validateUploadFileStrict, type FileValidationResult } from '../utils/fileValidation';
 
-export type SourceValidation = { valid: true } | { valid: false; error: string };
+export type SourceValidation = { valid: true; hash?: string; ext?: 'pdf' | 'pptx' } | { valid: false; error: string };
 
+/**
+ * Validasi awal cepat (sinkron): ekstensi dan batas ukuran file.
+ */
 export function validateSourceFile(file: File): SourceValidation {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   const allowed = (ALLOWED_EXTENSIONS as readonly string[]).includes(ext);
@@ -15,6 +19,14 @@ export function validateSourceFile(file: File): SourceValidation {
     return { valid: false, error: `File-nya kegedean, maksimal ${MAX_UPLOAD_LABEL}.` };
   }
   return { valid: true };
+}
+
+/**
+ * Validasi ketat menyeluruh (asinkron):
+ * Magic bytes, deteksi enkripsi/password, dan komputasi hash SHA-256.
+ */
+export async function validateSourceFileStrict(file: File): Promise<FileValidationResult> {
+  return validateUploadFileStrict(file);
 }
 
 type UploadResponse = { status: string; projectId?: string };
