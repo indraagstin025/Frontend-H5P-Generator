@@ -4,9 +4,18 @@
  */
 import { API_BASE_URL } from '../../../config/env';
 import { apiFetch } from '../../../services/api';
-import { apiUpload } from '../../../services/apiUpload';
+import { apiUpload, ApiUploadError } from '../../../services/apiUpload';
 import { createProject } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project, Slide, SlideElement } from '../../studio/constants/h5pModel';
+
+export { ApiUploadError };
+
+export function isUploadValidationError(err: unknown): boolean {
+  if (err instanceof ApiUploadError) {
+    return err.status === 400 || err.status === 409 || err.status === 413 || err.status === 422;
+  }
+  return false;
+}
 
 interface ServerIngestResponse {
   data: {
