@@ -1,0 +1,170 @@
+/**
+ * FAQ, Grand CTA, & Footer Akademik Landing Page (styles/landing/footer.css)
+ * Berisi accordion FAQ (.edu-faq-item), Grand CTA banner hijau gradasi (.edu-cta-band),
+ * dan footer akademik dengan tautan informasi dan hak cipta (.edu-footer).
+ */
+
+/* ── FAQ Section ── */
+.edu-faq-list {
+  max-width: 840px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edu-faq-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.edu-faq-item:hover {
+  border-color: rgba(140, 214, 41, 0.6);
+}
+
+.edu-faq-question {
+  width: 100%;
+  padding: 18px 22px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.edu-faq-question svg {
+  color: var(--muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.edu-faq-item.open .edu-faq-question svg {
+  transform: rotate(180deg);
+  color: var(--green-mid);
+}
+
+.edu-faq-answer {
+  padding: 0 22px 18px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* ── Grand CTA Section (Hijau Muda Gradasi Hijau Tua) ── */
+.edu-cta-band {
+  width: min(1240px, calc(100% - 48px));
+  margin: 20px auto 48px;
+  padding: 56px 48px;
+  background: var(--grad-band);
+  color: #ffffff;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 60px rgba(6, 35, 20, 0.35), 0 0 32px rgba(140, 214, 41, 0.2);
+  border: 1.5px solid rgba(140, 214, 41, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.edu-cta-band::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  right: -10%;
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(140, 214, 41, 0.25), transparent 70%);
+  pointer-events: none;
+}
+
+.edu-cta-content {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+}
+
+.edu-cta-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-lime);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.edu-cta-title {
+  margin: 0 0 12px;
+  font-size: clamp(24px, 2.6vw, 36px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.edu-cta-desc {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #d1ead7;
+}
+
+.edu-cta-actions {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.edu-cta-band .edu-btn-primary {
+  background: #ffffff;
+  color: var(--green-deep);
+  border-color: #ffffff;
+  padding: 14px 28px;
+  font-size: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25), 0 0 20px rgba(140, 214, 41, 0.3);
+}
+
+.edu-cta-band .edu-btn-primary:hover {
+  background: #f7fee7;
+  color: var(--green-darkest);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3), 0 0 28px rgba(140, 214, 41, 0.5);
+}
+
+/* ── Academic Footer ── */
+.edu-footer {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.edu-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.edu-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
