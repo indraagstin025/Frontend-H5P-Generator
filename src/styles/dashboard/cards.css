@@ -1,0 +1,182 @@
+/**
+ * Kartu, Statistik, & Aksi Cepat Dashboard (styles/dashboard/cards.css)
+ * Berisi styling kartu umum (.db-card), grid statistik (.db-stats), dan grid aksi cepat (.db-quick).
+ */
+
+.db-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.db-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--db-green-darkest);
+  margin: 0;
+}
+
+.db-section-subtitle {
+  font-size: 12px;
+  color: var(--db-muted);
+  margin: 3px 0 0;
+  line-height: 1.5;
+}
+
+.db-card {
+  background-color: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+  transition: border-color 0.15s ease;
+}
+
+/* ==========================================================================
+   Stats Grid
+   ========================================================================== */
+.db-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.db-stat {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  border-color: var(--db-border);
+}
+
+.db-stat:hover {
+  border-color: var(--db-green-border);
+}
+
+.db-stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.db-stat-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--db-muted-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.db-icon-square {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--db-radius-md);
+  background-color: var(--db-green-lightest);
+  color: var(--db-green-deep);
+  border: 1px solid var(--db-border);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.db-icon-square svg {
+  width: 18px;
+  height: 18px;
+}
+
+.db-stat-number {
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--db-green-darkest);
+  margin-top: 2px;
+}
+
+.db-stat-context {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--db-muted);
+  background-color: var(--db-green-lightest);
+  border: 1px solid var(--db-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  width: fit-content;
+}
+
+/* ==========================================================================
+   Quick Actions Grid
+   ========================================================================== */
+.db-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.db-action-card {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid var(--db-border);
+  position: relative;
+}
+
+.db-action-card:hover {
+  border-color: var(--db-green-border);
+}
+
+.db-action-card.featured {
+  background-color: var(--db-green-lightest);
+  border-color: var(--db-border);
+}
+
+.db-action-card.featured .db-icon-square {
+  background-color: var(--db-surface);
+  border-color: var(--db-border);
+  color: var(--db-green-darkest);
+}
+
+.db-action-card h3 {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--db-green-darkest);
+  margin: 14px 0 0;
+}
+
+.db-action-card p {
+  font-size: 12px;
+  color: var(--db-muted);
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
+
+.db-action-card.featured p {
+  color: var(--db-muted);
+}
+
+.db-text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--db-green-primary);
+  font-weight: 700;
+  font-size: 11.5px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  margin-top: auto;
+  padding-top: 16px;
+  text-decoration: none;
+}
+
+.db-text-action:hover {
+  color: var(--db-green-primary-hover);
+  text-decoration: underline;
+}
