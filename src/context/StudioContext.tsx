@@ -11,6 +11,7 @@ import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hook
 import type { Project } from '../features/studio/constants/h5pModel';
 import { hydrateElementMedia, getSlideBg, registerSlideBg } from '../features/studio/utils/mediaRegistry';
 import { apiFetch } from '../services/api';
+import { fetchServerProject } from '../features/ingest/api/serverIngest';
 
 const CURRENT_KEY = 'h5p-generator:current-project';
 
@@ -92,9 +93,25 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       } catch {
         // abaikan
       }
+
+      // Jika proyek berasal dari sinkronisasi server dan slide-nya belum dimuat di lokal
+      if (
+        project.slides.length === 0 &&
+        project.id &&
+        !project.id.startsWith('temp-') &&
+        !project.id.startsWith('local-')
+      ) {
+        fetchServerProject(project.id)
+          .then((full) => {
+            actions.replaceProject(hydrateProject(full));
+            store.save(full);
+          })
+          .catch(() => undefined);
+      }
+
       navigate('/studio', { state: { from, step: opts?.step } });
     },
-    [actions, navigate],
+    [actions, navigate, store],
   );
 
   const saveDraft = useCallback(async () => {
