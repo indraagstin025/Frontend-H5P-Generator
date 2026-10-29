@@ -152,3 +152,31 @@ export async function convertViaServer(
     jobMessage: backgroundReady ? '' : 'Latar presisi belum ada (server render belum aktif), gradien dipakai dulu.',
   };
 }
+
+/**
+ * Mengambil proyek dan seluruh slide dari server backend.
+ */
+export async function fetchServerProject(projectId: string): Promise<Project> {
+  const pRes = await apiFetch<{
+    data: {
+      id: string;
+      title: string;
+      aspect: AspectRatio;
+      sourceFileName: string | null;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }>(`/projects/${projectId}`);
+  const srv = pRes.data;
+
+  const slidesRes = await apiFetch<{ data: ServerSlideRow[] }>(`/projects/${projectId}/slides`);
+  const rows = slidesRes.data ?? [];
+  const slides = rows.map((r) => mapSlide(r, srv.aspect || '16:9'));
+
+  const project = createProject(srv.title, srv.aspect || '16:9', srv.sourceFileName);
+  project.id = srv.id;
+  project.createdAt = srv.createdAt;
+  project.updatedAt = srv.updatedAt;
+  project.slides = slides;
+  return project;
+}
