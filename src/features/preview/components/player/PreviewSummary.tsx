@@ -1,19 +1,10 @@
 import { maxScoreOf } from '../../../studio/constants/h5pModel';
-import type { SlideElement } from '../../../studio/constants/h5pModel';
+import type { PreviewRun } from '../../hooks/usePreviewRun';
 import { quizLabel } from './types';
 
 interface PreviewSummaryProps {
-  state: {
-    obtained: number;
-    maxScore: number;
-    quizzes: Array<{ slide: { order: number }; el: SlideElement }>;
-    answers: Record<string, unknown>;
-  };
-  actions: {
-    scoreElement: (el: SlideElement, answer: unknown) => number;
-    reset: () => void;
-    setFinished: (finished: boolean) => void;
-  };
+  state: PreviewRun['state'];
+  actions: PreviewRun['actions'];
   settings: {
     retryButton?: boolean;
   };
