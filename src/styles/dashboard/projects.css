@@ -1,0 +1,641 @@
+/**
+ * Tampilan Materi Saya (/materi) & Modal Materi Baru (styles/dashboard/projects.css)
+ * Berisi komponen ProjectsHome (grid materi, kartu proyek, toolbar pencarian, filter),
+ * dialog modal pembuatan materi baru, drag-and-drop dock unggah berkas, dan notifikasi toast.
+ */
+
+.db-content .projects-home {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.projects-home .new-project-card {
+  margin: 0;
+  padding: 24px 26px;
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+  background-color: var(--db-surface);
+  box-shadow: none;
+}
+
+.new-project-head h2 {
+  margin: 0;
+  color: var(--db-green-darkest);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.new-project-head p {
+  margin: 4px 0 0;
+  color: var(--db-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.projects-home .new-project-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 0 18px;
+}
+
+.projects-home .field-label {
+  gap: 7px;
+  margin-top: 18px;
+  color: var(--db-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.projects-home .field-label input,
+.projects-home .field-label select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--db-border);
+  border-radius: 9px;
+  padding: 0 13px;
+  color: var(--db-ink);
+  background-color: var(--db-surface);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.projects-home .field-label input::placeholder {
+  color: var(--db-muted-light);
+}
+
+.projects-home .field-label input:focus,
+.projects-home .field-label select:focus {
+  border-color: var(--db-green-primary);
+  box-shadow: 0 0 0 3px rgba(34, 108, 70, 0.12);
+}
+
+.projects-home .field-label select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2352665a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 12px 8px;
+}
+
+.projects-home .new-project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.projects-home .primary-button,
+.projects-home .secondary-button {
+  min-height: 44px;
+  border-radius: 9px;
+  padding: 0 18px;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: none;
+  transform: none;
+}
+
+.projects-home .primary-button {
+  border: 1px solid var(--db-green-primary);
+  background: var(--db-green-primary);
+  color: #ffffff;
+}
+
+.projects-home .primary-button:hover {
+  border-color: var(--db-green-primary-hover);
+  background: var(--db-green-primary-hover);
+  color: #ffffff;
+  box-shadow: none;
+  transform: none;
+}
+
+.projects-home .secondary-button {
+  border: 1px solid var(--db-green-border);
+  background: var(--db-surface);
+  color: var(--db-ink);
+}
+
+.projects-home .secondary-button:hover {
+  border-color: var(--db-green-border);
+  background: var(--db-green-lightest);
+  color: var(--db-ink);
+  box-shadow: none;
+  transform: none;
+}
+
+.projects-home .secondary-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.projects-home .materials-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 190px;
+  gap: 10px;
+  margin: 0;
+}
+
+.projects-home .materials-search,
+.projects-home .materials-toolbar select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--db-border);
+  border-radius: 9px;
+  padding: 0 13px;
+  color: var(--db-ink);
+  background-color: var(--db-surface);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.projects-home .materials-search::placeholder {
+  color: var(--db-muted-light);
+}
+
+.projects-home .materials-search:focus,
+.projects-home .materials-toolbar select:focus {
+  border-color: var(--db-green-primary);
+  box-shadow: 0 0 0 3px rgba(34, 108, 70, 0.12);
+}
+
+.projects-home .materials-toolbar select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2352665a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 12px 8px;
+}
+
+.projects-home .db-section-head {
+  margin-bottom: 0;
+}
+
+.projects-home .db-section-head .db-section-title {
+  font-size: 17px;
+}
+
+.projects-home .project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 0;
+}
+
+.projects-home .project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-lg);
+  background-color: var(--db-surface);
+  box-shadow: none;
+  overflow: visible;
+}
+
+.projects-home .project-card::before {
+  content: none;
+}
+
+.projects-home .project-card:hover {
+  border-color: var(--db-green-border);
+  box-shadow: none;
+  transform: none;
+}
+
+.projects-home .project-card strong {
+  display: block;
+  color: var(--db-ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.projects-home .project-card small {
+  display: block;
+  margin-top: 6px;
+  color: var(--db-muted-light);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.projects-home .project-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.projects-home .project-card-actions .secondary-button {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 11.5px;
+}
+
+.projects-home .small-icon-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--db-border);
+  border-radius: 8px;
+  color: var(--db-muted);
+  background-color: var(--db-surface);
+}
+
+.projects-home .small-icon-button:hover {
+  border-color: var(--db-green-border);
+  color: var(--db-green-deep);
+  background-color: var(--db-green-lightest);
+}
+
+.projects-home .small-icon-button.danger {
+  color: #a33327;
+}
+
+.projects-home .small-icon-button.danger:hover {
+  border-color: #eccfc9;
+  color: #8c2a1f;
+  background-color: #fdf1ef;
+}
+
+.projects-home .rename-row {
+  align-items: center;
+  gap: 6px;
+}
+
+.projects-home .rename-row input {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--db-border);
+  border-radius: 8px;
+  padding: 0 10px;
+  color: var(--db-ink);
+  background-color: var(--db-surface);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+
+.projects-home .rename-row input:focus {
+  border-color: var(--db-green-primary);
+  box-shadow: 0 0 0 3px rgba(34, 108, 70, 0.12);
+}
+
+.projects-home .db-empty {
+  padding: 44px 24px;
+}
+
+.projects-home .db-empty > svg {
+  color: var(--db-green-primary);
+}
+
+/* ==========================================================================
+   Modal Materi Baru
+   ========================================================================== */
+.db-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background-color: rgba(20, 45, 32, 0.55);
+}
+
+.db-modal-dialog {
+  width: min(100%, 560px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--db-border);
+  border-radius: var(--db-radius-xl);
+  background-color: var(--db-surface);
+  box-shadow: var(--db-shadow-md);
+}
+
+.db-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 26px 18px;
+  border-bottom: 1px solid var(--db-border);
+}
+
+.db-modal-kicker {
+  margin: 0;
+  color: #467450;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.db-modal-head h2 {
+  margin: 6px 0 0;
+  color: var(--db-green-darkest);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.db-modal-desc {
+  margin: 6px 0 0;
+  color: var(--db-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.db-modal-close {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--db-border);
+  border-radius: 9px;
+  color: var(--db-muted);
+  background-color: var(--db-surface);
+  cursor: pointer;
+}
+
+.db-modal-close:hover {
+  color: var(--db-green-deep);
+  background-color: var(--db-green-lightest);
+}
+
+.db-modal-body {
+  padding: 20px 26px 24px;
+  overflow-y: auto;
+}
+
+.db-modal-body .field-label {
+  gap: 7px;
+  margin-top: 0;
+  color: var(--db-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.db-modal-body .field-label + .field-label {
+  margin-top: 16px;
+}
+
+.db-modal-body .field-label input,
+.db-modal-body .field-label select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--db-border);
+  border-radius: 9px;
+  padding: 0 13px;
+  color: var(--db-ink);
+  background-color: var(--db-surface);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.db-modal-body .field-label input::placeholder {
+  color: var(--db-muted-light);
+}
+
+.db-modal-body .field-label input:focus,
+.db-modal-body .field-label select:focus {
+  border-color: var(--db-green-primary);
+  box-shadow: 0 0 0 3px rgba(34, 108, 70, 0.12);
+}
+
+.db-modal-body .field-label select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2352665a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 12px 8px;
+}
+
+.db-modal-body .field-label select:disabled {
+  color: var(--db-muted-light);
+  background-color: var(--db-green-lightest);
+  cursor: not-allowed;
+}
+
+.field-hint {
+  display: block;
+  color: var(--db-muted-light);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.db-modal-upload {
+  margin-top: 20px;
+}
+
+.db-modal-upload-label {
+  margin: 0 0 8px;
+  color: var(--db-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.db-modal-upload-label span {
+  color: var(--db-muted-light);
+  font-weight: 500;
+}
+
+.db-modal .upload-dock {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 96px;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px dashed var(--db-green-border);
+  border-radius: var(--db-radius-lg);
+  background-color: var(--db-green-lightest);
+}
+
+.db-modal .upload-dock.dragging {
+  border-color: var(--db-green-primary);
+  background-color: var(--db-green-light);
+}
+
+.db-modal .upload-dock .upload-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: var(--db-green-deep);
+  background: var(--db-green-light);
+  box-shadow: none;
+}
+
+.db-modal .upload-dock .upload-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.db-modal .upload-dock > div:nth-child(2) {
+  min-width: 0;
+}
+
+.db-modal .upload-dock strong {
+  color: var(--db-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.db-modal .upload-dock span {
+  margin-top: 3px;
+  color: var(--db-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.db-modal .upload-dock .upload-button {
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--db-green-border);
+  border-radius: 8px;
+  color: var(--db-green-deep);
+  background-color: var(--db-surface);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.db-modal .upload-dock .upload-button:hover {
+  border-color: var(--db-green-border);
+  background-color: var(--db-green-light);
+}
+
+.db-file-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--db-border);
+  border-radius: 9px;
+  background-color: var(--db-green-lightest);
+  color: var(--db-ink);
+}
+
+.db-file-row > svg {
+  flex: none;
+  color: var(--db-green-primary);
+}
+
+.db-file-row span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.db-file-row button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  color: var(--db-green-primary);
+  background: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.db-file-row button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.db-form-error {
+  margin: 14px 0 0;
+  padding: 9px 12px;
+  border: 1px solid #eccfc9;
+  border-radius: 8px;
+  color: #a33327;
+  background-color: #fdf1ef;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.db-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 26px 22px;
+  border-top: 1px solid var(--db-border);
+  background-color: var(--db-canvas);
+}
+
+.db-modal-hint {
+  max-width: 240px;
+  margin: 0;
+  color: var(--db-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.db-modal-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.db-modal-actions .db-btn-primary,
+.db-modal-actions .db-btn-secondary {
+  min-height: 44px;
+}
+
+/* Toast diselaraskan dengan palet landing */
+.db-scope .toast {
+  right: 24px;
+  bottom: 24px;
+  gap: 9px;
+  padding: 12px 16px;
+  border: 1px solid var(--db-green-border);
+  border-radius: 10px;
+  color: #f7fbf4;
+  background-color: var(--db-green-darkest);
+  box-shadow: var(--db-shadow-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.db-scope .toast svg {
+  color: #b8d7a8;
+}
