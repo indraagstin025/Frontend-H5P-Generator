@@ -7,6 +7,19 @@ import './LoginPage.css';
 export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
+
+  function validateEmail(input: HTMLInputElement) {
+    const error = !input.value
+      ? 'Email wajib diisi.'
+      : input.validity.typeMismatch || !/^[^\s@]+@gmail\.com$/i.test(input.value)
+        ? 'Email harus dalam format nama@gmail.com.'
+        : '';
+    input.setCustomValidity(error);
+    setEmailError(error);
+    setEmailTooltipOpen(Boolean(error));
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,7 +44,42 @@ export function LoginPage() {
           <h2 id="login-title">Login ke akun Anda</h2>
           <form aria-describedby="login-availability" onSubmit={handleSubmit} onChange={() => setMessage('')}>
             <label htmlFor="login-email">Email</label>
-            <input id="login-email" name="email" type="email" autoComplete="username" placeholder="nama@instansi.go.id" required />
+            <div className="login-email-field">
+            <input
+              id="login-email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              placeholder="nama@gmail.com"
+              pattern={'[^\\s@]+@[gG][mM][aA][iI][lL]\\.[cC][oO][mM]'}
+              required
+              aria-invalid={Boolean(emailError)}
+              aria-describedby={emailError && emailTooltipOpen ? 'login-email-error' : undefined}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setEmailTooltipOpen(false);
+              }}
+              onBlur={(event) => {
+                if (event.relatedTarget instanceof HTMLElement && event.relatedTarget.id === 'login-password') {
+                  validateEmail(event.currentTarget);
+                } else {
+                  setEmailTooltipOpen(false);
+                }
+              }}
+              onChange={(event) => {
+                if (emailError) validateEmail(event.currentTarget);
+              }}
+              onInvalid={(event) => {
+                event.preventDefault();
+              }}
+            />
+            {emailError && emailTooltipOpen && (
+              <div id="login-email-error" className="login-email-tooltip" role="alert">
+                <span className="login-email-tooltip-icon" aria-hidden="true">!</span>
+                <span><strong>Periksa alamat email</strong><span>{emailError}</span></span>
+                <button type="button" className="login-email-tooltip-close" aria-label="Tutup pesan validasi" onClick={() => setEmailTooltipOpen(false)}>×</button>
+              </div>
+            )}
+            </div>
             <label htmlFor="login-password">Kata sandi</label>
             <div className="login-password">
               <input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Masukkan kata sandi" required />

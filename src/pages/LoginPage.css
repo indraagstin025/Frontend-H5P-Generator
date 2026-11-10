@@ -17,6 +17,14 @@
 .login-card label { display: block; color: #263d2d; font-size: 13px; font-weight: 650; margin: 22px 0 9px; }
 .login-card input { width: 100%; min-height: 50px; border: 1px solid #d5e0d7; border-radius: 10px; padding: 12px 14px; background: #fff; color: #163a23; font-size: 14px; }
 .login-card input::placeholder { color: #647469; opacity: 1; }
+.login-card input[aria-invalid="true"] { border-color: #b42318; }
+.login-email-field { position: relative; }
+.login-email-tooltip { position: absolute; top: calc(100% + 10px); left: 0; z-index: 5; display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 14px; border: 1px solid #bed7c2; border-radius: 12px; background: #f2faf3; color: #245633; box-shadow: 0 8px 24px #15382320; font-size: 12px; line-height: 1.6; }
+.login-email-tooltip::before { content: ''; position: absolute; top: -6px; left: 22px; width: 10px; height: 10px; background: #f2faf3; border-top: 1px solid #bed7c2; border-left: 1px solid #bed7c2; transform: rotate(45deg); }
+.login-email-tooltip-icon { display: grid; place-items: center; flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px; background: #077c1a; color: #fff; font-size: 15px; font-weight: 750; }
+.login-email-tooltip strong { display: block; margin-bottom: 2px; font-size: 13px; }
+.login-email-tooltip-close { display: grid; place-items: center; flex-shrink: 0; margin-left: auto; padding: 0; width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #245633; font-size: 20px; cursor: pointer; }
+.login-email-tooltip-close:hover { background: #dceede; }
 .login-password { position: relative; }
 .login-password input { padding-right: 52px; }
 .login-password button { position: absolute; right: 5px; top: 5px; height: 40px; width: 40px; display: grid; place-items: center; color: #647469; background: transparent; border: 0; border-radius: 6px; }
