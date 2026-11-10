@@ -1,5 +1,4 @@
 import { useEffect, useRef, type PointerEvent } from 'react';
-import { ArrowRightIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import { FeatureIllustration } from './FeatureIllustration';
 import { LearningIllustration } from './LearningIllustration';
