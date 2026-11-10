@@ -1,5 +1,4 @@
 import { type PointerEvent } from 'react';
-import { ArrowRightIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import { FeatureIllustration } from './FeatureIllustration';
 import { LearningIllustration } from './LearningIllustration';
@@ -46,8 +45,10 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <span className="landing-kicker">Ruang Kreasi Pembelajaran Digital</span>
             <h1 id="landing-title">Hadirkan pembelajaran<br />yang lebih <span>interaktif.</span></h1>
             <p>Kreasikan materi Anda menjadi pengalaman belajar yang interaktif. Tambahkan kuis, lalu ekspor ke H5P untuk LMS Anda.</p>
-            <button className="landing-start" type="button" onClick={onEnter}>Mulai buat materi <ArrowRightIcon width={20} height={20} /></button>
-            <span className="landing-signin-note">Login untuk mulai berkreasi</span>
+            <div className="landing-actions">
+              <button className="landing-start" type="button" onClick={onEnter}>Mulai buat materi</button>
+              <span className="landing-signin-note">Login untuk mulai berkreasi</span>
+            </div>
           </div>
           <aside className="landing-visual" aria-label="Materi pembelajaran H5P">
             <span className="landing-visual-label">KREASIKAN PEMBELAJARAN ANDA</span>
@@ -65,28 +66,24 @@ export function LandingPage({ onEnter }: LandingPageProps) {
           <ul className="landing-feature-list">
             <li className="landing-feature-card">
               <FeatureIllustration variant="editing" />
-              <span className="landing-feature-number" aria-hidden="true">01</span>
               <h3>Editing File H5P</h3>
               <p>Buka kembali materi H5P yang didukung, perbarui isi dan interaksinya di Studio, lalu ekspor hasil pengeditan Anda.</p>
               <span className="landing-feature-note">Lanjutkan dan sempurnakan materi</span>
             </li>
             <li className="landing-feature-card">
               <FeatureIllustration variant="convert" />
-              <span className="landing-feature-number" aria-hidden="true">02</span>
               <h3>Convert PPTX dan PDF ke H5P</h3>
               <p>Mulai dari presentasi atau dokumen Anda. Ubah menjadi slide pembelajaran, tambahkan interaksi, lalu unduh sebagai paket H5P.</p>
               <span className="landing-feature-note">Gunakan materi yang sudah Anda miliki</span>
             </li>
             <li className="landing-feature-card">
               <FeatureIllustration variant="game" />
-              <span className="landing-feature-number" aria-hidden="true">03</span>
               <h3>Berbasis Gamifikasi</h3>
               <p>Ajak peserta belajar lebih aktif melalui kuis, pilihan alur, dan umpan balik. Jadikan materi sebagai tantangan yang menarik untuk diselesaikan.</p>
               <span className="landing-feature-note">Belajar melalui interaksi dan tantangan</span>
             </li>
             <li className="landing-feature-card">
               <FeatureIllustration variant="customization" />
-              <span className="landing-feature-number" aria-hidden="true">04</span>
               <h3>Customization</h3>
               <p>Sesuaikan teks, gambar, tata letak, dan interaksi agar materi mengikuti kebutuhan serta gaya pembelajaran Anda.</p>
               <span className="landing-feature-note">Kreasikan materi sesuai kebutuhan</span>

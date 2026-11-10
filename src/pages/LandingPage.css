@@ -22,9 +22,10 @@
 .landing-copy h1 { color: #fff; font-size: clamp(40px, 4.1vw, 62px); letter-spacing: -.045em; line-height: 1.15; font-weight: 650; margin: 28px 0 24px; }
 .landing-copy h1 > span { color: #bceac7; }
 .landing-copy p { color: #e0edd9; font-size: 18px; line-height: 1.85; max-width: 620px; margin: 0 0 38px; }
-.landing-start { display: inline-flex; align-items: center; gap: 26px; border: 0; border-radius: 12px; padding: 17px 24px; color: #075f26; background: #fff; font-size: 14px; font-weight: 750; transition: background .2s, transform .2s; }
+.landing-actions { display: flex; flex-direction: column; align-items: stretch; gap: 12px; width: fit-content; max-width: 100%; }
+.landing-start { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; border: 0; border-radius: 12px; padding: 17px 24px; color: #075f26; background: #fff; font-size: 14px; font-weight: 750; text-align: center; transition: background .2s, transform .2s; }
 .landing-start:hover { background: #edf8ef; transform: translateY(-2px); }
-.landing-signin-note { display: block; margin-top: 16px; color: #e0edd9; font-size: 12px; }
+.landing-signin-note { display: block; margin: 0; color: #e0edd9; font-size: 12px; line-height: 1.5; text-align: center; }
 .landing-visual { position: relative; min-width: 0; padding: 28px; background: linear-gradient(145deg, #ffffff14, #ffffff05); border: 1px solid #ffffff30; border-radius: 24px; overflow: hidden; backdrop-filter: blur(12px); box-shadow: 0 24px 60px #00341520; }
 .landing-visual::before { content: ''; position: absolute; width: 280px; height: 280px; border: 1px solid #fff6; border-radius: 50%; right: -120px; top: -90px; box-shadow: 0 0 0 40px #ffffff15, 0 0 0 80px #ffffff10; pointer-events: none; }
 .landing-visual-label { position: relative; color: #d2ead8; font-size: 9px; letter-spacing: .12em; font-weight: 750; }
