@@ -86,8 +86,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="edu-landing login-page">
-      <section className="login-story" aria-label="H5P Generator" onPointerMove={moveOrnaments} onPointerLeave={resetOrnaments} onPointerCancel={resetOrnaments}>
+    <main className="edu-landing login-page" onPointerMove={moveOrnaments} onPointerLeave={resetOrnaments} onPointerCancel={resetOrnaments}>
         <div ref={ornamentsRef} className="login-background-ornaments" aria-hidden="true">
           <span className="login-ornament login-ornament-square" />
           <span className="login-ornament login-ornament-circle" />
@@ -98,6 +97,7 @@ export function LoginPage() {
           <span className="login-ornament login-ornament-capsule" />
           <span className="login-ornament login-ornament-lower-circle" />
         </div>
+      <section className="login-story" aria-label="H5P Generator">
         <Link className="edu-brand" to="/">
           <span className="login-brand-logo"><img src="/landing-logo.png" alt="" /></span>
           <span className="edu-brand-title">H5P Generator</span>

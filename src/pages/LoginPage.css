@@ -1,5 +1,5 @@
-.login-page { display: grid; grid-template-columns: 1fr 1fr; }
-.login-story { position: relative; isolation: isolate; padding: 48px clamp(28px, 5vw, 88px); background: linear-gradient(#00000018, #00000018), radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(118deg, #075f26 0%, #077c1a 55%, #248b38 100%); color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 70px; min-height: 100vh; }
+.login-page { --login-green-background: linear-gradient(#00000018, #00000018), radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(118deg, #075f26 0%, #077c1a 55%, #248b38 100%); position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(0, 45fr) minmax(0, 47fr) minmax(0, 8fr); background: var(--login-green-background); }
+.login-story { position: relative; isolation: isolate; padding: 48px clamp(28px, 5vw, 88px); background: transparent; color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 70px; min-height: 100vh; }
 .login-story .edu-brand-title { color: white; font-size: 22px; }
 .login-story .edu-brand-logo-img { border-radius: 12px; padding: 0; }
 .login-story { overflow: hidden; }
@@ -18,16 +18,16 @@
   .login-ornament-center-square, .login-ornament-lower-circle { display: none; }
   .login-ornament-capsule { right: 8%; bottom: -55px; }
 }
-.login-eyebrow { display: block; font-size: 13px; font-weight: 600; letter-spacing: .01em; }
-.login-story h1 { color: white; font-size: clamp(34px, 3.7vw, 58px); line-height: 1.18; margin: 24px 0; letter-spacing: -.045em; }
+.login-eyebrow { display: block; padding-inline-start: 3px; font-size: 13px; font-weight: 600; letter-spacing: .01em; }
+.login-story h1 { color: white; font-size: clamp(46px, calc(4vw + 8px), 72px); line-height: 1.15; margin: 24px 0; letter-spacing: -.035em; }
 .login-story h1 span { color: #b8efb9; }
-.login-story p { color: #fff; line-height: 1.9; max-width: 440px; font-size: 15px; }
+.login-story p { color: #fff; line-height: 1.75; max-width: 440px; font-size: 16px; }
 .login-story-copy { margin-block: auto; }
-.login-form-panel { padding: 48px clamp(24px, 5vw, 88px); display: flex; flex-direction: column; background: #fff; }
+.login-form-panel { position: relative; z-index: 1; margin: 32px 0; border: 1px solid #ffffff70; border-radius: 28px; box-shadow: 0 24px 64px #00341540, 0 8px 20px #00341520; padding: 48px clamp(24px, 5vw, 88px); display: flex; flex-direction: column; background: #fff; }
 .login-back { display: inline-flex; align-items: center; gap: 8px; color: #52665a; text-decoration: none; font-size: 13px; align-self: flex-start; }
 .login-back:hover { color: #077c1a; }
 .login-card { width: 100%; max-width: 400px; margin: auto; padding-block: 56px; }
-.login-card h2 { font-size: clamp(26px, 2.5vw, 34px); margin: 12px 0; color: #163a23; line-height: 1.2; }
+.login-card h2 { font-size: clamp(26px, 2.5vw, 34px); margin: 12px 0; color: #163a23; line-height: 1.25; }
 .login-card p { font-size: 14px; color: #647469; line-height: 1.8; }
 .login-card form { margin-top: 32px; }
 .login-card label { display: block; color: #263d2d; font-size: 13px; font-weight: 650; margin: 22px 0 9px; }
@@ -53,7 +53,7 @@
 .login-story .edu-brand:focus-visible { outline-color: #fff; }
 .login-message { background: #fff8e8; border: 1px solid #efdcac; color: #725213; font-size: 13px; line-height: 1.7; padding: 12px; border-radius: 8px; margin-top: 18px; }
 .login-card .login-help { text-align: center; font-size: 12px; margin: 24px 0 0; }
-@media (max-width: 850px) { .login-page { grid-template-columns: 1fr; } .login-story { min-height: auto; padding: 28px; gap: 32px; } .login-story-copy { display: none; } .login-caption { display: none; } .login-form-panel { padding: 24px; } .login-card { padding-block: 40px; } }
+@media (max-width: 850px) { .login-page { grid-template-columns: 1fr; } .login-story { min-height: auto; padding: 28px; gap: 32px; } .login-story-copy { display: none; } .login-caption { display: none; } .login-form-panel { position: relative; z-index: 1; padding: 24px; } .login-card { padding-block: 40px; } }
 
 .login-story .edu-brand { gap: 8px; }
 .login-brand-logo { display: block; position: relative; width: 80px; height: 72px; overflow: hidden; flex-shrink: 0; }
@@ -66,3 +66,22 @@
 .login-google:active { background: #edf4ee; }
 @media (max-width: 450px) { .login-story .edu-brand-title { font-size: 20px; } }
 @media (prefers-reduced-motion: reduce) { .login-google, .login-submit { transition: none; } }
+@media (max-width: 850px) { .login-form-panel { margin: 0 20px 24px; border-radius: 24px; } }
+
+/* Keep the floating form compact enough for a desktop viewport. */
+@media (min-width: 851px) {
+  .login-story { padding-inline-end: 32px; }
+  .login-story-copy { width: 100%; max-width: 520px; margin-inline-start: auto; transform: translateY(-48px); }
+  .login-form-panel { width: min(100%, 480px); justify-self: center; margin-block: 24px; padding-block: 24px; padding-inline: clamp(24px, 3vw, 40px); }
+  .login-card { padding-block: 16px; }
+  .login-card form { margin-top: 24px; }
+  .login-card label { margin-top: 16px; }
+  .login-submit { margin-top: 20px; }
+  .login-card .login-help { margin-top: 16px; }
+}
+@media (min-width: 851px) and (max-height: 700px) {
+  .login-form-panel { margin-block: 16px; padding-block: 16px; }
+  .login-card { padding-block: 8px; }
+  .login-card form { margin-top: 16px; }
+  .login-divider { margin-block: 12px; }
+}
