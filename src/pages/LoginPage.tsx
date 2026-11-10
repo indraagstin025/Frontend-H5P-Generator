@@ -1,14 +1,74 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import './LoginPage.css';
 
 export function LoginPage() {
+  const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
+
+  useEffect(() => {
+    const ornaments = ornamentsRef.current?.querySelectorAll<HTMLElement>('.login-ornament');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const animations = new Set<Animation>();
+    let stopped = false;
+
+    function stop() {
+      stopped = true;
+      animations.forEach((animation) => animation.cancel());
+      animations.clear();
+    }
+
+    function start() {
+      stop();
+      if (reducedMotion.matches) return;
+      stopped = false;
+      ornaments?.forEach((ornament) => {
+        let position = { translate: '0px 0px', rotate: '0deg' };
+        function move() {
+          if (stopped) return;
+          const next = {
+            translate: `${Math.random() * 80 - 40}px ${Math.random() * 64 - 32}px`,
+            rotate: `${Math.random() * 18 - 9}deg`,
+          };
+          const animation = ornament.animate([position, next], {
+            duration: 3500 + Math.random() * 1500,
+            easing: 'ease-in-out',
+          });
+          animations.add(animation);
+          animation.onfinish = () => {
+            animations.delete(animation);
+            position = next;
+            move();
+          };
+        }
+        move();
+      });
+    }
+
+    start();
+    reducedMotion.addEventListener('change', start);
+    return () => {
+      stop();
+      reducedMotion.removeEventListener('change', start);
+    };
+  }, []);
+
+  function resetOrnaments(event: PointerEvent<HTMLElement>) {
+    event.currentTarget.style.setProperty('--login-ornament-x', '0px');
+    event.currentTarget.style.setProperty('--login-ornament-y', '0px');
+  }
+
+  function moveOrnaments(event: PointerEvent<HTMLElement>) {
+    if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty('--login-ornament-x', `${((event.clientX - bounds.left) / bounds.width - .5) * 40}px`);
+    event.currentTarget.style.setProperty('--login-ornament-y', `${((event.clientY - bounds.top) / bounds.height - .5) * 30}px`);
+  }
 
   function validateEmail(input: HTMLInputElement) {
     const error = !input.value
@@ -27,7 +87,17 @@ export function LoginPage() {
 
   return (
     <main className="edu-landing login-page">
-      <section className="login-story" aria-label="H5P Generator">
+      <section className="login-story" aria-label="H5P Generator" onPointerMove={moveOrnaments} onPointerLeave={resetOrnaments} onPointerCancel={resetOrnaments}>
+        <div ref={ornamentsRef} className="login-background-ornaments" aria-hidden="true">
+          <span className="login-ornament login-ornament-square" />
+          <span className="login-ornament login-ornament-circle" />
+          <span className="login-ornament login-ornament-triangle" />
+          <span className="login-ornament login-ornament-ring" />
+          <span className="login-ornament login-ornament-center-square" />
+          <span className="login-ornament login-ornament-upper-ring" />
+          <span className="login-ornament login-ornament-capsule" />
+          <span className="login-ornament login-ornament-lower-circle" />
+        </div>
         <Link className="edu-brand" to="/">
           <span className="login-brand-logo"><img src="/landing-logo.png" alt="" /></span>
           <span className="edu-brand-title">H5P Generator</span>
