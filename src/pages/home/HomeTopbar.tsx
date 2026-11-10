@@ -19,11 +19,11 @@ export function HomeTopbar({
   return (
     <header className="db-topbar">
       <div className="db-topbar-title">
-        <h1>{tab === 'dashboard' ? 'Dashboard' : 'Materi saya'}</h1>
+        <h1>{tab === 'dashboard' ? 'Dashboard Utama' : 'Materi Pembelajaran Saya'}</h1>
         <p>
           {tab === 'dashboard'
-            ? 'Ringkasan materi, riwayat ekspor, dan akses cepat ke ruang kerja.'
-            : 'Kelola materi tersimpan, cari, gandakan, atau buka kembali berkas .h5p.'}
+            ? 'Buat, kelola, dan lanjutkan materi pembelajaran Anda'
+            : 'Kelola, cari materi tersimpan, gandakan, atau buka kembali berkas .h5p'}
         </p>
       </div>
 
