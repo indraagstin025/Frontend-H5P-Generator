@@ -1,4 +1,4 @@
-import { type PointerEvent } from 'react';
+import { useEffect, useRef, type PointerEvent } from 'react';
 import { ArrowRightIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import { FeatureIllustration } from './FeatureIllustration';
@@ -7,6 +7,61 @@ import { LearningIllustration } from './LearningIllustration';
 type LandingPageProps = { onEnter: () => void };
 
 export function LandingPage({ onEnter }: LandingPageProps) {
+  const ornamentsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const ornaments = ornamentsRef.current?.querySelectorAll<HTMLElement>('.landing-square');
+    if (!ornaments) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const animations = new Set<Animation>();
+    let stopped = false;
+
+    function startMotion() {
+      stopped = false;
+      if (reducedMotion.matches) return;
+      ornaments?.forEach((ornament) => {
+        let x = 0;
+        let y = 0;
+        let angle = 0;
+        function move() {
+          if (stopped) return;
+          const nextX = Math.random() * 80 - 40;
+          const nextY = Math.random() * 64 - 32;
+          const nextAngle = Math.random() * 18 - 9;
+          const animation = ornament.animate([
+            { translate: `${x}px ${y}px`, rotate: `${angle}deg` },
+            { translate: `${nextX}px ${nextY}px`, rotate: `${nextAngle}deg` },
+          ], { duration: 3500 + Math.random() * 1500, easing: 'ease-in-out' });
+          animations.add(animation);
+          animation.onfinish = () => {
+            animations.delete(animation);
+            x = nextX;
+            y = nextY;
+            angle = nextAngle;
+            move();
+          };
+        }
+        move();
+      });
+    }
+
+    function stopMotion() {
+      stopped = true;
+      animations.forEach((animation) => animation.cancel());
+      animations.clear();
+    }
+    function updateMotion() {
+      stopMotion();
+      startMotion();
+    }
+    startMotion();
+    reducedMotion.addEventListener('change', updateMotion);
+    return () => {
+      stopMotion();
+      reducedMotion.removeEventListener('change', updateMotion);
+    };
+  }, []);
+
   function moveOrnaments(event: PointerEvent<HTMLDivElement>) {
     if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const hero = event.currentTarget;
@@ -30,7 +85,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               <span className="landing-hero-brand-text"><strong>H5P Generator</strong><span>Ruang kreasi pembelajaran</span></span>
             </a>
           </div>
-          <div className="landing-square-ornaments" aria-hidden="true">
+          <div ref={ornamentsRef} className="landing-square-ornaments" aria-hidden="true">
             <span className="landing-square landing-square-edge-left landing-shape-circle" />
             <span className="landing-square landing-square-edge-right" />
             <span className="landing-square landing-square-one" />
