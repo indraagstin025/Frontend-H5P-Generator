@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { uid } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
+import { registerSlideBg } from '../../studio/utils/mediaRegistry';
 
 export const PROJECTS_STORAGE_KEY = 'h5p-generator:projects:v1';
 
@@ -29,6 +30,35 @@ function loadAll(): StoredProjectMeta[] {
   }
 }
 
+/**
+ * Aset yang disajikan backend (http/https) tetap valid setelah reload,
+ * sedangkan blob:/data: hanya hidup selama tab ini. Jadi hanya URL server
+ * yang ikut disimpan ke draf.
+ */
+function persistentAssetUrl(url: string | null): string | null {
+  return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
+}
+
+function snapshotProject(project: Project): Project {
+  return {
+    ...project,
+    updatedAt: new Date().toISOString(),
+    slides: project.slides.map((s) => {
+      if (s.backgroundUrl) registerSlideBg(s.id, s.backgroundUrl);
+      return {
+        ...s,
+        backgroundUrl: persistentAssetUrl(s.backgroundUrl),
+        elements: s.elements.map((e) => {
+          if (e.kind === 'image' || e.kind === 'audio' || e.kind === 'video') {
+            return { ...e, file: null, objectUrl: persistentAssetUrl(e.objectUrl) } as typeof e;
+          }
+          return e;
+        }),
+      };
+    }),
+  };
+}
+
 export function useProjectStore() {
   const [items, setItems] = useState<StoredProjectMeta[]>(() => loadAll());
 
@@ -41,20 +71,7 @@ export function useProjectStore() {
   }, [items]);
 
   const save = useCallback((project: Project) => {
-    const snapshot: Project = {
-      ...project,
-      updatedAt: new Date().toISOString(),
-      slides: project.slides.map((s) => ({
-        ...s,
-        backgroundUrl: null,
-        elements: s.elements.map((e) => {
-          if ((e.kind === 'image' || e.kind === 'audio') && e.file) {
-            return { ...e, file: null, objectUrl: null } as typeof e;
-          }
-          return e;
-        }),
-      })),
-    };
+    const snapshot = snapshotProject(project);
     const meta: StoredProjectMeta = {
       id: snapshot.id,
       title: snapshot.title,
@@ -106,12 +123,14 @@ export function useProjectStore() {
       snap.updatedAt = now;
       snap.title = `${src.title} (salinan)`;
       snap.settings = { ...snap.settings, projectTitle: snap.title };
-      // URL blob tidak bertahan antar sesi — kosongkan, nama berkas dipertahankan
+      // URL server tetap valid; hanya blob/data yang tidak bertahan antar sesi.
       snap.slides = snap.slides.map((s) => ({
         ...s,
-        backgroundUrl: null,
+        backgroundUrl: persistentAssetUrl(s.backgroundUrl),
         elements: s.elements.map((e) =>
-          e.kind === 'image' || e.kind === 'audio' ? { ...e, objectUrl: null } : e,
+          e.kind === 'image' || e.kind === 'audio' || e.kind === 'video'
+            ? { ...e, objectUrl: persistentAssetUrl(e.objectUrl), file: null }
+            : e,
         ),
       }));
       const meta: StoredProjectMeta = {

@@ -8,6 +8,7 @@ import {
   CopyIcon,
   Cross2Icon,
   FilePlusIcon,
+  LayersIcon,
   OpenInNewWindowIcon,
   Pencil1Icon,
   TrashIcon,
@@ -41,11 +42,11 @@ function timeAgo(iso: string): string {
 
 function sourceOf(item: StoredProjectMeta): { key: Exclude<SourceFilter, 'all'>; label: string } {
   const fn = item.sourceFileName?.toLowerCase() ?? '';
-  if (!fn) return { key: 'manual', label: 'Bikin sendiri' };
+  if (!fn) return { key: 'manual', label: 'Dari nol' };
   if (fn.endsWith('.h5p')) return { key: 'h5p', label: 'File H5P' };
   if (fn.endsWith('.pptx')) return { key: 'pptx', label: 'PPTX' };
   if (fn.endsWith('.pdf')) return { key: 'pdf', label: 'PDF' };
-  return { key: 'manual', label: 'Bikin sendiri' };
+  return { key: 'manual', label: 'Dari nol' };
 }
 
 export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
@@ -69,9 +70,9 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
     try {
       const project = await parseH5p(file);
       onOpen(project);
-      onNotice(`${project.title} kebuka, silakan edit lagi.`);
+      onNotice(`${project.title} berhasil dibuka. Silakan lanjutkan pengeditan.`);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'File-nya gagal dibuka.');
+      onNotice(err instanceof Error ? err.message : 'Berkas gagal dibuka.');
     } finally {
       setImporting(false);
     }
@@ -103,13 +104,11 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
 
   return (
     <div className="projects-home">
-      <p className="section-kicker">Daftar materi</p>
-      <h1>Materi saya</h1>
-      <p className="muted">
-        Bikin materi baru, cari materi lama, atau buka lagi file <code>.h5p</code> yang pernah didownload. Semua kesimpan otomatis di browser.
-      </p>
-
-      <div className="new-project-card">
+      <section className="new-project-card" aria-labelledby="new-project-heading">
+        <div className="new-project-head">
+          <h2 id="new-project-heading">Mulai materi baru</h2>
+          <p>Beri judul dan ukuran slide, atau buka berkas .h5p yang sudah pernah diunduh.</p>
+        </div>
         <div className="new-project-fields">
           <label className="field-label">
             Judul materi
@@ -118,14 +117,14 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           <label className="field-label">
             Ukuran slide
             <select value={aspect} onChange={(e) => setAspect(e.target.value as AspectRatio)}>
-              <option value="16:9">16:9 — layar lebar</option>
-              <option value="4:3">4:3 — kotak klasik</option>
+              <option value="16:9">16:9 (layar lebar)</option>
+              <option value="4:3">4:3 (kotak klasik)</option>
             </select>
           </label>
         </div>
         <div className="new-project-actions">
           <button className="primary-button" type="button" onClick={createNew}>
-            <FilePlusIcon /> Bikin materi baru
+            <FilePlusIcon /> Buat materi baru
           </button>
           <input
             ref={importRef}
@@ -135,38 +134,70 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
             onChange={(e) => void importFile(e.target.files?.[0])}
           />
           <button className="secondary-button" type="button" disabled={importing} onClick={() => importRef.current?.click()}>
-            <UploadIcon /> {importing ? 'Membuka file…' : 'Buka file .h5p'}
+            <UploadIcon /> {importing ? 'Membuka file...' : 'Buka file .h5p'}
           </button>
         </div>
-      </div>
+      </section>
 
       <div className="materials-toolbar">
         <input
           className="materials-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari judul atau nama file…"
+          placeholder="Cari judul atau nama file..."
           aria-label="Cari materi"
         />
         <select value={filter} onChange={(e) => setFilter(e.target.value as SourceFilter)} aria-label="Saring sumber">
-          <option value="all">Semua</option>
+          <option value="all">Semua sumber</option>
           <option value="pptx">PPTX</option>
           <option value="pdf">PDF</option>
           <option value="h5p">File H5P</option>
-          <option value="manual">Bikin sendiri</option>
+          <option value="manual">Dari nol</option>
         </select>
         <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Urutkan">
           <option value="updated">Terakhir diubah</option>
-          <option value="title">Judul A–Z</option>
+          <option value="title">Judul A-Z</option>
           <option value="slides">Slide paling banyak</option>
         </select>
       </div>
 
-      <h2>
-        {visible.length} dari {items.length} materi
-      </h2>
+      <div className="db-section-head">
+        <div>
+          <h2 className="db-section-title">Daftar materi</h2>
+          <p className="db-section-subtitle">
+            {visible.length} dari {items.length} materi
+          </p>
+        </div>
+      </div>
+
       {visible.length === 0 ? (
-        <p className="muted">Tidak ketemu. Coba kata kunci lain.</p>
+        <div className="db-empty">
+          <LayersIcon width={26} height={26} aria-hidden="true" />
+          <h3>{items.length === 0 ? 'Belum ada materi' : 'Tidak ada yang cocok'}</h3>
+          <p>
+            {items.length === 0
+              ? 'Mulai dari kanvas kosong atau buka berkas .h5p lama. Untuk mengolah PPTX atau PDF, gunakan tombol materi baru di bilah atas.'
+              : 'Coba kata kunci lain, atau kembalikan saringan ke semua materi.'}
+          </p>
+          <div className="db-empty-actions">
+            {items.length === 0 ? (
+              <button className="primary-button" type="button" onClick={createNew}>
+                <FilePlusIcon /> Buat materi kosong
+              </button>
+            ) : (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setFilter('all');
+                }}
+              >
+                Reset pencarian
+              </button>
+            )}
+          </div>
+        </div>
       ) : (
         <div className="project-grid">
           {visible.map((item) => (
@@ -233,7 +264,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   title="Hapus"
                   aria-label="Hapus materi"
                   onClick={() => {
-                    if (window.confirm(`Hapus "${item.title}"? Tidak bisa dibatalkan lho.`)) {
+                    if (window.confirm(`Hapus "${item.title}"? Tindakan ini tidak bisa dibatalkan.`)) {
                       onDelete(item.id);
                       onNotice('Materi sudah dihapus.');
                     }

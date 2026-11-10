@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { unzipSync } from 'fflate';
 import type { H5PPlayerClass } from 'h5p-standalone';
+import { createLogger } from '../../../utils/logger';
 import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
 import { buildH5p } from '../../exporter/api/h5pPackager';
@@ -16,6 +17,8 @@ import {
   setPreviewPackage,
 } from '../api/previewServiceWorker';
 import type { PreviewFile } from '../api/previewServiceWorker';
+
+const log = createLogger('H5PPreview');
 
 type Status = 'checking' | 'missing-libs' | 'preparing' | 'ready' | 'error';
 
@@ -50,14 +53,21 @@ async function loadPlayerClass(): Promise<H5PPlayerClass> {
   return found;
 }
 
-function mimeFor(path: string): string {  const ext = path.split('.').pop()?.toLowerCase() ?? '';
+function mimeFor(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase() ?? '';
   if (ext === 'json') return 'application/json';
   if (ext === 'png') return 'image/png';
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
   if (ext === 'gif') return 'image/gif';
   if (ext === 'svg') return 'image/svg+xml';
+  if (ext === 'webp') return 'image/webp';
   if (ext === 'mp3') return 'audio/mpeg';
   if (ext === 'wav') return 'audio/wav';
+  if (ext === 'm4a') return 'audio/mp4';
+  if (ext === 'mp4' || ext === 'm4v') return 'video/mp4';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'ogv') return 'video/ogg';
+  if (ext === 'ogg') return path.startsWith('videos/') ? 'video/ogg' : 'audio/ogg';
   return 'application/octet-stream';
 }
 
@@ -90,6 +100,7 @@ export function H5PRealPlayer({ project }: { project: Project }) {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [events, setEvents] = useState<XapiRow[]>([]);
+  const [mediaWarnings, setMediaWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,8 +111,8 @@ export function H5PRealPlayer({ project }: { project: Project }) {
       // 1. Cari versi CoursePresentation yang tersedia (baru → lama).
       // Seed backend dari Hub memberi 1.26, sedangkan default ekspor (24)
       // mengikuti LMS — player pratinjau pakai yang ada saja.
-      // (Cek isi, bukan sekadar status: server SPA bisa menjawab
-      // index.html 200 untuk file yang tidak ada.)
+      // (Cek isi dan berkas runner JS/CSS, bukan sekadar status: server SPA bisa
+      // menjawab index.html 200 untuk berkas yang hilang.)
       let cpMinor: number | null = null;
       for (const m of [...COURSE_PRESENTATION_MINORS].sort((a, b) => b - a)) {
         try {
@@ -110,10 +121,41 @@ export function H5PRealPlayer({ project }: { project: Project }) {
           });
           if (probe.ok) {
             try {
-              const json = (await probe.json()) as { machineName?: string };
+              const json = (await probe.json()) as {
+                machineName?: string;
+                preloadedJs?: Array<{ path: string }>;
+                preloadedCss?: Array<{ path: string }>;
+              };
               if (json.machineName === 'H5P.CoursePresentation') {
-                cpMinor = m;
-                break;
+                // Pastikan berkas runtime (preloadedJs / preloadedCss) benar-benar ada di disk
+                const runtimeFiles = [
+                  ...(json.preloadedJs ?? []).map((j) => j.path),
+                  ...(json.preloadedCss ?? []).map((c) => c.path),
+                ];
+
+                let allFilesExist = runtimeFiles.length > 0;
+                for (const filePath of runtimeFiles) {
+                  try {
+                    const fileProbe = await fetch(
+                      `/h5p-libraries/H5P.CoursePresentation-1.${m}/${filePath}`,
+                      { cache: 'no-store' },
+                    );
+                    const contentType = fileProbe.headers.get('content-type') ?? '';
+                    // Jika file tidak ada, server SPA Vite mengembalikan index.html (text/html)
+                    if (!fileProbe.ok || contentType.includes('text/html')) {
+                      allFilesExist = false;
+                      break;
+                    }
+                  } catch {
+                    allFilesExist = false;
+                    break;
+                  }
+                }
+
+                if (allFilesExist) {
+                  cpMinor = m;
+                  break;
+                }
               }
             } catch {
               // lanjut ke versi berikut
@@ -132,8 +174,10 @@ export function H5PRealPlayer({ project }: { project: Project }) {
 
       // 2. Aktifkan service worker penyaji paket
       setStatus('preparing');
+      log.info('Menyiapkan paket pratinjau', key);
       const workerOk = await ensurePreviewWorker();
       if (!workerOk) {
+        log.warn('Service worker pratinjau tidak mengendalikan halaman', key);
         if (!cancelled) {
           setStatus('error');
           setError('Service worker gagal aktif. Muat ulang halaman ini lalu coba lagi.');
@@ -144,15 +188,23 @@ export function H5PRealPlayer({ project }: { project: Project }) {
 
       // 3. Rakit paket + sajikan dari memori
       try {
-        const { blob } = await buildH5p(project, cpMinor);
+        // Library tidak perlu ikut ZIP: h5p-standalone memuatnya dari
+        // librariesPath (/h5p-libraries), jadi pratinjau lebih cepat.
+        const { blob, media } = await buildH5p(project, cpMinor, { includeLibraries: false });
+        if (!cancelled) setMediaWarnings(media.failed);
+        if (media.failed.length > 0) {
+          log.warn('Sebagian media tidak ikut paket', media.failed);
+        }
         if (cancelled) return;
         const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
         const files: Record<string, PreviewFile> = {};
         for (const [path, data] of Object.entries(entries)) {
           files[path] = { data, mime: mimeFor(path) };
         }
+        log.info('Paket siap disajikan', { key, files: Object.keys(files).length, sizeKb: Math.round(blob.size / 1024) });
         await setPreviewPackage(key, files);
         if (cancelled) return;
+        log.info('Paket tersimpan di service worker', key);
 
         // 4. Jalankan player asli (lazy-load agar bundle awal tetap kecil)
         if (!host) return;
@@ -179,6 +231,7 @@ export function H5PRealPlayer({ project }: { project: Project }) {
         });
         setStatus('ready');
       } catch (err) {
+        log.error('Gagal menyiapkan player asli', err);
         if (!cancelled) {
           setStatus('error');
           setError(err instanceof Error ? err.message : 'Player gagal dimuat.');
@@ -198,7 +251,7 @@ export function H5PRealPlayer({ project }: { project: Project }) {
       <div className="pv-setup">
         <strong>Player asli belum bisa jalan.</strong>
         <p className="muted">
-          Folder <code>frontend/public/h5p-libraries/</code> masih kosong — salin folder-folder library dari{' '}
+          Folder <code>frontend/public/h5p-libraries/</code> masih kosong atau berkas runtime library (seperti runner JS/CSS di <code>dist/</code>) belum lengkap — salin folder-folder library dari{' '}
           <code>backend/storage/h5p/libraries/</code> (sudah terisi otomatis saat seed, tanpa H5PEditor.*) ke sana,
           lalu muat ulang halaman ini. Sementara itu mode simulasi tetap bisa dipakai.
         </p>
@@ -233,6 +286,12 @@ export function H5PRealPlayer({ project }: { project: Project }) {
         <p className="muted">{status === 'checking' ? 'Mengecek library H5P…' : 'Menyiapkan paket & player…'}</p>
       )}
       <div ref={hostRef} className="pv-real-host"></div>
+      {status === 'ready' && mediaWarnings.length > 0 && (
+        <p className="muted">
+          Sebagian media tidak ikut: {mediaWarnings.slice(0, 3).join('; ')}
+          {mediaWarnings.length > 3 ? ` (+${mediaWarnings.length - 3} lagi)` : ''}
+        </p>
+      )}
       {status === 'ready' && (
         <div className="pv-xapi">
           <p className="section-kicker">Aktivitas xAPI tertangkap ({events.length})</p>

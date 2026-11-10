@@ -4,6 +4,7 @@
  * Judul otomatis dari nama file (satu sumber judul ada di halaman Materi
  * + topbar studio) — tidak ada input judul di sini.
  */
+import { ExclamationTriangleIcon, FileTextIcon, ReloadIcon } from '@radix-ui/react-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { UploadDock } from '../../ingest/components/UploadDock';
 import { useIngest } from '../../ingest/hooks/useIngest';
@@ -30,6 +31,7 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
   const [serverStatus, setServerStatus] = useState('');
   const [serverActive, setServerActive] = useState(false);
   const startedRef = useRef(false);
+  const lastFileRef = useRef<File | null>(null);
 
   const ingest = useIngest((slides: Slide[], info: ConvertInfo) => {
     const project = createProject(titleFromFileName(info.fileName), info.aspect, info.fileName);
@@ -39,13 +41,14 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
     const auto = c.hotspots + c.notes + c.media + c.quizzes;
     onNotice(
       auto > 0
-        ? `${slides.length} slide + ${auto} isi otomatis (tombol ${c.hotspots}, tulisan ${c.notes}, gambar/suara ${c.media}, draf kuis ${c.quizzes}) — tinggal rapikan.`
-        : `${slides.length} slide dari ${info.fileName} sudah jadi — tinggal rapikan.`,
+        ? `${slides.length} slide + ${auto} isi otomatis (tombol ${c.hotspots}, tulisan ${c.notes}, gambar/suara ${c.media}, draf kuis ${c.quizzes}) sudah jadi, tinggal rapikan.`
+        : `${slides.length} slide dari ${info.fileName} sudah jadi, tinggal rapikan.`,
     );
   });
 
   const handleFile = useCallback(
     (file: File) => {
+      lastFileRef.current = file;
       setLastFile(file.name);
       setServerActive(true);
       setServerProgress(2);
@@ -61,8 +64,8 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
           onComplete(project);
           onNotice(
             backgroundReady
-              ? `${project.slides.length} slide dari ${file.name} sudah jadi, gambar latar asli ikut tampil — tinggal rapikan.`
-              : `${project.slides.length} slide dari ${file.name} sudah jadi — tinggal rapikan.${jobMessage ? ` ${jobMessage}` : ''}`,
+              ? `${project.slides.length} slide dari ${file.name} sudah jadi, gambar latar asli ikut tampil. Tinggal rapikan.`
+              : `${project.slides.length} slide dari ${file.name} sudah jadi, tinggal rapikan.${jobMessage ? ` ${jobMessage}` : ''}`,
           );
         })
         .catch(() => {
@@ -83,54 +86,83 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
     }
   }, [initialFile, handleFile]);
 
+  const localActive = ingest.state.phase !== 'idle';
+  const isActive = serverActive || localActive;
+  const isError = !serverActive && ingest.state.phase === 'error';
+  const progress = serverActive ? serverProgress : ingest.state.progress;
+  const status = serverActive
+    ? serverStatus || 'Menyiapkan konversi…'
+    : isError
+      ? ingest.state.error
+      : ingest.state.status || 'Menyiapkan konversi…';
+
+  const retry = () => {
+    const file = lastFileRef.current;
+    if (file) {
+      handleFile(file);
+      return;
+    }
+    ingest.actions.reset();
+  };
+
   return (
-    <div className="step-panel">
-      <div className="step-heading">
-        <div>
-          <p className="section-kicker">Langkah 1 — Upload & ubah otomatis</p>
-          <h2>Mulai dari file yang sudah ada</h2>
-          <p className="muted">
-            Upload file presentasi (<code>.pptx</code>) atau dokumen (<code>.pdf</code>), maksimal 50 MB dan 60 slide.
-            Link antar-slide otomatis jadi tombol, catatan pembicara jadi tulisan cerita. Judul diambil dari nama file
-            dan bisa diganti di judul atas.
-          </p>
-        </div>
-      </div>
+    <div className="hs-ingest">
+      <header className="hs-ingest-head">
+        <p className="hs-ingest-kicker">Langkah 1 dari 4</p>
+        <h2>Mulai dari file yang sudah ada</h2>
+        <p className="hs-ingest-lede">
+          Unggah presentasi (<code>.pptx</code>) atau dokumen (<code>.pdf</code>), maksimal 50 MB dan 60 slide.
+          Tautan antar-slide otomatis jadi tombol, catatan pembicara jadi cerita, dan judul diambil dari nama file.
+        </p>
+      </header>
 
-      <UploadDock
-        onAccepted={handleFile}
-        onNotice={onNotice}
-      />
+      <UploadDock onAccepted={handleFile} onNotice={onNotice} />
 
-      {serverActive && (
-        <div className="convert-box" role="status">
-          <div className="convert-row">
-            <strong>{lastFile}</strong>
-            <span>{serverProgress}%</span>
+      {isActive && (
+        <section
+          className={`hs-convert${isError ? ' is-error' : ''}`}
+          aria-label="Progres konversi"
+        >
+          <div className="hs-convert-head">
+            <span className="hs-convert-icon" aria-hidden="true">
+              {isError ? <ExclamationTriangleIcon /> : <FileTextIcon />}
+            </span>
+            <div className="hs-convert-meta">
+              <strong title={lastFile}>{lastFile}</strong>
+              <span aria-live={isError ? 'assertive' : undefined}>{status}</span>
+            </div>
+            <span className="hs-convert-percent">{isError ? 'Gagal' : `${progress}%`}</span>
           </div>
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${serverProgress}%` }}></div>
-          </div>
-          <p className="muted">{serverStatus}</p>
-        </div>
-      )}
 
-      {!serverActive && ingest.state.phase !== 'idle' && (
-        <div className="convert-box" role="status">
-          <div className="convert-row">
-            <strong>{lastFile}</strong>
-            <span>{ingest.state.progress}%</span>
-          </div>
-          <div className="progress-track">
-            <div className="progress-fill" style={{ width: `${ingest.state.progress}%` }}></div>
-          </div>
-          <p className="muted">{ingest.state.phase === 'error' ? ingest.state.error : ingest.state.status}</p>
-          {ingest.state.phase === 'error' && (
-            <button className="secondary-button" type="button" onClick={ingest.actions.reset}>
-              Coba lagi
-            </button>
+          {!isError && (
+            <div
+              className="hs-convert-track"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+              aria-label="Progres konversi file"
+            >
+              <div className="hs-convert-fill" style={{ width: `${progress}%` }} />
+            </div>
           )}
-        </div>
+
+          <div className="hs-convert-foot">
+            <span className="hs-convert-source">
+              <span className="hs-convert-dot" aria-hidden="true" />
+              {isError
+                ? 'Konversi gagal'
+                : serverActive
+                  ? 'Diproses di server'
+                  : 'Diproses di perangkat ini'}
+            </span>
+            {isError && (
+              <button className="hs-convert-retry" type="button" onClick={retry}>
+                <ReloadIcon /> Coba lagi
+              </button>
+            )}
+          </div>
+        </section>
       )}
     </div>
   );
