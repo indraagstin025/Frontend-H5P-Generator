@@ -421,6 +421,11 @@ function toAction(
           sources: source ? [source] : [],
           visuals: { fit: true, controls: true },
           playback: { autoplay: false, loop: false },
+          // H5P.Video membaca `a11y` sebagai ARRAY track
+          // (`parameters.a11y.forEach`), walau semantics.json menuliskannya
+          // sebagai group `{videoTrack: [...]}`. Tanpa ini, default semantics
+          // membuatnya object dan player crash.
+          a11y: [],
         },
       };
     }
@@ -659,6 +664,10 @@ function toAction(
           sources: source ? [source] : [],
           visuals: { fit: true, controls: true },
           playback: { autoplay: false, loop: false },
+          // H5P.Video membaca `a11y` sebagai ARRAY track
+          // (`parameters.a11y.forEach`), walau semantics.json menuliskannya
+          // sebagai group `{videoTrack: [...]}`.
+          a11y: [],
         },
       };
     }
@@ -713,11 +722,168 @@ export interface SlideBackgroundRef {
   mime: string;
 }
 
+/**
+ * Potongan semantics.json yang relevan untuk mengisi default.
+ *
+ * Kenapa perlu: library H5P membaca params seperti `params.UI.checkAnswerButton`
+ * atau `dropZone.tipsAndFeedback.tip` TANPA guard. Params yang tidak kita tulis
+ * dan tidak diisi default (karena paket tidak melewati editor H5P) membuat
+ * player meledak: "Cannot read properties of undefined". Dengan mengisi default
+ * dari semantics.json milik library itu sendiri, isi paket selalu lengkap dan
+ * mengikuti versi library yang ikut dibundel.
+ */
+export interface SemanticsField {
+  name: string;
+  type?: string;
+  default?: unknown;
+  optional?: boolean;
+  defaultNum?: number;
+  min?: number;
+  options?: Array<{ value?: unknown }>;
+  fields?: SemanticsField[];
+  field?: SemanticsField;
+}
+
+/** Bukan objek biasa (array/berkas) — tidak boleh ditelusuri sebagai group. */
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Nilai default satu field semantics. `undefined` = jangan ditulis. */
+function defaultFor(node: SemanticsField): unknown {
+  if (node.default !== undefined) return node.default;
+  const type = node.type ?? 'text';
+
+  // Jangan memalsukan berkas/berkas media/library lain. Sengaja `undefined`
+  // (bukan `null`): banyak library mengecek `!== undefined` lalu langsung
+  // membaca `.path`, sehingga `null` lolos guard dan berujung crash
+  // (mis. DragQuestion `question.settings.background.path`).
+  if (type === 'library') return undefined;
+  if (type === 'file' || type === 'image' || type === 'video' || type === 'audio') return undefined;
+
+  if (type === 'group') {
+    const fields = node.fields ?? [];
+    // Pola khas H5P: group berisi list bernama sama (overallFeedback).
+    // Runtime membacanya sebagai ARRAY DATAR [{from,to,feedback}].
+    const sameName = fields.find((f) => f.name === node.name && f.type === 'list');
+    if (sameName) {
+      const count = sameName.defaultNum ?? sameName.min ?? 0;
+      const out: unknown[] = [];
+      for (let i = 0; i < count; i++) out.push(defaultFor(sameName.field ?? sameName));
+      return out;
+    }
+    const out: Record<string, unknown> = {};
+    for (const f of fields) {
+      const v = defaultFor(f);
+      if (v !== undefined) out[f.name] = v;
+    }
+    return out;
+  }
+
+  if (type === 'list') {
+    const count = node.defaultNum ?? 0;
+    const out: unknown[] = [];
+    for (let i = 0; i < count; i++) out.push(defaultFor(node.field ?? node));
+    return out;
+  }
+
+  if (type === 'number') return node.min ?? 0;
+  if (type === 'boolean') return false;
+  if (type === 'select') {
+    const first = node.options?.find((o) => o.value !== undefined)?.value;
+    return first ?? '';
+  }
+  // text, html, dll.
+  return '';
+}
+
+/**
+ * Lengkapi `params` dengan field semantics yang belum ada. Nilai yang sudah
+ * kita tulis TIDAK ditimpa; object di-merge, array diproses per elemen
+ * (penting untuk `dropZones[].tipsAndFeedback`).
+ */
+export function fillSemanticsDefaults(
+  semantics: SemanticsField[],
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  for (const node of semantics) {
+    const value = params[node.name];
+    if (value === undefined) {
+      const d = defaultFor(node);
+      if (d !== undefined) params[node.name] = d;
+      continue;
+    }
+    if (node.type === 'group' && isPlainObject(value)) {
+      if (node.fields) fillSemanticsDefaults(node.fields, value);
+      continue;
+    }
+    if (node.type === 'list' && Array.isArray(value) && node.field?.type === 'group' && node.field.fields) {
+      for (const item of value) {
+        if (isPlainObject(item)) fillSemanticsDefaults(node.field.fields, item);
+      }
+    }
+  }
+  return params;
+}
+
+/** Ambil semantics.json tiap library yang dipakai (gagal → dilewati). */
+async function loadLibrarySemantics(
+  deps: LibDep[],
+  readFile: (relPath: string) => Promise<Uint8Array>,
+): Promise<Record<string, SemanticsField[]>> {
+  const out: Record<string, SemanticsField[]> = {};
+  await Promise.all(
+    deps.map(async (dep) => {
+      try {
+        const dir = `${dep.machineName}-${dep.majorVersion}.${dep.minorVersion}`;
+        const parsed = decodeJson(await readFile(`${dir}/semantics.json`)) as SemanticsField[];
+        if (Array.isArray(parsed) && parsed.length > 0) out[dep.machineName] = parsed;
+      } catch {
+        // library tanpa semantics.json — biarkan tanpa default tambahan
+      }
+    }),
+  );
+  return out;
+}
+
+/** Terapkan default semantics ke params root (CoursePresentation) + tiap action. */
+function applySemanticsDefaults(
+  content: Record<string, unknown>,
+  semantics: Record<string, SemanticsField[]> | undefined,
+): void {
+  if (!semantics) return;
+  const cpSemantics = semantics[COURSE_PRESENTATION.machineName];
+  if (cpSemantics) {
+    // `presentation` (slides/elements) sengaja TIDAK diisi default: struktur
+    // itu kita bangun sendiri, dan default semantics di level element justru
+    // menambah `goToSlideType`/`goToSlide` ke elemen ber-action sehingga
+    // importer (parseH5p) salah mengenalinya sebagai tombol navigasi.
+    fillSemanticsDefaults(
+      cpSemantics.filter((f) => f.name !== 'presentation'),
+      content,
+    );
+  }
+
+  const presentation = content.presentation as
+    | { slides?: Array<{ elements?: Array<Record<string, unknown>> }> }
+    | undefined;
+  for (const slide of presentation?.slides ?? []) {
+    for (const el of slide.elements ?? []) {
+      const action = el.action as { library?: string; params?: Record<string, unknown> } | undefined;
+      if (!action?.library || !isPlainObject(action.params)) continue;
+      const machineName = action.library.split(' ')[0];
+      const libSemantics = semantics[machineName];
+      if (libSemantics) fillSemanticsDefaults(libSemantics, action.params);
+    }
+  }
+}
+
 export function toContentJson(
   project: Project,
   cpMinor: number,
   backgrounds?: SlideBackgroundRef[],
   media: Map<string, ResolvedMedia> = new Map(),
+  semantics?: Record<string, SemanticsField[]>,
 ): Record<string, unknown> {
   const n = project.slides.length;
   const slides = project.slides.map((s, idx) => ({
@@ -735,7 +901,7 @@ export function toContentJson(
       ),
     },
   }));
-  return {
+  const content: Record<string, unknown> = {
     presentation: {
       slides,
       keywordListEnabled: project.settings.keywordListEnabled,
@@ -754,6 +920,10 @@ export function toContentJson(
     },
     l10n: {},
   };
+  // Lengkapi field yang tidak kita tulis (UI, l10n, confirm*, overallFeedback,
+  // tipsAndFeedback dropZone, dll.) supaya player tidak crash membaca undefined.
+  applySemanticsDefaults(content, semantics);
+  return content;
 }
 
 /**
@@ -1108,7 +1278,13 @@ export async function buildH5p(
     if (bg.real) bgReal += 1;
   }
   const { media, failed: mediaFailed } = await mediaPromise;
-  files['content/content.json'] = strToU8(JSON.stringify(toContentJson(project, cpMinor, bgRefs, media)));
+  const readLibFile = opts.readLibraryFile ?? fetchLibraryFile;
+  // Default semantics diisi dari semantics.json library yang ikut dibundel,
+  // supaya params selalu lengkap saat diputar di LMS lain.
+  const semantics = await loadLibrarySemantics(toManifest(project, cpMinor).preloadedDependencies, readLibFile);
+  files['content/content.json'] = strToU8(
+    JSON.stringify(toContentJson(project, cpMinor, bgRefs, media, semantics)),
+  );
   for (const asset of media.values()) {
     files[`content/${asset.path}`] = asset.bytes;
   }
@@ -1122,7 +1298,7 @@ export async function buildH5p(
   if (opts.includeLibraries !== false) {
     const bundle = await bundleLibraryFiles(
       manifest.preloadedDependencies,
-      opts.readLibraryFile ?? fetchLibraryFile,
+      readLibFile,
     );
     bundled = bundle.bundled;
     missing = [...new Set(bundle.missing)];
@@ -1259,7 +1435,10 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   const buttonLabel = str(e.buttonLabel);
   const title = str(e.title);
 
-  if (typeof e.goToSlideType === 'string') {
+  // Elemen ber-`action` adalah konten; `goToSlideType` hanya penanda elemen
+  // navigasi (yang tidak punya action). Cek action lebih dulu supaya paket
+  // lama yang (pernah) mengisi goToSlideType di semua elemen tetap terbaca.
+  if (!e.action && typeof e.goToSlideType === 'string') {
     const targetType = (e.goToSlideType === 'next' || e.goToSlideType === 'previous' ? e.goToSlideType : 'specified') as 'specified' | 'next' | 'previous';
     const g = createElement('goToSlide', slideCount);
     return {

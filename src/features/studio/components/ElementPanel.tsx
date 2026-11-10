@@ -16,20 +16,10 @@ type DropdownItem = {
 
 const DROPDOWN_ITEMS: DropdownItem[] = [
   { kind: 'dragWords', label: 'Drag the Words' },
-  { kind: 'markWords', label: 'Mark the Words' },
-  { kind: 'dialogCards', label: 'Dialog Cards' },
-  { kind: 'continuousText', label: 'Continuous Text' },
-  { kind: 'exportableText', label: 'Exportable Text Area' },
-  { kind: 'table', label: 'Table' },
-  { kind: 'interactiveVideo', label: 'Interactive Video' },
-  { kind: 'audioRecorder', label: 'Audio Recorder' },
   { kind: 'multimediaChoice', label: 'Multimedia Choice' },
 ];
 
 const INTERACTION_ITEMS: Array<{ kind: ElementKind; label: string }> = [
-  { kind: 'blanks', label: 'Fill In The Blank' },
-  { kind: 'singleChoice', label: 'Single Choice Set' },
-  { kind: 'multiChoice', label: 'Multiple Choice' },
   { kind: 'trueFalse', label: 'True False Question' },
   { kind: 'dragDrop', label: 'Drag And Drop' },
   { kind: 'summary', label: 'Summary' },
@@ -137,7 +127,7 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
               <path d="M7 2L7 13M4 4L4 11M1 6L1 9M10 4L10 11M13 6L13 9" stroke="currentColor" strokeLinecap="round"/>
             </svg>
           </span>
-          <span>Audio</span>
+          <span>Add Audio</span>
         </button>
       </div>
 
