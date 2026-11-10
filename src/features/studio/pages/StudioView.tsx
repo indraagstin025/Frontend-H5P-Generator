@@ -3,7 +3,7 @@
  * Layar Susun memakai layout referensi gambar: 3 kolom
  * (daftar slide kiri | canvas tengah | panel elemen kanan).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Toast } from '../../../components/UI/Toast';
 import { useStudio } from '../../../context/StudioContext';
@@ -21,7 +21,7 @@ import { StudioLeftPanel } from '../components/StudioLeftPanel';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
-import { buildH5p, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
+import { buildH5p, detectAvailableCpMinor, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
 import { recordExport } from '../../exporter/api/exportHistory';
 
 const NOTICE_TIMEOUT_MS = 2600;
@@ -38,10 +38,30 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+  // Di layar kecil panel kanan jadi drawer
+  const [panelOpen, setPanelOpen] = useState(false);
 
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
   const [exporting, setExporting] = useState(false);
+  // Jangan timpa pilihan user saat probe library selesai.
+  const cpPickedByUser = useRef(false);
+
+  // Selaraskan versi dengan library yang benar-benar ada di public/h5p-libraries.
+  useEffect(() => {
+    let cancelled = false;
+    void detectAvailableCpMinor().then((detected) => {
+      if (!cancelled && detected !== null && !cpPickedByUser.current) setCpMinor(detected);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCpMinorChange = (minor: number) => {
+    cpPickedByUser.current = true;
+    setCpMinor(minor);
+  };
 
   // File titipan modal (dibaca sekali saat mount)
   const [initialFile] = useState<File | null>(() => peekPendingFile());
@@ -101,15 +121,15 @@ export function StudioView() {
     setExporting(true);
     showNotice(`Mengemas file .h5p (v1.${cpMinor})...`);
     try {
-      const { blob, bundled, missing } = await buildH5p(project, cpMinor);
+      const { blob, bundled, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
-      showNotice(
-        missing.length > 0
-          ? `${name} berhasil diunduh (v1.${cpMinor}). Pustaka lokal: ${bundled.length}.`
-          : `Berhasil! ${name} berhasil diunduh (${bundled.length} pustaka H5P).`,
-      );
+      const mediaNote =
+        media.failed.length > 0
+          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
+          : '';
+      showNotice(`Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).${mediaNote}`);
     } catch (err) {
       showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
     } finally {
@@ -123,7 +143,7 @@ export function StudioView() {
         projectTitle={project.title}
         savedLabel={savedLabel}
         cpMinor={cpMinor}
-        onCpMinorChange={setCpMinor}
+        onCpMinorChange={handleCpMinorChange}
         onExport={handleExport}
         isExporting={exporting}
         onHome={goBack}
@@ -173,6 +193,14 @@ export function StudioView() {
             <div className="hs-canvas-topbar">
               <span className="hs-edit-mode-badge">EDIT MODE</span>
               <span className="hs-canvas-hint">Klik elemen pada slide untuk mengedit</span>
+              <button
+                type="button"
+                className="hs-panel-toggle"
+                aria-expanded={panelOpen}
+                onClick={() => setPanelOpen((open) => !open)}
+              >
+                {panelOpen ? 'Tutup panel' : 'Panel elemen'}
+              </button>
             </div>
 
             {state.activeSlide ? (
@@ -183,8 +211,12 @@ export function StudioView() {
                 activeSurface={project.settings.activeSurface}
                 onSelectElement={(id) => {
                   actions.setSelectedElementId(id);
-                  if (id) setRightPanel('properties');
-                  else setRightPanel('elements');
+                  if (id) {
+                    setRightPanel('properties');
+                    setPanelOpen(true);
+                  } else {
+                    setRightPanel('elements');
+                  }
                 }}
                 onMoveElement={(id, x, y) => {
                   const el = state.activeSlide?.elements.find((e) => e.id === id);
@@ -201,7 +233,15 @@ export function StudioView() {
           </div>
 
           {/* Kolom kanan: Panel Elemen / Properti */}
-          <div className="hs-right-panel-container">
+          {panelOpen && (
+            <button
+              type="button"
+              className="hs-panel-backdrop"
+              aria-label="Tutup panel"
+              onClick={() => setPanelOpen(false)}
+            />
+          )}
+          <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
             {rightPanel === 'elements' || !state.selectedElement ? (
               <>
                 <ElementPanel
@@ -209,6 +249,7 @@ export function StudioView() {
                     actions.addElement(kind);
                     showNotice('Elemen baru ditambah — atur propertinya.');
                     setRightPanel('properties');
+                    setPanelOpen(true);
                   }}
                 />
               </>
@@ -294,6 +335,7 @@ export function StudioView() {
                   <H5PServerPlayer
                     key={`server-${project.id}-${project.updatedAt}`}
                     project={project}
+                    cpMinor={cpMinor}
                     onNotice={showNotice}
                   />
                 )}
@@ -307,7 +349,12 @@ export function StudioView() {
 
       {step === 4 && (
         <section className="hs-step-section">
-          <ExportStep project={project} onNotice={showNotice} />
+          <ExportStep
+            project={project}
+            cpMinor={cpMinor}
+            onCpMinorChange={handleCpMinorChange}
+            onNotice={showNotice}
+          />
         </section>
       )}
 

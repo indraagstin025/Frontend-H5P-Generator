@@ -3,10 +3,10 @@
  * Cerminan perilaku player Course Presentation + summary slide.
  */
 import { useMemo, useState } from 'react';
-import { extractBlankAnswers, isQuizElement, maxScoreOf } from '../../studio/constants/h5pModel';
+import { extractBlankAnswers, isQuizElement, markWordTokens, maxScoreOf } from '../../studio/constants/h5pModel';
 import type { GoToSlideElement, Project, SlideElement } from '../../studio/constants/h5pModel';
 
-export type AnswerValue = string[] | boolean | string[] | null;
+export type AnswerValue = string[] | boolean | null;
 
 export function resolveTarget(el: GoToSlideElement, current: number, total: number): number {
   if (el.targetType === 'next') return Math.min(total - 1, current + 1);
@@ -16,7 +16,7 @@ export function resolveTarget(el: GoToSlideElement, current: number, total: numb
 
 function scoreElement(el: SlideElement, answer: AnswerValue): number {
   if (answer == null) return 0;
-  if (el.kind === 'multiChoice') {
+  if (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice') {
     if (!Array.isArray(answer)) return 0;
     const chosen = new Set(answer as string[]);
     const correct = new Set(el.options.filter((o) => o.correct).map((o) => o.id));
@@ -35,6 +35,34 @@ function scoreElement(el: SlideElement, answer: AnswerValue): number {
       if ((given[i] ?? '').toLowerCase() === exp.toLowerCase()) score += 1;
     });
     return score;
+  }
+  if (el.kind === 'dragWords') {
+    const expected = extractBlankAnswers(el.text);
+    const given = (answer as string[]).map((s) => s.trim().toLowerCase());
+    let score = 0;
+    expected.forEach((exp, i) => {
+      if ((given[i] ?? '').toLowerCase() === exp.toLowerCase()) score += 1;
+    });
+    return score;
+  }
+  if (el.kind === 'markWords') {
+    const expected = markWordTokens(el.text)
+      .map((t, i) => (t.marked ? String(i) : null))
+      .filter((v): v is string => v !== null);
+    const given = Array.isArray(answer) ? [...(answer as string[])].sort() : [];
+    const want = [...expected].sort();
+    if (given.length !== want.length) return 0;
+    return given.every((v, i) => v === want[i]) ? 1 : 0;
+  }
+  if (el.kind === 'dragDrop') {
+    if (!Array.isArray(answer)) return 0;
+    const given = answer as string[];
+    return el.items.reduce((score, item, i) => (given[i] === item.zoneId ? score + 1 : score), 0);
+  }
+  if (el.kind === 'summary') {
+    if (!Array.isArray(answer)) return 0;
+    const picked = (answer as string[])[0];
+    return el.statements.some((s) => s.id === picked && s.correct) ? 1 : 0;
   }
   return 0;
 }

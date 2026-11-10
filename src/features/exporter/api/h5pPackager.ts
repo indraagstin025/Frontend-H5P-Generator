@@ -8,27 +8,21 @@
  * Arsip ZIP hanya berisi entri berkas (tanpa entri direktori).
  */
 import { strToU8, strFromU8, unzipSync, zipSync } from 'fflate';
-import { actionLibrary } from '../../studio/constants/h5pLibraries';
-import { COURSE_PRESENTATION, DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
+import { actionLibraryFor, libraryForElement } from '../../studio/constants/h5pLibraries';
+import { COURSE_PRESENTATION, COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import {
-  countBlanks,
   createElement,
   createProject,
   createSlide,
-  extractBlankAnswers,
   uid,
 } from '../../studio/constants/h5pModel';
 import type {
   AspectRatio,
-  AudioRecorderElement,
+  AudioElement,
   BlanksElement,
-  ContinuousTextElement,
   DialogCardsElement,
   DragDropElement,
-  DragWordsElement,
-  ElementKind,
-  ExportableTextElement,
-  InteractiveVideoElement,
+  ImageElement,
   LinkElement,
   MarkWordsElement,
   MultiChoiceElement,
@@ -39,9 +33,9 @@ import type {
   Slide,
   SlideElement,
   SummaryElement,
-  TableElement,
   TrueFalseElement,
   VideoElement,
+  DragWordsElement,
 } from '../../studio/constants/h5pModel';
 import { getMedia } from '../../studio/utils/mediaRegistry';
 
@@ -51,13 +45,233 @@ const IMAGE_MIME: Record<string, string> = {
   jpeg: 'image/jpeg',
   gif: 'image/gif',
   svg: 'image/svg+xml',
+  webp: 'image/webp',
 };
-const AUDIO_MIME: Record<string, string> = { mp3: 'audio/mpeg', wav: 'audio/wav' };
+const AUDIO_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+};
 const VIDEO_MIME: Record<string, string> = {
   mp4: 'video/mp4',
+  m4v: 'video/mp4',
   webm: 'video/webm',
   ogv: 'video/ogg',
+  ogg: 'video/ogg',
 };
+
+type MediaKind = 'image' | 'audio' | 'video';
+type MediaElement = ImageElement | AudioElement | VideoElement;
+
+const MEDIA_DIR: Record<MediaKind, string> = {
+  image: 'images',
+  audio: 'audios',
+  video: 'videos',
+};
+const MEDIA_MIME: Record<MediaKind, Record<string, string>> = {
+  image: IMAGE_MIME,
+  audio: AUDIO_MIME,
+  video: VIDEO_MIME,
+};
+const MEDIA_FALLBACK_EXT: Record<MediaKind, string> = { image: 'png', audio: 'mp3', video: 'mp4' };
+const MEDIA_LABEL: Record<MediaKind, string> = { image: 'Gambar', audio: 'Suara', video: 'Video' };
+/** Batas ukuran mengikuti editor properti (video 50 MB, media lain 10 MB). */
+const MEDIA_MAX_BYTES: Record<MediaKind, number> = {
+  image: 10 * 1024 * 1024,
+  audio: 10 * 1024 * 1024,
+  video: 50 * 1024 * 1024,
+};
+const ASSET_FETCH_TIMEOUT_MS = 20_000;
+
+const MIME_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/gif': 'gif',
+  'image/svg+xml': 'svg',
+  'image/webp': 'webp',
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/wave': 'wav',
+  'audio/ogg': 'ogg',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
+  'video/ogg': 'ogv',
+};
+
+/** Aset media yang sudah siap ditulis ke content/ dan dirujuk action. */
+interface ResolvedMedia {
+  bytes: Uint8Array;
+  ext: string;
+  mime: string;
+  /** Path relatif terhadap folder content/ di paket .h5p. */
+  path: string;
+}
+
+function isMediaElement(el: SlideElement): el is MediaElement {
+  return el.kind === 'image' || el.kind === 'audio' || el.kind === 'video';
+}
+
+function mediaContentPath(kind: MediaKind, id: string, ext: string): string {
+  return `${MEDIA_DIR[kind]}/el-${id.slice(0, 8)}.${ext}`;
+}
+
+function extFromName(name: string): string {
+  const clean = name.split('?')[0].split('#')[0];
+  return sanitizeExt(clean.split('/').pop() ?? '', '');
+}
+
+function allowedExt(kind: MediaKind, ext: string): string {
+  return ext && MEDIA_MIME[kind][ext] ? ext : '';
+}
+
+function asciiAt(bytes: Uint8Array, offset: number, length: number): string {
+  if (bytes.length < offset + length) return '';
+  let out = '';
+  for (let i = 0; i < length; i += 1) out += String.fromCharCode(bytes[offset + i]);
+  return out;
+}
+
+/**
+ * Tebak jenis media dari magic bytes. Ekstensi hasil tebakan dipakai agar
+ * path di content.json selalu cocok dengan isi berkas, walau nama dari
+ * server keliru atau URL tidak punya ekstensi.
+ */
+function sniffMediaKind(kind: MediaKind, bytes: Uint8Array): { ext: string; mime: string } | null {
+  if (kind === 'image') return sniffImageKind(bytes);
+  if (kind === 'audio') {
+    if (asciiAt(bytes, 0, 3) === 'ID3') return { ext: 'mp3', mime: 'audio/mpeg' };
+    if (bytes.length > 1 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) {
+      return { ext: 'mp3', mime: 'audio/mpeg' };
+    }
+    if (asciiAt(bytes, 0, 4) === 'RIFF' && asciiAt(bytes, 8, 4) === 'WAVE') {
+      return { ext: 'wav', mime: 'audio/wav' };
+    }
+    if (asciiAt(bytes, 0, 4) === 'OggS') return { ext: 'ogg', mime: 'audio/ogg' };
+    if (asciiAt(bytes, 4, 4) === 'ftyp') return { ext: 'm4a', mime: 'audio/mp4' };
+    return null;
+  }
+  if (asciiAt(bytes, 4, 4) === 'ftyp') return { ext: 'mp4', mime: 'video/mp4' };
+  if (bytes.length > 3 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return { ext: 'webm', mime: 'video/webm' };
+  }
+  if (asciiAt(bytes, 0, 4) === 'OggS') return { ext: 'ogv', mime: 'video/ogg' };
+  return null;
+}
+
+function chooseMediaExt(kind: MediaKind, bytes: Uint8Array, mime: string, names: string[]): string {
+  const sniffed = sniffMediaKind(kind, bytes);
+  if (sniffed) return sniffed.ext;
+  const fromMime = allowedExt(kind, MIME_EXT[mime.toLowerCase()] ?? '');
+  if (fromMime) return fromMime;
+  for (const name of names) {
+    const ext = allowedExt(kind, extFromName(name));
+    if (ext) return ext;
+  }
+  return MEDIA_FALLBACK_EXT[kind];
+}
+
+async function fetchMediaBytes(
+  url: string,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; mime: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ASSET_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const declared = Number(res.headers.get('content-length') ?? '0');
+    if (Number.isFinite(declared) && declared > maxBytes) {
+      throw new Error(`ukuran melebihi ${Math.round(maxBytes / 1024 / 1024)} MB`);
+    }
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (bytes.length === 0) throw new Error('berkas kosong');
+    if (bytes.length > maxBytes) {
+      throw new Error(`ukuran melebihi ${Math.round(maxBytes / 1024 / 1024)} MB`);
+    }
+    return { bytes, mime: (res.headers.get('content-type') ?? '').split(';')[0].trim() };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('waktu pengambilan habis');
+    }
+    if (err instanceof TypeError) {
+      throw new Error('tidak bisa diambil (jaringan/CORS)');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Ambil bytes + ekstensi aset elemen, baik dari File lokal maupun objectUrl server. */
+async function resolveMediaElement(el: MediaElement): Promise<ResolvedMedia | null> {
+  let bytes: Uint8Array;
+  let mime = '';
+  let names: string[] = [];
+  const candidate = el.file ?? getMedia(el.id)?.file;
+  if (candidate && typeof (candidate as Blob).arrayBuffer === 'function') {
+    bytes = await fileToBytes(candidate);
+    mime = (candidate as File).type || '';
+    names = [(candidate as File).name, el.fileName].filter(Boolean);
+  } else {
+    if (!el.objectUrl) return null;
+    const fetched = await fetchMediaBytes(el.objectUrl, MEDIA_MAX_BYTES[el.kind]);
+    bytes = fetched.bytes;
+    mime = fetched.mime;
+    names = [el.fileName, el.objectUrl];
+  }
+  const sniffed = sniffMediaKind(el.kind, bytes);
+  const ext = chooseMediaExt(el.kind, bytes, mime, names);
+  return {
+    bytes,
+    ext,
+    mime: MEDIA_MIME[el.kind][ext] ?? sniffed?.mime ?? 'application/octet-stream',
+    path: mediaContentPath(el.kind, el.id, ext),
+  };
+}
+
+/**
+ * Kumpulkan aset gambar/audio/video dari semua slide. Aset server (objectUrl)
+ * di-fetch ulang supaya ikut masuk paket; batasi 4 fetch paralel agar tidak
+ * membanjiri backend saat satu presentasi berisi banyak gambar.
+ */
+async function resolveProjectMedia(project: Project): Promise<{
+  media: Map<string, ResolvedMedia>;
+  failed: string[];
+}> {
+  const media = new Map<string, ResolvedMedia>();
+  const failed: string[] = [];
+  const queue: Array<{ el: MediaElement; order: number }> = [];
+  for (const slide of project.slides) {
+    for (const el of slide.elements) {
+      if (isMediaElement(el) && (el.file || el.objectUrl || getMedia(el.id)?.file)) queue.push({ el, order: slide.order });
+    }
+  }
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+    for (;;) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= queue.length) return;
+      const { el, order } = queue[index];
+      try {
+        const resolved = await resolveMediaElement(el);
+        if (resolved) media.set(el.id, resolved);
+      } catch (err) {
+        const name = el.fileName || el.title || 'tanpa nama';
+        const detail = err instanceof Error ? err.message : String(err);
+        failed.push(`Slide ${order}: ${MEDIA_LABEL[el.kind]} ${name} — ${detail}`);
+      }
+    }
+  });
+  await Promise.all(workers);
+  return { media, failed };
+}
 
 export function sanitizeExt(name: string, fallback: string): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
@@ -91,70 +305,168 @@ function mcAnswerText(a: unknown): string {
   return '';
 }
 
-function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Array>): Record<string, unknown> | null {
-  void assets;
+function splitLinkUrl(raw: string): { protocol: string; url: string } {
+  const url = raw.trim();
+  if (url.startsWith('https://')) return { protocol: 'https://', url: url.slice(8) };
+  if (url.startsWith('http://')) return { protocol: 'http://', url: url.slice(7) };
+  if (url.startsWith('/')) return { protocol: '/', url: url.slice(1) };
+  return { protocol: 'other', url };
+}
+
+function videoSource(
+  el: { fileName: string; file: File | null; objectUrl?: string | null; videoUrl: string; title: string },
+  id: string,
+  asset?: ResolvedMedia,
+) {
+  if (asset) {
+    return fileRef(asset.path, asset.mime, el.title || el.fileName || asset.path);
+  }
+  if (el.file) {
+    const ext = sanitizeExt(el.fileName, 'mp4');
+    return fileRef(
+      `videos/el-${id.slice(0, 8)}.${ext}`,
+      VIDEO_MIME[ext] ?? 'video/mp4',
+      el.title || el.fileName,
+    );
+  }
+  const url = el.videoUrl.trim() || (el.objectUrl ?? '').trim();
+  if (!url) return null;
+  const clean = url.split('?')[0].split('#')[0];
+  const ext = clean.split('.').pop()?.toLowerCase() ?? '';
+  return fileRef(url, VIDEO_MIME[ext] ?? 'video/mp4', el.title || url);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function tableHtml(el: { rows: number; cols: number }): string {
+  const rows = Math.max(1, Math.min(20, Math.round(el.rows)));
+  const cols = Math.max(1, Math.min(20, Math.round(el.cols)));
+  const body = Array.from({ length: rows }, () => `<tr>${'<td>&nbsp;</td>'.repeat(cols)}</tr>`).join('');
+  return `<figure class="table"><table class="h5p-table">${body}</table></figure>`;
+}
+
+function toAction(
+  el: SlideElement,
+  cpMinor: number,
+  media: Map<string, ResolvedMedia>,
+): Record<string, unknown> | null {
   switch (el.kind) {
     case 'advancedText':
-      return { library: actionLibrary(el.kind, cpMinor), params: { text: el.text } };
-    case 'image': {
-      const ext = sanitizeExt(el.fileName, 'png');
-      const name = `images/el-${el.id.slice(0, 8)}.${ext}`;
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+    case 'link': {
+      const link = el as LinkElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          file: fileRef(name, IMAGE_MIME[ext] ?? 'image/png', el.title || el.alt),
+          title: link.linkText || link.title || link.url,
+          linkWidget: splitLinkUrl(link.url),
+        },
+      };
+    }
+    case 'image': {
+      const asset = media.get(el.id);
+      const ext = asset?.ext ?? sanitizeExt(el.fileName, 'png');
+      const name = asset?.path ?? mediaContentPath('image', el.id, ext);
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          file: fileRef(name, asset?.mime ?? IMAGE_MIME[ext] ?? 'image/png', el.title || el.alt),
           alt: el.alt,
           title: el.title,
         },
       };
     }
-    case 'audio': {
-      const ext = sanitizeExt(el.fileName, 'mp3');
-      const name = `audios/el-${el.id.slice(0, 8)}.${ext}`;
+    case 'shape': {
+      const shape = el as ShapeElement;
+      const type =
+        shape.shapeType === 'circle'
+          ? 'circle'
+          : shape.shapeType === 'vertical-line'
+            ? 'vertical-line'
+            : shape.shapeType === 'horizontal-line'
+              ? 'horizontal-line'
+              : 'rectangle';
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
+        params:
+          type === 'circle' || type === 'rectangle'
+            ? {
+                type,
+                shape: {
+                  fillColor: shape.color,
+                  borderColor: '#1f2937',
+                  borderWidth: '2',
+                  borderStyle: 'solid',
+                  borderRadius: type === 'circle' ? '20' : '0',
+                },
+              }
+            : {
+                type,
+                line: { borderColor: shape.color, borderWidth: '4', borderStyle: 'solid' },
+              },
+      };
+    }
+    case 'video': {
+      const asset = media.get(el.id);
+      const source = videoSource(el as VideoElement, el.id, asset);
+      return {
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          files: [fileRef(name, AUDIO_MIME[ext] ?? 'audio/mpeg', el.title || name)],
+          sources: source ? [source] : [],
+          visuals: { fit: true, controls: true },
+          playback: { autoplay: false, loop: false },
+          // H5P.Video membaca `a11y` sebagai ARRAY track
+          // (`parameters.a11y.forEach`), walau semantics.json menuliskannya
+          // sebagai group `{videoTrack: [...]}`. Tanpa ini, default semantics
+          // membuatnya object dan player crash.
+          a11y: [],
+        },
+      };
+    }
+    case 'audio': {
+      const asset = media.get(el.id);
+      const ext = asset?.ext ?? sanitizeExt(el.fileName, 'mp3');
+      const name = asset?.path ?? mediaContentPath('audio', el.id, ext);
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          files: [fileRef(name, asset?.mime ?? AUDIO_MIME[ext] ?? 'audio/mpeg', el.title || name)],
           playerMode: 'minimalistic',
         },
       };
     }
-    case 'video': {
-      const v = el as VideoElement;
-      const ext = sanitizeExt(v.fileName || 'video.mp4', 'mp4');
-      const name = `videos/el-${v.id.slice(0, 8)}.${ext}`;
-      const sources: Array<Record<string, unknown>> = [];
-      const file = v.file ?? getMedia(v.id)?.file;
-      if (file) {
-        sources.push(fileRef(name, VIDEO_MIME[ext] ?? 'video/mp4', v.title || name));
-      } else if (v.videoUrl) {
-        const isYt = v.videoUrl.includes('youtube.com') || v.videoUrl.includes('youtu.be');
-        sources.push({
-          path: v.videoUrl,
-          mime: isYt ? 'video/YouTube' : (VIDEO_MIME[ext] ?? 'video/mp4'),
-          copyright: { license: 'U' },
-        });
-      }
-      if (sources.length === 0) return null;
+    case 'singleChoice': {
+      const sc = el as SingleChoiceElement;
+      const answers = [...sc.options]
+        .sort((a, b) => Number(b.correct) - Number(a.correct))
+        .map((o) => o.text);
       return {
-        library: actionLibrary(v.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          sources,
-          visuals: {
-            fit: true,
-            controls: true,
-          },
-          playback: {
-            autoplay: false,
-            loop: false,
+          choices: [{ question: sc.question, answers }],
+          behaviour: {
+            autoContinue: true,
+            enableRetry: sc.enableRetry,
+            enableSolutionsButton: sc.showSolution,
+            passPercentage: 50,
+            soundEffectsEnabled: false,
+            timeoutCorrect: 2,
+            timeoutWrong: 5,
           },
         },
       };
     }
-    case 'multiChoice': {
-      const m = el as MultiChoiceElement;
+    case 'multiChoice':
+    case 'multimediaChoice': {
+      const m = el as MultiChoiceElement | MultimediaChoiceElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
           question: m.question,
           answers: m.options.map((o) => ({
@@ -166,295 +478,204 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
               notChosenFeedback: '',
             },
           })),
-          behaviour: behaviourOf(m, { singleAnswer: m.singleAnswer }),
+          behaviour: behaviourOf(m, {
+            // MultimediaChoice mengikuti jumlah jawaban benar (auto);
+            // MultiChoice tetap mengikuti sakelar singleAnswer.
+            type:
+              el.kind === 'multimediaChoice'
+                ? 'auto'
+                : (el as MultiChoiceElement).singleAnswer
+                  ? 'single'
+                  : 'multi',
+          }),
         },
       };
     }
     case 'trueFalse': {
       const t = el as TrueFalseElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
           question: t.question,
           correct: t.correctAnswer ? 'true' : 'false',
-          behaviour: behaviourOf(t),
-          confirmCheckDialog: false,
+          behaviour: behaviourOf(t, {
+            feedbackOnCorrect: t.feedbackCorrect,
+            feedbackOnWrong: t.feedbackWrong,
+            confirmCheckDialog: false,
+            confirmRetryDialog: false,
+          }),
         },
       };
     }
     case 'blanks': {
       const b = el as BlanksElement;
-      const answers = extractBlankAnswers(b.text);
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          text: b.text,
-          questions: answers,
+          // H5P.Blanks membaca baris soal (dengan *jawaban*) dari `questions`.
+          text: '',
+          questions: [b.text],
           behaviour: behaviourOf(b, { enableCheckButton: true }),
-        },
-      };
-    }
-    case 'link': {
-      const l = el as LinkElement;
-      let protocol = 'https://';
-      let cleanUrl = l.url || '';
-      if (/^https?:\/\//i.test(cleanUrl)) {
-        protocol = cleanUrl.toLowerCase().startsWith('https://') ? 'https://' : 'http://';
-        cleanUrl = cleanUrl.replace(/^https?:\/\//i, '');
-      } else if (cleanUrl.startsWith('/')) {
-        protocol = '/';
-        cleanUrl = cleanUrl.replace(/^\//, '');
-      }
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          title: l.linkText || l.title || 'Link',
-          linkWidget: {
-            protocol,
-            url: cleanUrl,
-          },
-        },
-      };
-    }
-    case 'shape': {
-      const s = el as ShapeElement;
-      const shapeTypeMap: Record<string, string> = {
-        circle: 'circle',
-        rectangle: 'rectangle',
-        square: 'rectangle',
-        triangle: 'rectangle',
-      };
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          type: shapeTypeMap[s.shapeType] ?? 'rectangle',
-          shape: {
-            fillColor: s.color || '#4CAF50',
-            borderWidth: 0,
-            borderStyle: 'solid',
-            borderColor: '#333333',
-            borderRadius: s.shapeType === 'circle' ? 50 : 0,
-          },
-        },
-      };
-    }
-    case 'singleChoice': {
-      const sc = el as SingleChoiceElement;
-      const sortedOptions = [...sc.options].sort((a, b) => (b.correct ? 1 : 0) - (a.correct ? 1 : 0));
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          choices: [
-            {
-              question: `<p>${sc.question || 'Pertanyaan'}</p>`,
-              answers: sortedOptions.map((o) => `<p>${o.text}</p>`),
-            },
-          ],
-          behaviour: {
-            timeoutCorrect: 2000,
-            timeoutWrong: 3000,
-            soundEffectsEnabled: true,
-            enableRetry: sc.enableRetry,
-            enableSolutionsButton: sc.showSolution,
-            passPercentage: 100,
-          },
         },
       };
     }
     case 'dragDrop': {
       const dd = el as DragDropElement;
+      const zones = dd.zones.length > 0 ? dd.zones : [{ id: 'zone-1', label: 'Zona 1' }];
+      const items = dd.items.length > 0 ? dd.items : [{ id: 'item-1', text: 'Item 1', zoneId: zones[0].id }];
+      const zoneIndex = new Map(zones.map((z, i) => [z.id, i]));
+      const taskWidth = 640;
+      const taskHeight = 420;
+      const dropZones = zones.map((zone, i) => ({
+        label: zone.label,
+        showLabel: true,
+        x: 16 + (i % 3) * 205,
+        y: 290 + Math.floor(i / 3) * 70,
+        width: 190,
+        height: 58,
+        correctElements: items
+          .map((it, itemIndex) => (it.zoneId === zone.id ? String(itemIndex) : null))
+          .filter((v): v is string => v !== null),
+        backgroundOpacity: 100,
+        single: true,
+        autoAlign: false,
+      }));
+      const elements = items.map((item, i) => ({
+        type: {
+          library: 'H5P.AdvancedText 1.1',
+          params: { text: `<p>${escapeHtml(item.text)}</p>` },
+          subContentId: item.id,
+        },
+        x: 16 + (i % 3) * 205,
+        y: 16 + Math.floor(i / 3) * 56,
+        width: 190,
+        height: 46,
+        dropZones: [String(zoneIndex.get(item.zoneId) ?? 0)],
+        backgroundOpacity: 100,
+        multiple: false,
+      }));
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          scoreShow: 'Check',
-          tryAgain: 'Retry',
+          scoreShow: 'Tampilkan nilai',
+          submit: 'Periksa',
+          tryAgain: 'Coba lagi',
+          scoreExplanation: 'Penjelasan nilai',
           question: {
-            settings: {
-              size: { width: 620, height: 310 },
-            },
-            task: {
-              elements: [],
-              dropZones: [],
-            },
+            settings: { size: { width: taskWidth, height: taskHeight } },
+            task: { elements, dropZones },
           },
-          overallFeedback: [],
-          behaviour: behaviourOf(dd, {
-            preventResize: false,
+          behaviour: {
+            enableRetry: dd.enableRetry,
+            enableCheckButton: true,
             singlePoint: false,
-            applyPenalties: true,
+            applyPenalties: false,
             dropZoneHighlighting: 'dragging',
-            autoAlignSpacing: 2,
-          }),
+            autoAlignSpacing: 10,
+            enableFullScreen: false,
+            showScorePoints: true,
+            showTitle: false,
+          },
         },
       };
     }
     case 'summary': {
       const sm = el as SummaryElement;
+      const ordered = [...sm.statements].sort((a, b) => Number(b.correct) - Number(a.correct));
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          intro: `<p>${sm.intro || 'Ringkasan materi di slide ini.'}</p>`,
+          intro: sm.intro,
           summaries: [
             {
-              summary: [
-                { text: 'Pernyataan rangkuman benar' },
-                { text: 'Pernyataan rangkuman salah (distraktor)' },
-              ],
+              // H5P.Summary membaca `summary` sebagai array string (bukan {text})
+              // dan `tip` sebagai string (bukan {tip}).
+              summary: ordered.map((s) => s.text),
+              tip: sm.feedbackCorrect,
             },
           ],
-          overallFeedback: [],
-          solvedLabel: 'Solved!',
-          scoreLabel: 'Wrong answers:',
         },
       };
     }
     case 'dragWords': {
       const dw = el as DragWordsElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          taskDescription: `<p>${dw.title || 'Drag the words into the correct boxes'}</p>`,
-          textField: dw.text || 'Drag *kata* ke tempat yang *tepat*.',
-          overallFeedback: [],
-          behaviour: behaviourOf(dw, {
-            instantFeedback: false,
-          }),
+          taskDescription: dw.title || 'Lengkapi kalimat berikut',
+          textField: dw.text,
+          behaviour: behaviourOf(dw, { enableCheckButton: true }),
         },
       };
     }
     case 'markWords': {
       const mw = el as MarkWordsElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          taskDescription: `<p>${mw.title || 'Click on all the correct words.'}</p>`,
-          textField: `<p>${mw.text || 'Tandai *kata kunci* dalam kalimat ini.'}</p>`,
-          overallFeedback: [],
-          behaviour: behaviourOf(mw),
+          taskDescription: mw.title || 'Tandai kata yang benar',
+          textField: mw.text,
+          behaviour: behaviourOf(mw, { enableCheckButton: true, showScorePoints: true }),
         },
       };
     }
     case 'dialogCards': {
       const dc = el as DialogCardsElement;
       return {
-        library: actionLibrary(el.kind, cpMinor),
+        library: actionLibraryFor(el, cpMinor),
         params: {
-          title: `<p>${dc.title || 'Kartu Dialog'}</p>`,
-          description: `<p>${dc.description || 'Balik kartu untuk melihat jawaban.'}</p>`,
+          title: dc.title || 'Dialog Cards',
           mode: 'normal',
-          dialogs: [
-            {
-              text: `<p style="text-align: center;">${dc.description || 'Pertanyaan kartu'}</p>`,
-              answer: '<p style="text-align: center;">Jawaban kartu</p>',
-            },
-          ],
-          behaviour: {
-            enableRetry: true,
-            scaleTextNotCard: false,
-            randomCards: false,
-            maxProficiency: 5,
-          },
-        },
-      };
-    }
-    case 'continuousText': {
-      const ct = el as ContinuousTextElement;
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          text: ct.text.startsWith('<') ? ct.text : `<p>${ct.text || 'Teks narasi…'}</p>`,
-        },
-      };
-    }
-    case 'exportableText': {
-      const et = el as ExportableTextElement;
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          label: `<p>${et.title || 'Catatan Peserta'}</p>`,
-          placeholderText: et.text || 'Tulis catatan Anda di sini…',
-          exportNotSupported: 'Export not supported on your device',
-          exportComments: false,
-        },
-      };
-    }
-    case 'table': {
-      const tb = el as TableElement;
-      const rCount = Math.max(1, Math.min(20, tb.rows || 3));
-      const cCount = Math.max(1, Math.min(20, tb.cols || 3));
-      let rowsHtml = '';
-      for (let r = 0; r < rCount; r++) {
-        rowsHtml += '<tr>';
-        for (let c = 0; c < cCount; c++) {
-          rowsHtml += r === 0 ? `<th>Header ${c + 1}</th>` : `<td>Baris ${r} Kol ${c + 1}</td>`;
-        }
-        rowsHtml += '</tr>';
-      }
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          text: `<figure class="table"><table class="h5p-table">${rowsHtml}</table></figure>`,
-        },
-      };
-    }
-    case 'interactiveVideo': {
-      const iv = el as InteractiveVideoElement;
-      const url = iv.videoUrl || '';
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          interactiveVideo: {
-            video: {
-              files: url ? [{ path: url, mime: 'video/mp4', copyright: { license: 'U' } }] : [],
-              startScreenOptions: {
-                title: iv.title || 'Interactive Video',
-                hideStartTitle: false,
-              },
-            },
-            assets: {
-              interactions: [],
-              bookmarks: [],
-            },
-          },
-        },
-      };
-    }
-    case 'audioRecorder': {
-      const ar = el as AudioRecorderElement;
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          title: ar.description || ar.title || 'Rekam suara Anda',
-          l10n: {
-            recordAnswer: 'Record',
-            pause: 'Pause',
-            continue: 'Continue',
-            download: 'Download',
-            done: 'Done',
-            retry: 'Retry',
-          },
-        },
-      };
-    }
-    case 'multimediaChoice': {
-      const mm = el as MultimediaChoiceElement;
-      return {
-        library: actionLibrary(el.kind, cpMinor),
-        params: {
-          question: `<p>${mm.question || 'Pilih jawaban yang benar'}</p>`,
-          options: mm.options.map((o) => ({
-            media: null,
-            correct: o.correct,
-            tipsAndFeedback: {
-              tip: '',
-              chosenFeedback: o.correct ? mm.feedbackCorrect : mm.feedbackWrong,
-              notChosenFeedback: '',
-            },
+          description: dc.description,
+          dialogs: dc.cards.map((card) => ({
+            text: card.front,
+            answer: card.back,
           })),
-          behaviour: behaviourOf(mm),
+          behaviour: { scaleTextNotCard: true, randomCards: false, enableRetry: true },
         },
       };
     }
+    case 'continuousText':
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+    case 'exportableText':
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          label: el.text,
+          index: 1,
+          exportNotSupported: 'Ekspor tidak didukung di browser ini.',
+        },
+      };
+    case 'table':
+      return { library: actionLibraryFor(el, cpMinor), params: { text: tableHtml(el) } };
+    case 'interactiveVideo': {
+      const source = videoSource(
+        {
+          fileName: '',
+          file: null,
+          videoUrl: el.videoUrl,
+          title: el.title,
+        },
+        el.id,
+      );
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: {
+          sources: source ? [source] : [],
+          visuals: { fit: true, controls: true },
+          playback: { autoplay: false, loop: false },
+          // H5P.Video membaca `a11y` sebagai ARRAY track
+          // (`parameters.a11y.forEach`), walau semantics.json menuliskannya
+          // sebagai group `{videoTrack: [...]}`.
+          a11y: [],
+        },
+      };
+    }
+    case 'audioRecorder':
+      return {
+        library: actionLibraryFor(el, cpMinor),
+        params: { title: el.description || el.title || 'Audio Recorder' },
+      };
     case 'goToSlide':
       return null;
     default: {
@@ -464,7 +685,12 @@ function toAction(el: SlideElement, cpMinor: number, assets: Map<string, Uint8Ar
   }
 }
 
-export function toCpElement(el: SlideElement, slideCount: number, cpMinor: number, assets: Map<string, Uint8Array>) {
+export function toCpElement(
+  el: SlideElement,
+  slideCount: number,
+  cpMinor: number,
+  media: Map<string, ResolvedMedia>,
+) {
   const base = {
     x: clampPct(el.position.x),
     y: clampPct(el.position.y),
@@ -486,7 +712,7 @@ export function toCpElement(el: SlideElement, slideCount: number, cpMinor: numbe
       invisible: el.invisible,
     };
   }
-  const action = toAction(el, cpMinor, assets);
+  const action = toAction(el, cpMinor, media);
   if (!action) return null;
   return { ...base, action };
 }
@@ -496,16 +722,173 @@ export interface SlideBackgroundRef {
   mime: string;
 }
 
+/**
+ * Potongan semantics.json yang relevan untuk mengisi default.
+ *
+ * Kenapa perlu: library H5P membaca params seperti `params.UI.checkAnswerButton`
+ * atau `dropZone.tipsAndFeedback.tip` TANPA guard. Params yang tidak kita tulis
+ * dan tidak diisi default (karena paket tidak melewati editor H5P) membuat
+ * player meledak: "Cannot read properties of undefined". Dengan mengisi default
+ * dari semantics.json milik library itu sendiri, isi paket selalu lengkap dan
+ * mengikuti versi library yang ikut dibundel.
+ */
+export interface SemanticsField {
+  name: string;
+  type?: string;
+  default?: unknown;
+  optional?: boolean;
+  defaultNum?: number;
+  min?: number;
+  options?: Array<{ value?: unknown }>;
+  fields?: SemanticsField[];
+  field?: SemanticsField;
+}
+
+/** Bukan objek biasa (array/berkas) — tidak boleh ditelusuri sebagai group. */
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Nilai default satu field semantics. `undefined` = jangan ditulis. */
+function defaultFor(node: SemanticsField): unknown {
+  if (node.default !== undefined) return node.default;
+  const type = node.type ?? 'text';
+
+  // Jangan memalsukan berkas/berkas media/library lain. Sengaja `undefined`
+  // (bukan `null`): banyak library mengecek `!== undefined` lalu langsung
+  // membaca `.path`, sehingga `null` lolos guard dan berujung crash
+  // (mis. DragQuestion `question.settings.background.path`).
+  if (type === 'library') return undefined;
+  if (type === 'file' || type === 'image' || type === 'video' || type === 'audio') return undefined;
+
+  if (type === 'group') {
+    const fields = node.fields ?? [];
+    // Pola khas H5P: group berisi list bernama sama (overallFeedback).
+    // Runtime membacanya sebagai ARRAY DATAR [{from,to,feedback}].
+    const sameName = fields.find((f) => f.name === node.name && f.type === 'list');
+    if (sameName) {
+      const count = sameName.defaultNum ?? sameName.min ?? 0;
+      const out: unknown[] = [];
+      for (let i = 0; i < count; i++) out.push(defaultFor(sameName.field ?? sameName));
+      return out;
+    }
+    const out: Record<string, unknown> = {};
+    for (const f of fields) {
+      const v = defaultFor(f);
+      if (v !== undefined) out[f.name] = v;
+    }
+    return out;
+  }
+
+  if (type === 'list') {
+    const count = node.defaultNum ?? 0;
+    const out: unknown[] = [];
+    for (let i = 0; i < count; i++) out.push(defaultFor(node.field ?? node));
+    return out;
+  }
+
+  if (type === 'number') return node.min ?? 0;
+  if (type === 'boolean') return false;
+  if (type === 'select') {
+    const first = node.options?.find((o) => o.value !== undefined)?.value;
+    return first ?? '';
+  }
+  // text, html, dll.
+  return '';
+}
+
+/**
+ * Lengkapi `params` dengan field semantics yang belum ada. Nilai yang sudah
+ * kita tulis TIDAK ditimpa; object di-merge, array diproses per elemen
+ * (penting untuk `dropZones[].tipsAndFeedback`).
+ */
+export function fillSemanticsDefaults(
+  semantics: SemanticsField[],
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  for (const node of semantics) {
+    const value = params[node.name];
+    if (value === undefined) {
+      const d = defaultFor(node);
+      if (d !== undefined) params[node.name] = d;
+      continue;
+    }
+    if (node.type === 'group' && isPlainObject(value)) {
+      if (node.fields) fillSemanticsDefaults(node.fields, value);
+      continue;
+    }
+    if (node.type === 'list' && Array.isArray(value) && node.field?.type === 'group' && node.field.fields) {
+      for (const item of value) {
+        if (isPlainObject(item)) fillSemanticsDefaults(node.field.fields, item);
+      }
+    }
+  }
+  return params;
+}
+
+/** Ambil semantics.json tiap library yang dipakai (gagal → dilewati). */
+async function loadLibrarySemantics(
+  deps: LibDep[],
+  readFile: (relPath: string) => Promise<Uint8Array>,
+): Promise<Record<string, SemanticsField[]>> {
+  const out: Record<string, SemanticsField[]> = {};
+  await Promise.all(
+    deps.map(async (dep) => {
+      try {
+        const dir = `${dep.machineName}-${dep.majorVersion}.${dep.minorVersion}`;
+        const parsed = decodeJson(await readFile(`${dir}/semantics.json`)) as SemanticsField[];
+        if (Array.isArray(parsed) && parsed.length > 0) out[dep.machineName] = parsed;
+      } catch {
+        // library tanpa semantics.json — biarkan tanpa default tambahan
+      }
+    }),
+  );
+  return out;
+}
+
+/** Terapkan default semantics ke params root (CoursePresentation) + tiap action. */
+function applySemanticsDefaults(
+  content: Record<string, unknown>,
+  semantics: Record<string, SemanticsField[]> | undefined,
+): void {
+  if (!semantics) return;
+  const cpSemantics = semantics[COURSE_PRESENTATION.machineName];
+  if (cpSemantics) {
+    // `presentation` (slides/elements) sengaja TIDAK diisi default: struktur
+    // itu kita bangun sendiri, dan default semantics di level element justru
+    // menambah `goToSlideType`/`goToSlide` ke elemen ber-action sehingga
+    // importer (parseH5p) salah mengenalinya sebagai tombol navigasi.
+    fillSemanticsDefaults(
+      cpSemantics.filter((f) => f.name !== 'presentation'),
+      content,
+    );
+  }
+
+  const presentation = content.presentation as
+    | { slides?: Array<{ elements?: Array<Record<string, unknown>> }> }
+    | undefined;
+  for (const slide of presentation?.slides ?? []) {
+    for (const el of slide.elements ?? []) {
+      const action = el.action as { library?: string; params?: Record<string, unknown> } | undefined;
+      if (!action?.library || !isPlainObject(action.params)) continue;
+      const machineName = action.library.split(' ')[0];
+      const libSemantics = semantics[machineName];
+      if (libSemantics) fillSemanticsDefaults(libSemantics, action.params);
+    }
+  }
+}
+
 export function toContentJson(
   project: Project,
   cpMinor: number,
   backgrounds?: SlideBackgroundRef[],
+  media: Map<string, ResolvedMedia> = new Map(),
+  semantics?: Record<string, SemanticsField[]>,
 ): Record<string, unknown> {
-  const assets = new Map<string, Uint8Array>();
   const n = project.slides.length;
   const slides = project.slides.map((s, idx) => ({
     elements: s.elements
-      .map((el) => toCpElement(el, n, cpMinor, assets))
+      .map((el) => toCpElement(el, n, cpMinor, media))
       .filter((el): el is NonNullable<typeof el> => el !== null),
     keywords: s.keywords
       .filter((k) => k.main.trim().length > 0)
@@ -518,7 +901,7 @@ export function toContentJson(
       ),
     },
   }));
-  return {
+  const content: Record<string, unknown> = {
     presentation: {
       slides,
       keywordListEnabled: project.settings.keywordListEnabled,
@@ -537,29 +920,43 @@ export function toContentJson(
     },
     l10n: {},
   };
+  // Lengkapi field yang tidak kita tulis (UI, l10n, confirm*, overallFeedback,
+  // tipsAndFeedback dropZone, dll.) supaya player tidak crash membaca undefined.
+  applySemanticsDefaults(content, semantics);
+  return content;
 }
 
-export function usedKinds(project: Project): ElementKind[] {
-  const set = new Set<ElementKind>();
-  for (const s of project.slides) for (const el of s.elements) set.add(el.kind);
-  return [...set];
-}
-
-export function toManifest(project: Project, cpMinor: number) {
-  const kinds = usedKinds(project);
-  const deps = new Map<string, { machineName: string; majorVersion: number; minorVersion: number }>();
-  deps.set(COURSE_PRESENTATION.machineName, {
+/**
+ * Rakit `h5p.json`. `extraDeps` diisi hasil penelusuran transitif
+ * (`bundleLibraryFiles`) supaya `preloadedDependencies` memuat SEMUA library
+ * yang ikut di ZIP — bukan hanya yang dipakai langsung elemen. Tanpa ini
+ * sebagian importer mengira dependensi (FontAwesome, JoubelUI, H5P.Question,
+ * dll.) belum terpasang dan menolak paket.
+ */
+export function toManifest(project: Project, cpMinor: number, extraDeps: LibDep[] = []) {
+  const deps = new Map<string, LibDep>();
+  const add = (dep: LibDep) => {
+    const prev = deps.get(dep.machineName);
+    if (
+      !prev ||
+      dep.majorVersion > prev.majorVersion ||
+      (dep.majorVersion === prev.majorVersion && dep.minorVersion > prev.minorVersion)
+    ) {
+      deps.set(dep.machineName, dep);
+    }
+  };
+  add({
     machineName: COURSE_PRESENTATION.machineName,
     majorVersion: COURSE_PRESENTATION.majorVersion,
     minorVersion: cpMinor,
   });
-  for (const kind of kinds) {
-    if (kind === 'goToSlide') continue;
-    const lib = actionLibrary(kind, cpMinor);
-    const [machineName, ver] = lib.split(' ');
-    const [majorVersion, minorVersion] = ver.split('.').map(Number);
-    deps.set(machineName, { machineName, majorVersion, minorVersion });
+  for (const slide of project.slides) {
+    for (const el of slide.elements) {
+      if (el.kind === 'goToSlide') continue;
+      add(libraryForElement(el, cpMinor));
+    }
   }
+  for (const dep of extraDeps) add(dep);
   return {
     title: project.title,
     language: project.settings.language,
@@ -692,10 +1089,12 @@ export interface H5pBuildResult {
   blob: Blob;
   /** Folder library yang ikut dibundel, mis. H5P.CoursePresentation-1.26. */
   bundled: string[];
-  /** Dependensi yang tidak ketemu lokal (paket tetap jadi, tanpa library itu). */
+  /** Dependensi yang tidak ketemu lokal. Selalu kosong bila ekspor berhasil. */
   missing: string[];
   /** Latar: berapa slide pakai gambar asli vs gradien pengganti. */
   backgrounds: { real: number; gradient: number };
+  /** Media elemen yang ikut dibundel dan yang gagal diambil dari server. */
+  media: { bundled: number; failed: string[] };
 }
 
 export interface H5pBuildOptions {
@@ -703,6 +1102,53 @@ export interface H5pBuildOptions {
   includeLibraries?: boolean;
   /** Ambil berkas library; default fetch dari /h5p-libraries (browser). */
   readLibraryFile?: (relPath: string) => Promise<Uint8Array>;
+  /**
+   * Default false. Bila false, ekspor DIGAGALKAN saat ada library yang tidak
+   * tersedia lokal — paket tanpa library utama/transitif tidak bisa dibuka
+   * pembaca lain. Set true hanya untuk pratinjau internal yang library-nya
+   * sudah tersedia di server.
+   */
+  allowMissingLibraries?: boolean;
+}
+
+/**
+ * Library yang dideklarasikan di h5p.json tetapi tidak ada di
+ * `public/h5p-libraries`. Ekspor harus berhenti: paket tanpa folder library
+ * yang cocok akan ditolak Lumi/LMS ("library missing" / "invalid package").
+ */
+export class MissingLibrariesError extends Error {
+  readonly missing: string[];
+
+  constructor(missing: string[]) {
+    super(
+      `Paket tidak bisa dibuat: library ${missing.join(', ')} tidak tersedia di public/h5p-libraries. ` +
+        `Pilih versi Course Presentation yang tersedia (mis. v1.26) atau pasang folder library tersebut.`,
+    );
+    this.name = 'MissingLibrariesError';
+    this.missing = missing;
+  }
+}
+
+/**
+ * Deteksi versi Course Presentation tertinggi yang benar-benar tersedia di
+ * `public/h5p-libraries` (probe `library.json` tiap kandidat). Dipakai Studio
+ * agar default selalu selaras dengan library yang ikut dibundel.
+ */
+export async function detectAvailableCpMinor(): Promise<number | null> {
+  const candidates = [...COURSE_PRESENTATION_MINORS].sort((a, b) => b - a);
+  for (const minor of candidates) {
+    try {
+      const res = await fetch(`/h5p-libraries/H5P.CoursePresentation-1.${minor}/library.json`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) continue;
+      const meta = (await res.json()) as { machineName?: string };
+      if (meta.machineName === 'H5P.CoursePresentation') return minor;
+    } catch {
+      // versi ini tidak tersedia — coba versi berikutnya
+    }
+  }
+  return null;
 }
 
 async function fetchLibraryFile(relPath: string): Promise<Uint8Array> {
@@ -728,6 +1174,8 @@ export interface LibraryBundle {
   bundled: string[];
   /** Dependensi yang tidak ketemu lokal. */
   missing: string[];
+  /** Dependensi lengkap (langsung + transitif) untuk `h5p.json`. */
+  dependencies: LibDep[];
   /** Entri ZIP siap gabung: H5P.X-1.y/rel/path → bytes. */
   files: Record<string, Uint8Array>;
 }
@@ -748,10 +1196,10 @@ export async function bundleLibraryFiles(
       string[]
     >;
   } catch {
-    return { bundled: [], missing: [...new Set(missingAll)], files: {} };
+    return { bundled: [], missing: [...new Set(missingAll)], dependencies: [], files: {} };
   }
   const readJson = async (rel: string): Promise<unknown> => decodeJson(await readFile(rel));
-  const { bundled, missing } = await resolveLibraryClosure(deps, readJson, index);
+  const { bundled, missing, resolved } = await resolveLibraryClosure(deps, readJson, index);
   const files: Record<string, Uint8Array> = {};
   await Promise.all(
     bundled.map(async (dir) => {
@@ -770,15 +1218,16 @@ export async function bundleLibraryFiles(
       }
     }),
   );
-  return { bundled, missing: [...new Set(missing)], files };
+  return { bundled, missing: [...new Set(missing)], dependencies: resolved, files };
 }
 async function resolveLibraryClosure(
   deps: LibDep[],
   readJson: (relPath: string) => Promise<unknown>,
   index: Record<string, string[]> | null,
-): Promise<{ bundled: string[]; missing: string[] }> {
+): Promise<{ bundled: string[]; missing: string[]; resolved: LibDep[] }> {
   const bundled: string[] = [];
   const missing: string[] = [];
+  const resolved: LibDep[] = [];
   const seen = new Set<string>();
   const queue = [...deps];
   while (queue.length > 0) {
@@ -795,9 +1244,14 @@ async function resolveLibraryClosure(
       continue;
     }
     bundled.push(dir);
+    resolved.push({
+      machineName: dep.machineName,
+      majorVersion: dep.majorVersion,
+      minorVersion: dep.minorVersion,
+    });
     for (const sub of meta.preloadedDependencies ?? []) queue.push(sub);
   }
-  return { bundled, missing };
+  return { bundled, missing, resolved };
 }
 
 export async function buildH5p(
@@ -806,9 +1260,11 @@ export async function buildH5p(
   opts: H5pBuildOptions = {},
 ): Promise<H5pBuildResult> {
   if (project.slides.length === 0) throw new Error('Proyek belum memiliki slide.');
-  const manifest = toManifest(project, cpMinor);
   const files: Record<string, Uint8Array> = {};
-  files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
+
+  // Ambil media elemen (termasuk gambar/audio hasil ekstraksi server) sambil
+  // latar slide dirender, supaya preview dengan banyak gambar tidak lambat.
+  const mediaPromise = resolveProjectMedia(project);
 
   // Latar: gambar asli render server bila ada, gradien bila tidak.
   // Berkas konten wajib di bawah content/ (§5 + validasi Lumi).
@@ -821,39 +1277,49 @@ export async function buildH5p(
     files[`content/images/slide-${idx + 1}.${bg.ext}`] = bg.bytes;
     if (bg.real) bgReal += 1;
   }
-  files['content/content.json'] = strToU8(JSON.stringify(toContentJson(project, cpMinor, bgRefs)));
-  for (const slide of project.slides) {
-    for (const el of slide.elements) {
-      const rawCandidate = ('file' in el && el.file) ? el.file : getMedia(el.id)?.file;
-      const file = (rawCandidate && typeof (rawCandidate as Blob).arrayBuffer === 'function') ? rawCandidate : null;
-      if ((el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') && file) {
-        const ext = sanitizeExt(el.fileName, el.kind === 'image' ? 'png' : el.kind === 'audio' ? 'mp3' : 'mp4');
-        const dir = el.kind === 'image' ? 'images' : el.kind === 'audio' ? 'audios' : 'videos';
-        files[`content/${dir}/el-${el.id.slice(0, 8)}.${ext}`] = await fileToBytes(file);
-      }
-    }
+  const { media, failed: mediaFailed } = await mediaPromise;
+  const readLibFile = opts.readLibraryFile ?? fetchLibraryFile;
+  // Default semantics diisi dari semantics.json library yang ikut dibundel,
+  // supaya params selalu lengkap saat diputar di LMS lain.
+  const semantics = await loadLibrarySemantics(toManifest(project, cpMinor).preloadedDependencies, readLibFile);
+  files['content/content.json'] = strToU8(
+    JSON.stringify(toContentJson(project, cpMinor, bgRefs, media, semantics)),
+  );
+  for (const asset of media.values()) {
+    files[`content/${asset.path}`] = asset.bytes;
   }
 
   // Bundel library agar paket mandiri (Lumi Desktop menolak paket tanpa
-  // library bila Hub tak terjangkau). Gagal total → paket konten saja.
+  // library bila Hub tak terjangkau). Dependensi transitif ikut dicatat ke
+  // h5p.json supaya importer tahu semua library yang diperlukan.
+  let manifest = toManifest(project, cpMinor);
   let bundled: string[] = [];
   let missing: string[] = [];
   if (opts.includeLibraries !== false) {
     const bundle = await bundleLibraryFiles(
       manifest.preloadedDependencies,
-      opts.readLibraryFile ?? fetchLibraryFile,
+      readLibFile,
     );
     bundled = bundle.bundled;
-    missing = bundle.missing;
+    missing = [...new Set(bundle.missing)];
+    if (missing.length > 0 && opts.allowMissingLibraries !== true) {
+      throw new MissingLibrariesError(missing);
+    }
+    // Tulis ulang manifest setelah closure diketahui: preloadedDependencies
+    // memuat library langsung + transitif yang benar-benar ada di ZIP.
+    manifest = toManifest(project, cpMinor, bundle.dependencies);
     Object.assign(files, bundle.files);
   }
+  files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
+
   const zipped = zipSync(files, { level: 6 });
   // fflate hanya menulis entri berkas — selaras aturan `zip -rDX` (§5).
   return {
     blob: new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' }),
     bundled,
-    missing: [...new Set(missing)],
+    missing,
     backgrounds: { real: bgReal, gradient: project.slides.length - bgReal },
+    media: { bundled: media.size, failed: mediaFailed },
   };
 }
 
@@ -943,8 +1409,6 @@ export async function parseH5p(file: File): Promise<Project> {
     slide.elements = (cs.elements ?? []).map((e) => parseElement(e, cpSlides.length, entries));
     return slide;
   });
-  void DEFAULT_CP_MINOR;
-  void countBlanks;
   return project;
 }
 
@@ -971,7 +1435,10 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   const buttonLabel = str(e.buttonLabel);
   const title = str(e.title);
 
-  if (typeof e.goToSlideType === 'string') {
+  // Elemen ber-`action` adalah konten; `goToSlideType` hanya penanda elemen
+  // navigasi (yang tidak punya action). Cek action lebih dulu supaya paket
+  // lama yang (pernah) mengisi goToSlideType di semua elemen tetap terbaca.
+  if (!e.action && typeof e.goToSlideType === 'string') {
     const targetType = (e.goToSlideType === 'next' || e.goToSlideType === 'previous' ? e.goToSlideType : 'specified') as 'specified' | 'next' | 'previous';
     const g = createElement('goToSlide', slideCount);
     return {
@@ -1032,7 +1499,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     const vd = createElement('video', slideCount);
     const sources = (params.sources ?? []) as Array<{ path?: string }>;
     const path = str(sources[0]?.path);
-    const isRemote = /^https?:\/\//i.test(path);
+    const isRemote = /^(https?:|data:|blob:)/i.test(path) || path.startsWith('//');
     const videoBytes = !isRemote && path ? resolveContentEntry(entries, path) : undefined;
     return {
       ...vd,
@@ -1076,13 +1543,23 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   }
   if (machine === 'H5P.Blanks') {
     const b = createElement('blanks', slideCount);
+    const qs = Array.isArray(params.questions) ? (params.questions as unknown[]) : [];
+    const text =
+      qs
+        .map((q) =>
+          typeof q === 'string'
+            ? q
+            : str((q as { question?: unknown } | null)?.question),
+        )
+        .filter((q) => q.length > 0)
+        .join('\n') || str(params.text, '');
     return {
       ...b,
       position,
       displayAsButton,
       buttonLabel,
       title,
-      text: str(params.text, ''),
+      text,
     };
   }
   const t = createElement('advancedText', slideCount);

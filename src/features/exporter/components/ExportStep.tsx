@@ -4,16 +4,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckIcon, Cross2Icon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { API_BASE_URL } from '../../../config/env';
-import { COURSE_PRESENTATION_MINORS, DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
-import { countBlanks } from '../../studio/constants/h5pModel';
+import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
+import { countBlanks, isQuizElement } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
 import { recordExport } from '../api/exportHistory';
-import { buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
+import { MissingLibrariesError, buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
 
 type ServerCheck = { ok: boolean; issues: string[]; mainLibrary: string | null } | null;
 
-export function ExportStep({ project, onNotice }: { project: Project; onNotice: (m: string) => void }) {
-  const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
+export function ExportStep({
+  project,
+  cpMinor,
+  onCpMinorChange,
+  onNotice,
+}: {
+  project: Project;
+  cpMinor: number;
+  onCpMinorChange: (minor: number) => void;
+  onNotice: (m: string) => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<{ name: string; sizeKb: number } | null>(null);
@@ -52,35 +61,61 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
         if (el.kind === 'goToSlide' && el.targetType === 'specified' && (el.targetSlide < 1 || el.targetSlide > n)) {
           list.push(`Slide ${s.order}: tombol “${el.label}” mengarah ke slide ${el.targetSlide} yang tidak ada.`);
         }
-        if (el.kind === 'singleChoice') {
-          if (el.options.length < 2) list.push(`Slide ${s.order}: single choice set minimal 2 pilihan jawaban.`);
-          if (el.options.some((o) => !o.text.trim())) list.push(`Slide ${s.order}: ada pilihan single choice yang masih kosong.`);
-          if (!el.question.trim()) list.push(`Slide ${s.order}: pertanyaan single choice masih kosong.`);
-        }
-        if (el.kind === 'multimediaChoice') {
-          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis multimedia choice minimal 2 pilihan jawaban.`);
-          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis multimedia choice belum ada jawaban yang benar.`);
-          if (!el.question.trim()) list.push(`Slide ${s.order}: pertanyaan kuis multimedia choice masih kosong.`);
-        }
         if (el.kind === 'link' && !el.url.trim()) {
           list.push(`Slide ${s.order}: link URL belum diisi.`);
         }
-        if (el.kind === 'multiChoice') {
-          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis pilihan ganda minimal 2 pilihan jawaban.`);
-          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis pilihan ganda belum ada jawaban yang benar.`);
+        if (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice') {
+          const label = el.kind === 'multiChoice' ? 'pilihan ganda' : el.kind === 'singleChoice' ? 'pilihan tunggal' : 'multimedia choice';
+          if (el.options.length < 2) list.push(`Slide ${s.order}: kuis ${label} minimal 2 pilihan jawaban.`);
+          if (!el.options.some((o) => o.correct)) list.push(`Slide ${s.order}: kuis ${label} belum ada jawaban yang benar.`);
+          if (el.kind === 'singleChoice' && el.options.filter((o) => o.correct).length !== 1) {
+            list.push(`Slide ${s.order}: kuis pilihan tunggal harus punya tepat satu jawaban benar.`);
+          }
+          if (el.kind === 'singleChoice' && el.options.length > 4) {
+            list.push(`Slide ${s.order}: H5P Single Choice maksimal 4 pilihan jawaban.`);
+          }
           if (el.options.some((o) => !o.text.trim())) list.push(`Slide ${s.order}: ada pilihan jawaban yang masih kosong.`);
         }
-        if ((el.kind === 'multiChoice' || el.kind === 'trueFalse') && !el.question.trim()) {
+        if (
+          (el.kind === 'multiChoice' || el.kind === 'singleChoice' || el.kind === 'multimediaChoice' || el.kind === 'trueFalse' || el.kind === 'dragDrop') &&
+          !el.question.trim()
+        ) {
           list.push(`Slide ${s.order}: pertanyaan kuisnya masih kosong.`);
         }
-        if (el.kind === 'blanks' && countBlanks(el.text) === 0) {
-          list.push(`Slide ${s.order}: kuis isian belum punya jawaban *berbintang*.`);
+        if ((el.kind === 'blanks' || el.kind === 'dragWords' || el.kind === 'markWords') && countBlanks(el.text) === 0) {
+          list.push(`Slide ${s.order}: kuis ${el.kind === 'blanks' ? 'isian' : el.kind === 'dragWords' ? 'drag the words' : 'mark the words'} belum punya kata *berbintang*.`);
+        }
+        if (el.kind === 'dragDrop') {
+          if (el.zones.length === 0) list.push(`Slide ${s.order}: drag & drop belum punya zona tujuan.`);
+          if (el.items.length === 0) list.push(`Slide ${s.order}: drag & drop belum punya item.`);
+          if (el.zones.some((z) => !z.label.trim())) list.push(`Slide ${s.order}: ada zona drag & drop yang masih kosong.`);
+          if (el.items.some((it) => !it.text.trim())) list.push(`Slide ${s.order}: ada item drag & drop yang masih kosong.`);
+          if (el.items.some((it) => !el.zones.some((z) => z.id === it.zoneId))) {
+            list.push(`Slide ${s.order}: ada item drag & drop yang belum punya zona jawaban.`);
+          }
+        }
+        if (el.kind === 'summary') {
+          if (el.statements.length < 2) list.push(`Slide ${s.order}: summary minimal butuh 2 pernyataan.`);
+          if (!el.statements.some((st) => st.correct)) list.push(`Slide ${s.order}: summary belum ada pernyataan yang benar.`);
+          if (el.statements.some((st) => !st.text.trim())) list.push(`Slide ${s.order}: ada pernyataan summary yang masih kosong.`);
+        }
+        if (el.kind === 'dialogCards') {
+          if (el.cards.length === 0) list.push(`Slide ${s.order}: dialog cards belum punya kartu.`);
+          if (el.cards.some((c) => !c.front.trim() || !c.back.trim())) {
+            list.push(`Slide ${s.order}: ada kartu dialog yang sisi depan/belakangnya kosong.`);
+          }
+        }
+        if (el.kind === 'table' && (el.rows < 1 || el.cols < 1)) {
+          list.push(`Slide ${s.order}: tabel minimal 1 baris dan 1 kolom.`);
+        }
+        if (el.kind === 'video' && !el.file && !el.videoUrl.trim()) {
+          list.push(`Slide ${s.order}: video belum ada file atau URL-nya.`);
+        }
+        if (el.kind === 'interactiveVideo' && !el.videoUrl.trim()) {
+          list.push(`Slide ${s.order}: interactive video belum ada URL video.`);
         }
         if ((el.kind === 'image' || el.kind === 'audio') && !el.file && !el.objectUrl) {
           list.push(`Slide ${s.order}: ${el.kind === 'image' ? 'Gambar' : 'Suara'} belum ada file-nya.`);
-        }
-        if (el.kind === 'video' && !el.file && !el.objectUrl && !el.videoUrl.trim()) {
-          list.push(`Slide ${s.order}: Video belum ada file atau URL-nya.`);
         }
       }
     }
@@ -91,8 +126,13 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
     const list: string[] = [];
     for (const s of project.slides) {
       for (const el of s.elements) {
-        if ((el.kind === 'image' || el.kind === 'audio') && !el.file && el.objectUrl) {
-          list.push(`Slide ${s.order}: gambar/suara dari file impor harus diupload ulang biar ikut ke paket (draf tidak menyimpan file aslinya).`);
+        if (
+          (el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') &&
+          !el.file &&
+          el.objectUrl &&
+          !/^(https?:|blob:|data:)/i.test(el.objectUrl)
+        ) {
+          list.push(`Slide ${s.order}: media tidak bisa diambil ulang — unggah ulang berkasnya agar ikut ke paket.`);
           break;
         }
       }
@@ -102,7 +142,7 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
   }, [project]);
 
   const manifest = useMemo(() => toManifest(project, cpMinor), [project, cpMinor]);
-  const quizCount = project.slides.flatMap((s) => s.elements).filter((e) => e.kind === 'multiChoice' || e.kind === 'trueFalse' || e.kind === 'blanks').length;
+  const quizCount = project.slides.flatMap((s) => s.elements).filter(isQuizElement).length;
 
   const doServerCheck = async () => {
     if (issues.length > 0 || checking) return;
@@ -117,8 +157,12 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
       const json = (await res.json()) as { data: ServerCheck };
       setServerCheck(json.data);
       if (json.data && !json.data.ok) onNotice('Validasi server menemukan masalah — lihat daftar.');
-    } catch {
-      onNotice('Backend tidak terjangkau. Download biasa tetap bisa dipakai.');
+    } catch (err) {
+      if (err instanceof MissingLibrariesError) {
+        onNotice(err.message);
+      } else {
+        onNotice('Backend tidak terjangkau. Download biasa tetap bisa dipakai.');
+      }
     } finally {
       setChecking(false);
     }
@@ -128,22 +172,27 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
     if (issues.length > 0 || loading) return;
     setLoading(true);
     try {
-      const { blob, bundled, missing, backgrounds } = await buildH5p(project, cpMinor);
+      const { blob, bundled, backgrounds, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       setResult({ name, sizeKb: Math.round(blob.size / 1024) });
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
       const bits: string[] = [];
       if (bundled.length > 0) bits.push(`${bundled.length} library ikut di dalam`);
+      if (media.bundled > 0) bits.push(`${media.bundled} media ikut di paket`);
       if (backgrounds.real > 0) bits.push(`${backgrounds.real} latar asli ikut di paket`);
       else bits.push('latar gradien (gambar asli tidak ketemu)');
-      onNotice(
-        missing.length > 0
-          ? `${name} terdownload, tapi library ${missing.slice(0, 3).join(', ')} tidak ketemu lokal — pilih 1.26 untuk paket lengkap.`
-          : `${name} sudah terdownload (${bits.join(', ')}).`,
-      );
+      const mediaNote =
+        media.failed.length > 0
+          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
+          : '';
+      onNotice(`${name} sudah terdownload (${bits.join(', ')}).${mediaNote}`);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
+      if (err instanceof MissingLibrariesError) {
+        onNotice(err.message);
+      } else {
+        onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
+      }
     } finally {
       setLoading(false);
     }
@@ -163,7 +212,7 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
 
       <label className="field-label">
         Versi Course Presentation di LMS kamu
-        <select value={cpMinor} onChange={(e) => setCpMinor(Number(e.target.value))}>
+        <select value={cpMinor} onChange={(e) => onCpMinorChange(Number(e.target.value))}>
           {COURSE_PRESENTATION_MINORS.map((m) => (
             <option key={m} value={m}>
               v1.{m} (samakan dengan LMS)
@@ -177,15 +226,15 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
         </p>
       )}
       {libLocal === false && (
-        <p className="check-warn">
-          <ExclamationTriangleIcon /> Library versi ini tidak ada lokal — file tetap bisa diupload ke LMS yang sudah
-          punya library-nya, tapi belum tentu bisa dibuka di Lumi. Pilih 1.26 untuk paket lengkap.
+        <p className="check-bad">
+          <Cross2Icon /> Library v1.{cpMinor} tidak tersedia lokal, jadi paket tidak akan lengkap. Download
+          diblokir — pilih versi yang tersedia (v1.26) atau pasang folder library tersebut.
         </p>
       )}
-      <p className="muted">Isi paket: {manifest.preloadedDependencies.map((d) => `${d.machineName} ${d.majorVersion}.${d.minorVersion}`).join(' · ') || '—'}</p>
+      <p className="muted">Dependensi langsung: {manifest.preloadedDependencies.map((d) => `${d.machineName} ${d.majorVersion}.${d.minorVersion}`).join(' · ') || '—'} · dependensi transitif ditambahkan otomatis.</p>
 
       <div className="check-list">
-        {issues.length === 0 ? (
+        {issues.length === 0 && libLocal !== false ? (
           <p className="check-ok">
             <CheckIcon /> Semua beres — file siap diupload ke LMS.
           </p>
@@ -204,10 +253,10 @@ export function ExportStep({ project, onNotice }: { project: Project; onNotice: 
       </div>
 
       <div className="export-actions">
-        <button className="primary-button" type="button" disabled={issues.length > 0 || loading} onClick={doExport}>
+        <button className="primary-button" type="button" disabled={issues.length > 0 || libLocal === false || loading} onClick={doExport}>
           <DownloadIcon /> {loading ? 'Menyiapkan file…' : 'Download file .h5p'}
         </button>
-        <button className="secondary-button" type="button" disabled={issues.length > 0 || checking} onClick={doServerCheck}>
+        <button className="secondary-button" type="button" disabled={issues.length > 0 || libLocal === false || checking} onClick={doServerCheck}>
           {checking ? 'Mengecek ke server…' : 'Cek validasi server (Lumi)'}
         </button>
         {serverCheck && (

@@ -5,12 +5,25 @@
  */
 import { useState } from 'react';
 import { ArrowLeftIcon, ArrowRightIcon, Cross2Icon } from '@radix-ui/react-icons';
-import { extractBlankAnswers } from '../../studio/constants/h5pModel';
+import {
+  extractBlankAnswers,
+  markWordTokens,
+  maxScoreOf,
+} from '../../studio/constants/h5pModel';
 import type {
+  AudioRecorderElement,
   BlanksElement,
+  DialogCardsElement,
+  DragDropElement,
+  DragWordsElement,
+  ExportableTextElement,
+  MarkWordsElement,
   MultiChoiceElement,
+  MultimediaChoiceElement,
   Project,
   SlideElement,
+  SummaryElement,
+  TableElement,
   TrueFalseElement,
 } from '../../studio/constants/h5pModel';
 import { resolveTarget, usePreviewRun } from '../hooks/usePreviewRun';
@@ -154,6 +167,247 @@ function BlanksWidget({
   );
 }
 
+function DragWordsWidget({
+  el,
+  answer,
+  showSolution,
+  onAnswer,
+}: {
+  el: DragWordsElement;
+  answer: Answer;
+  showSolution: boolean;
+  onAnswer: (id: string, value: string[] | boolean) => void;
+}) {
+  const segments = blanksSegments(el.text);
+  const values = Array.isArray(answer) ? answer : [];
+  const expected = extractBlankAnswers(el.text);
+  const choices = [...new Set(expected)];
+  const filled = expected.length > 0 && expected.every((_, i) => (values[i] ?? '').trim().length > 0);
+  const correct = expected.every((exp, i) => (values[i] ?? '').trim().toLowerCase() === exp.toLowerCase());
+  return (
+    <div className="pv-quiz">
+      <p className="pv-blanks">
+        {segments.map((seg, idx) => {
+          if (!seg.gap) return <span key={seg.key}>{seg.value}</span>;
+          const gi = segments.slice(0, idx).filter((s) => s.gap).length;
+          return (
+            <select
+              key={seg.key}
+              className="pv-gap"
+              value={values[gi] ?? ''}
+              aria-label={`Kata ${gi + 1}`}
+              onChange={(e) => {
+                const next = [...values];
+                next[gi] = e.target.value;
+                onAnswer(el.id, next);
+              }}
+            >
+              <option value="">…</option>
+              {choices.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          );
+        })}
+      </p>
+      {showSolution && filled && (
+        <p className={`pv-feedback ${correct ? 'ok' : 'bad'}`}>
+          {correct ? el.feedbackCorrect : el.feedbackWrong}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MarkWordsWidget({
+  el,
+  answer,
+  showSolution,
+  onAnswer,
+}: {
+  el: MarkWordsElement;
+  answer: Answer;
+  showSolution: boolean;
+  onAnswer: (id: string, value: string[] | boolean) => void;
+}) {
+  const tokens = markWordTokens(el.text);
+  const marked = new Set(Array.isArray(answer) ? answer : []);
+  const toggle = (index: number) => {
+    const key = String(index);
+    const next = new Set(marked);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onAnswer(el.id, [...next]);
+  };
+  const expected = tokens.map((t, i) => (t.marked ? String(i) : null)).filter((v): v is string => v !== null);
+  const correct =
+    marked.size === expected.length && [...marked].every((v) => expected.includes(v));
+  return (
+    <div className="pv-quiz">
+      <p className="pv-mark-text">
+        {tokens.map((token, i) => (
+          <button
+            key={`${token.word}-${i}`}
+            type="button"
+            className={`pv-mark-word ${marked.has(String(i)) ? 'marked' : ''}`}
+            onClick={() => toggle(i)}
+          >
+            {token.word}
+          </button>
+        ))}
+      </p>
+      {showSolution && marked.size > 0 && (
+        <p className={`pv-feedback ${correct ? 'ok' : 'bad'}`}>
+          {correct ? el.feedbackCorrect : el.feedbackWrong}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DragDropWidget({
+  el,
+  answer,
+  onAnswer,
+}: {
+  el: DragDropElement;
+  answer: Answer;
+  onAnswer: (id: string, value: string[] | boolean) => void;
+}) {
+  const values = Array.isArray(answer) ? answer : [];
+  const setValue = (index: number, zoneId: string) => {
+    const next = [...values];
+    next[index] = zoneId;
+    onAnswer(el.id, next);
+  };
+  return (
+    <div className="pv-quiz">
+      <p className="pv-question">{el.question}</p>
+      <div className="pv-drag-list">
+        {el.items.map((item, i) => (
+          <div className="pv-drag-item" key={item.id}>
+            <span>{item.text}</span>
+            <select
+              value={values[i] ?? ''}
+              aria-label={`Zona untuk ${item.text}`}
+              onChange={(e) => setValue(i, e.target.value)}
+            >
+              <option value="">Pilih zona…</option>
+              {el.zones.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SummaryWidget({
+  el,
+  answer,
+  showSolution,
+  onAnswer,
+}: {
+  el: SummaryElement;
+  answer: Answer;
+  showSolution: boolean;
+  onAnswer: (id: string, value: string[] | boolean) => void;
+}) {
+  const picked = Array.isArray(answer) ? answer[0] : undefined;
+  const chosen = el.statements.find((s) => s.id === picked);
+  return (
+    <div className="pv-quiz">
+      <p className="pv-question">{el.intro}</p>
+      <div className="pv-options">
+        {el.statements.map((st) => (
+          <button
+            key={st.id}
+            type="button"
+            className={`pv-tf ${picked === st.id ? 'chosen' : ''}`}
+            onClick={() => onAnswer(el.id, [st.id])}
+          >
+            {st.text}
+          </button>
+        ))}
+      </div>
+      {showSolution && chosen && (
+        <p className={`pv-feedback ${chosen.correct ? 'ok' : 'bad'}`}>
+          {chosen.correct ? el.feedbackCorrect : el.feedbackWrong}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DialogCardsWidget({ el }: { el: DialogCardsElement }) {
+  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+  return (
+    <div className="pv-quiz">
+      {el.description && <p className="pv-question">{el.description}</p>}
+      <div className="pv-card-grid">
+        {el.cards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            className={`pv-card ${flipped[card.id] ? 'flipped' : ''}`}
+            onClick={() => setFlipped((prev) => ({ ...prev, [card.id]: !prev[card.id] }))}
+          >
+            {flipped[card.id] ? card.back : card.front}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TableWidget({ el }: { el: TableElement }) {
+  const rows = Math.max(1, Math.min(20, Math.round(el.rows)));
+  const cols = Math.max(1, Math.min(20, Math.round(el.cols)));
+  return (
+    <table className="pv-table">
+      <tbody>
+        {Array.from({ length: rows }, (_, r) => (
+          <tr key={r}>
+            {Array.from({ length: cols }, (_, c) => (
+              <td key={c}>&nbsp;</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function ExportableTextWidget({ el }: { el: ExportableTextElement }) {
+  return (
+    <div className="pv-quiz">
+      <p className="pv-text">{el.text}</p>
+      <textarea rows={4} className="pv-export-area" placeholder="Tulis jawabanmu di sini…" />
+    </div>
+  );
+}
+
+function AudioRecorderWidget({ el }: { el: AudioRecorderElement }) {
+  return (
+    <div className="pv-placeholder">
+      [Audio Recorder] {el.description || el.title || 'Rekam suara Anda'} — perekaman aktif saat dijalankan di LMS.
+    </div>
+  );
+}
+
+function quizLabel(el: SlideElement): string {
+  if (el.kind === 'summary') return el.intro || 'Summary';
+  if ('question' in el) return el.question;
+  if ('text' in el) return el.text;
+  return el.title || el.kind;
+}
+
 export function PreviewPlayer({ project }: { project: Project }) {
   const run = usePreviewRun(project);
   const [popupId, setPopupId] = useState<string | null>(null);
@@ -196,16 +450,40 @@ export function PreviewPlayer({ project }: { project: Project }) {
     }
     if (el.kind === 'shape') {
       const isCircle = el.shapeType === 'circle';
+      const isVertical = el.shapeType === 'vertical-line';
+      const isHorizontal = el.shapeType === 'horizontal-line';
+      const color = el.color || '#22c55e';
       return (
         <div
           key={el.id}
           style={{
             width: '100%',
             height: '100%',
-            backgroundColor: el.color || '#22c55e',
-            borderRadius: isCircle ? '50%' : '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-        />
+        >
+          {isVertical || isHorizontal ? (
+            <div
+              style={{
+                width: isVertical ? '4px' : '100%',
+                height: isHorizontal ? '4px' : '100%',
+                backgroundColor: color,
+                borderRadius: '2px',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: color,
+                borderRadius: isCircle ? '50%' : '6px',
+              }}
+            />
+          )}
+        </div>
       );
     }
     if (el.kind === 'video') {
@@ -239,13 +517,42 @@ export function PreviewPlayer({ project }: { project: Project }) {
         />
       );
     }
+    if (el.kind === 'multimediaChoice') {
+      const mmc = el as MultimediaChoiceElement;
+      return (
+        <McWidget
+          key={el.id}
+          el={{ ...mmc, kind: 'multiChoice', singleAnswer: false }}
+          {...quizProps(el)}
+        />
+      );
+    }
     if (el.kind === 'trueFalse') return <TfWidget key={el.id} el={el} {...quizProps(el)} />;
     if (el.kind === 'blanks') return <BlanksWidget key={el.id} el={el} {...quizProps(el)} />;
-    return (
-      <div key={el.id} className="pv-placeholder">
-        [{el.kind}: {el.title || 'elemen interaktif'}]
-      </div>
-    );
+    if (el.kind === 'dragWords') return <DragWordsWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'markWords') return <MarkWordsWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'dragDrop') return <DragDropWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'summary') return <SummaryWidget key={el.id} el={el} {...quizProps(el)} />;
+    if (el.kind === 'dialogCards') return <DialogCardsWidget key={el.id} el={el} />;
+    if (el.kind === 'table') return <TableWidget key={el.id} el={el} />;
+    if (el.kind === 'continuousText') return <div key={el.id} className="pv-text">{el.text}</div>;
+    if (el.kind === 'exportableText') return <ExportableTextWidget key={el.id} el={el} />;
+    if (el.kind === 'audioRecorder') return <AudioRecorderWidget key={el.id} el={el} />;
+    if (el.kind === 'interactiveVideo') {
+      return el.videoUrl ? (
+        <video
+          key={el.id}
+          controls
+          src={el.videoUrl}
+          style={{ width: '100%', maxHeight: '100%', borderRadius: '6px' }}
+        />
+      ) : (
+        <div key={el.id} className="pv-placeholder">
+          [Interactive Video: belum ada URL video]
+        </div>
+      );
+    }
+    return null;
   };
 
   const inlineEls = slide.elements.filter((e) => !e.displayAsButton || e.kind === 'goToSlide');
@@ -269,8 +576,8 @@ export function PreviewPlayer({ project }: { project: Project }) {
           <div className="pv-summary-list">
             {state.quizzes.map(({ slide: s, el }) => {
               const got = actions.scoreElement(el, state.answers[el.id] ?? null);
-              const max = el.kind === 'blanks' ? extractBlankAnswers(el.text).length : 1;
-              const label = 'question' in el ? el.question : el.text;
+              const max = maxScoreOf(el);
+              const label = quizLabel(el);
               return (
                 <div className="pv-summary-row" key={el.id}>
                   <span>
@@ -306,6 +613,7 @@ export function PreviewPlayer({ project }: { project: Project }) {
                   left: `${el.position.x}%`,
                   top: `${el.position.y}%`,
                   width: `${el.position.width}%`,
+                  height: el.kind === 'shape' ? `${el.position.height}%` : undefined,
                 }}
               >
                 {renderElement(el)}

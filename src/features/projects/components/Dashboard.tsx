@@ -1,6 +1,6 @@
 /**
- * Dashboard Ruang Kerja Pemateri — Redesign Profesional
- * Tema: Hijau Muda Solid (Tidak Transparan), Terstruktur & Informatif
+ * Dashboard ruang kerja pemateri
+ * Ringkasan materi, akses cepat, dan status LMS internal.
  */
 import { useRef, useState } from 'react';
 import {
@@ -40,11 +40,11 @@ function quizCountOf(item: StoredProjectMeta): number {
 
 function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | 'h5p'; label: string; badgeClass: string } {
   const fn = item.sourceFileName?.toLowerCase() ?? '';
-  if (!fn) return { key: 'manual', label: 'Bikin Sendiri', badgeClass: 'db-badge-manual' };
-  if (fn.endsWith('.h5p')) return { key: 'h5p', label: 'File .H5P', badgeClass: 'db-badge-h5p' };
-  if (fn.endsWith('.pptx')) return { key: 'pptx', label: 'PPTX Slide', badgeClass: 'db-badge-pptx' };
-  if (fn.endsWith('.pdf')) return { key: 'pdf', label: 'PDF Dokumen', badgeClass: 'db-badge-pdf' };
-  return { key: 'manual', label: 'Bikin Sendiri', badgeClass: 'db-badge-manual' };
+  if (!fn) return { key: 'manual', label: 'Dari nol', badgeClass: 'db-badge-manual' };
+  if (fn.endsWith('.h5p')) return { key: 'h5p', label: 'File H5P', badgeClass: 'db-badge-h5p' };
+  if (fn.endsWith('.pptx')) return { key: 'pptx', label: 'PPTX', badgeClass: 'db-badge-pptx' };
+  if (fn.endsWith('.pdf')) return { key: 'pdf', label: 'PDF', badgeClass: 'db-badge-pdf' };
+  return { key: 'manual', label: 'Dari nol', badgeClass: 'db-badge-manual' };
 }
 
 export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }: DashboardProps) {
@@ -70,7 +70,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             <span className="db-pulse-dot" />
             <span>RUANG KERJA PEMATERI · LMS INTERNAL READY</span>
           </div>
-          <h2>Selamat Datang di H5P Content Generator</h2>
+          <h2>Selamat datang di H5P Content Generator</h2>
           <p>
             Kelola, susun interaksi kuis, pratinjau langsung, dan unduh materi pembelajaran interaktif berstandar
             H5P Course Presentation untuk platform LMS internal Anda.
@@ -78,11 +78,11 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
           <div className="db-hero-actions">
             <button className="db-btn-primary" type="button" onClick={create}>
               <PlusIcon />
-              <span>+ Buat Materi Baru</span>
+              <span>Buat materi baru</span>
             </button>
             <button className="db-btn-secondary" type="button" onClick={onGoMaterials}>
               <LayersIcon />
-              <span>Buka Materi Saya</span>
+              <span>Buka materi saya</span>
             </button>
             <button className="db-btn-secondary" type="button" onClick={() => guideRef.current?.showModal()}>
               <ReaderIcon />
@@ -96,7 +96,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
           <div className="db-hfc-header">
             <div className="db-hfc-header-left">
               <span className="db-pulse-dot" />
-              <strong>Alur Produksi H5P</strong>
+              <strong>Alur produksi H5P</strong>
             </div>
             <span className="db-badge db-badge-green">Standar v1.26</span>
           </div>
@@ -104,21 +104,21 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             <div className="db-hfc-step">
               <span className="db-hfc-step-num">1</span>
               <div className="db-hfc-step-text">
-                <strong>Unggah Dokumen atau Mulai Baru</strong>
+                <strong>Unggah dokumen atau mulai baru</strong>
                 <span>Konversi instan slide PPTX / PDF atau buat materi interaktif dari nol.</span>
               </div>
             </div>
             <div className="db-hfc-step">
               <span className="db-hfc-step-num">2</span>
               <div className="db-hfc-step-text">
-                <strong>Perkaya Slide & Evaluasi Kuis</strong>
+                <strong>Perkaya slide dan evaluasi kuis</strong>
                 <span>Sisipkan pilihan ganda, benar/salah, teks interaktif, dan multimedia.</span>
               </div>
             </div>
             <div className="db-hfc-step">
               <span className="db-hfc-step-num">3</span>
               <div className="db-hfc-step-text">
-                <strong>Ekspor Paket .h5p LMS</strong>
+                <strong>Ekspor paket .h5p</strong>
                 <span>Unduh paket Course Presentation siap pakai untuk Moodle atau Canvas.</span>
               </div>
             </div>
@@ -141,7 +141,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
           <div className="db-empty-actions">
             <button className="db-btn-primary" type="button" onClick={create}>
               <PlusIcon />
-              <span>+ Buat Materi Baru</span>
+              <span>Buat materi baru</span>
             </button>
           </div>
         </div>
@@ -149,13 +149,13 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
         <section aria-label="Materi terbaru">
           <div className="db-section-head">
             <div>
-              <h2 className="db-section-title">Materi Terbaru</h2>
+              <h2 className="db-section-title">Materi terbaru</h2>
               <p className="db-section-subtitle">
                 {q ? `Menampilkan hasil pencarian untuk "${query}"` : 'Modul yang baru saja Anda sunting atau buka'}
               </p>
             </div>
             <button className="db-text-action" type="button" onClick={onGoMaterials}>
-              <span>Lihat Semua Materi ({items.length})</span>
+              <span>Lihat semua materi ({items.length})</span>
               <ArrowRightIcon />
             </button>
           </div>
@@ -163,10 +163,10 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             <table className="db-table">
               <thead>
                 <tr>
-                  <th>Judul Materi</th>
+                  <th>Judul materi</th>
                   <th>Sumber</th>
                   <th>Komposisi</th>
-                  <th>Terakhir Diubah</th>
+                  <th>Terakhir diubah</th>
                   <th style={{ textAlign: 'right' }}>Aksi</th>
                 </tr>
               </thead>
@@ -203,7 +203,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                           type="button"
                           onClick={() => onOpen(p.snapshot)}
                         >
-                          <span>Buka di Studio</span>
+                          <span>Buka di studio</span>
                           <ArrowRightIcon />
                         </button>
                       </td>
@@ -227,7 +227,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
         <section aria-label="Aktivitas ekspor terbaru">
           <div className="db-section-head">
             <div>
-              <h2 className="db-section-title">Riwayat Ekspor Paket H5P</h2>
+              <h2 className="db-section-title">Riwayat ekspor paket H5P</h2>
               <p className="db-section-subtitle">Daftar paket Course Presentation yang telah diunduh</p>
             </div>
           </div>
@@ -235,9 +235,9 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             <table className="db-table">
               <thead>
                 <tr>
-                  <th>Nama Modul</th>
-                  <th>Format Paket</th>
-                  <th>Waktu Ekspor</th>
+                  <th>Nama modul</th>
+                  <th>Format paket</th>
+                  <th>Waktu ekspor</th>
                 </tr>
               </thead>
               <tbody>

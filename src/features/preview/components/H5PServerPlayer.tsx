@@ -20,7 +20,15 @@ interface Attempt {
   createdAt: string;
 }
 
-export function H5PServerPlayer({ project, onNotice }: { project: Project; onNotice: (m: string) => void }) {
+export function H5PServerPlayer({
+  project,
+  cpMinor = DEFAULT_CP_MINOR,
+  onNotice,
+}: {
+  project: Project;
+  cpMinor?: number;
+  onNotice: (m: string) => void;
+}) {
   const [status, setStatus] = useState<Status>('idle');
   const [playerUrl, setPlayerUrl] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -32,7 +40,12 @@ export function H5PServerPlayer({ project, onNotice }: { project: Project; onNot
     setStatus('uploading');
     setError('');
     try {
-      const { blob } = await buildH5p(project, DEFAULT_CP_MINOR);
+      // Pratinjau internal: library sudah ada di server, jadi paket tidak wajib
+      // mandiri. Ekspor untuk LMS tetap memakai default (blokir bila missing).
+      const { blob, media } = await buildH5p(project, cpMinor, { allowMissingLibraries: true });
+      if (media.failed.length > 0) {
+        onNotice(`Sebagian media gagal diambil: ${media.failed[0]}`);
+      }
       const form = new FormData();
       form.append('package', blob, safeFileName(project.title));
       form.append('title', project.title);
@@ -43,10 +56,15 @@ export function H5PServerPlayer({ project, onNotice }: { project: Project; onNot
       setPlayerUrl(`${API_ORIGIN}${json.data.playerUrl}`);
       setAttempts([]);
       setStatus('ready');
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setError('Backend tidak terjangkau. Nyalakan backend lalu coba lagi, atau pakai mode lain.');
-      onNotice('Backend tidak terjangkau.');
+      const detail = err instanceof Error ? err.message : '';
+      setError(
+        detail
+          ? `Gagal menyiapkan pratinjau: ${detail}`
+          : 'Backend tidak terjangkau. Nyalakan backend lalu coba lagi, atau pakai mode lain.',
+      );
+      onNotice(detail || 'Backend tidak terjangkau.');
     }
   };
 
