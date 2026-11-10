@@ -111,10 +111,23 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <div className="landing-visual-caption"><h2>Dari ide Anda,<br />jadi pengalaman belajar.</h2><p>Susun. Kreasikan. Bagikan.</p></div>
           </aside>
         </section>
-          <svg className="landing-section-wave" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-            <path d="M0 28C240 38 410 107 720 69S1190 9 1440 24V120H0Z" fill="#7ab780" />
-            <path d="M0 47C280 34 455 113 760 81S1170 25 1440 35V120H0Z" fill="#c8e2cc" />
-            <path d="M0 57C250 43 490 125 790 99S1220 82 1440 58V120H0Z" fill="#f8faf9" />
+          <svg className="landing-section-wave" viewBox="0 24 150 28" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <defs>
+              <path id="landing-wave-path" d="M-160 44c30 0 58-18 88-18s58 18 88 18 58-18 88-18 58 18 88 18v44h-352z" />
+              <mask id="landing-wave-cutout" maskUnits="userSpaceOnUse" x="0" y="24" width="150" height="28" style={{ maskType: 'luminance' }}>
+                <rect x="0" y="24" width="150" height="28" fill="white" />
+                <g transform="translate(0 76) scale(1 -1)">
+                  <g className="landing-wave-front"><use href="#landing-wave-path" x="50" y="9" fill="black" /></g>
+                </g>
+              </mask>
+            </defs>
+            <g mask="url(#landing-wave-cutout)">
+              <rect x="0" y="24" width="150" height="28" fill="#f8faf9" />
+              <g transform="translate(0 76) scale(1 -1)">
+                <g className="landing-wave-back"><use href="#landing-wave-path" x="50" y="3" fill="#c8e2cc" /></g>
+                <g className="landing-wave-middle"><use href="#landing-wave-path" x="50" y="0" fill="#7ab780" /></g>
+              </g>
+            </g>
           </svg>
         </div>
         <section className="landing-features" aria-labelledby="landing-features-title">
