@@ -9,7 +9,7 @@
  */
 import { strToU8, strFromU8, unzipSync, zipSync } from 'fflate';
 import { actionLibraryFor, libraryForElement } from '../../studio/constants/h5pLibraries';
-import { COURSE_PRESENTATION } from '../../studio/constants/h5pLibraries';
+import { COURSE_PRESENTATION, COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import {
   createElement,
   createProject,
@@ -583,8 +583,10 @@ function toAction(
           intro: sm.intro,
           summaries: [
             {
-              summary: ordered.map((s) => ({ text: s.text })),
-              tip: { tip: sm.feedbackCorrect },
+              // H5P.Summary membaca `summary` sebagai array string (bukan {text})
+              // dan `tip` sebagai string (bukan {tip}).
+              summary: ordered.map((s) => s.text),
+              tip: sm.feedbackCorrect,
             },
           ],
         },
@@ -754,9 +756,26 @@ export function toContentJson(
   };
 }
 
-export function toManifest(project: Project, cpMinor: number) {
-  const deps = new Map<string, { machineName: string; majorVersion: number; minorVersion: number }>();
-  deps.set(COURSE_PRESENTATION.machineName, {
+/**
+ * Rakit `h5p.json`. `extraDeps` diisi hasil penelusuran transitif
+ * (`bundleLibraryFiles`) supaya `preloadedDependencies` memuat SEMUA library
+ * yang ikut di ZIP — bukan hanya yang dipakai langsung elemen. Tanpa ini
+ * sebagian importer mengira dependensi (FontAwesome, JoubelUI, H5P.Question,
+ * dll.) belum terpasang dan menolak paket.
+ */
+export function toManifest(project: Project, cpMinor: number, extraDeps: LibDep[] = []) {
+  const deps = new Map<string, LibDep>();
+  const add = (dep: LibDep) => {
+    const prev = deps.get(dep.machineName);
+    if (
+      !prev ||
+      dep.majorVersion > prev.majorVersion ||
+      (dep.majorVersion === prev.majorVersion && dep.minorVersion > prev.minorVersion)
+    ) {
+      deps.set(dep.machineName, dep);
+    }
+  };
+  add({
     machineName: COURSE_PRESENTATION.machineName,
     majorVersion: COURSE_PRESENTATION.majorVersion,
     minorVersion: cpMinor,
@@ -764,14 +783,10 @@ export function toManifest(project: Project, cpMinor: number) {
   for (const slide of project.slides) {
     for (const el of slide.elements) {
       if (el.kind === 'goToSlide') continue;
-      const lib = libraryForElement(el, cpMinor);
-      deps.set(lib.machineName, {
-        machineName: lib.machineName,
-        majorVersion: lib.majorVersion,
-        minorVersion: lib.minorVersion,
-      });
+      add(libraryForElement(el, cpMinor));
     }
   }
+  for (const dep of extraDeps) add(dep);
   return {
     title: project.title,
     language: project.settings.language,
@@ -904,7 +919,7 @@ export interface H5pBuildResult {
   blob: Blob;
   /** Folder library yang ikut dibundel, mis. H5P.CoursePresentation-1.26. */
   bundled: string[];
-  /** Dependensi yang tidak ketemu lokal (paket tetap jadi, tanpa library itu). */
+  /** Dependensi yang tidak ketemu lokal. Selalu kosong bila ekspor berhasil. */
   missing: string[];
   /** Latar: berapa slide pakai gambar asli vs gradien pengganti. */
   backgrounds: { real: number; gradient: number };
@@ -917,6 +932,53 @@ export interface H5pBuildOptions {
   includeLibraries?: boolean;
   /** Ambil berkas library; default fetch dari /h5p-libraries (browser). */
   readLibraryFile?: (relPath: string) => Promise<Uint8Array>;
+  /**
+   * Default false. Bila false, ekspor DIGAGALKAN saat ada library yang tidak
+   * tersedia lokal — paket tanpa library utama/transitif tidak bisa dibuka
+   * pembaca lain. Set true hanya untuk pratinjau internal yang library-nya
+   * sudah tersedia di server.
+   */
+  allowMissingLibraries?: boolean;
+}
+
+/**
+ * Library yang dideklarasikan di h5p.json tetapi tidak ada di
+ * `public/h5p-libraries`. Ekspor harus berhenti: paket tanpa folder library
+ * yang cocok akan ditolak Lumi/LMS ("library missing" / "invalid package").
+ */
+export class MissingLibrariesError extends Error {
+  readonly missing: string[];
+
+  constructor(missing: string[]) {
+    super(
+      `Paket tidak bisa dibuat: library ${missing.join(', ')} tidak tersedia di public/h5p-libraries. ` +
+        `Pilih versi Course Presentation yang tersedia (mis. v1.26) atau pasang folder library tersebut.`,
+    );
+    this.name = 'MissingLibrariesError';
+    this.missing = missing;
+  }
+}
+
+/**
+ * Deteksi versi Course Presentation tertinggi yang benar-benar tersedia di
+ * `public/h5p-libraries` (probe `library.json` tiap kandidat). Dipakai Studio
+ * agar default selalu selaras dengan library yang ikut dibundel.
+ */
+export async function detectAvailableCpMinor(): Promise<number | null> {
+  const candidates = [...COURSE_PRESENTATION_MINORS].sort((a, b) => b - a);
+  for (const minor of candidates) {
+    try {
+      const res = await fetch(`/h5p-libraries/H5P.CoursePresentation-1.${minor}/library.json`, {
+        cache: 'no-store',
+      });
+      if (!res.ok) continue;
+      const meta = (await res.json()) as { machineName?: string };
+      if (meta.machineName === 'H5P.CoursePresentation') return minor;
+    } catch {
+      // versi ini tidak tersedia — coba versi berikutnya
+    }
+  }
+  return null;
 }
 
 async function fetchLibraryFile(relPath: string): Promise<Uint8Array> {
@@ -942,6 +1004,8 @@ export interface LibraryBundle {
   bundled: string[];
   /** Dependensi yang tidak ketemu lokal. */
   missing: string[];
+  /** Dependensi lengkap (langsung + transitif) untuk `h5p.json`. */
+  dependencies: LibDep[];
   /** Entri ZIP siap gabung: H5P.X-1.y/rel/path → bytes. */
   files: Record<string, Uint8Array>;
 }
@@ -962,10 +1026,10 @@ export async function bundleLibraryFiles(
       string[]
     >;
   } catch {
-    return { bundled: [], missing: [...new Set(missingAll)], files: {} };
+    return { bundled: [], missing: [...new Set(missingAll)], dependencies: [], files: {} };
   }
   const readJson = async (rel: string): Promise<unknown> => decodeJson(await readFile(rel));
-  const { bundled, missing } = await resolveLibraryClosure(deps, readJson, index);
+  const { bundled, missing, resolved } = await resolveLibraryClosure(deps, readJson, index);
   const files: Record<string, Uint8Array> = {};
   await Promise.all(
     bundled.map(async (dir) => {
@@ -984,15 +1048,16 @@ export async function bundleLibraryFiles(
       }
     }),
   );
-  return { bundled, missing: [...new Set(missing)], files };
+  return { bundled, missing: [...new Set(missing)], dependencies: resolved, files };
 }
 async function resolveLibraryClosure(
   deps: LibDep[],
   readJson: (relPath: string) => Promise<unknown>,
   index: Record<string, string[]> | null,
-): Promise<{ bundled: string[]; missing: string[] }> {
+): Promise<{ bundled: string[]; missing: string[]; resolved: LibDep[] }> {
   const bundled: string[] = [];
   const missing: string[] = [];
+  const resolved: LibDep[] = [];
   const seen = new Set<string>();
   const queue = [...deps];
   while (queue.length > 0) {
@@ -1009,9 +1074,14 @@ async function resolveLibraryClosure(
       continue;
     }
     bundled.push(dir);
+    resolved.push({
+      machineName: dep.machineName,
+      majorVersion: dep.majorVersion,
+      minorVersion: dep.minorVersion,
+    });
     for (const sub of meta.preloadedDependencies ?? []) queue.push(sub);
   }
-  return { bundled, missing };
+  return { bundled, missing, resolved };
 }
 
 export async function buildH5p(
@@ -1020,9 +1090,7 @@ export async function buildH5p(
   opts: H5pBuildOptions = {},
 ): Promise<H5pBuildResult> {
   if (project.slides.length === 0) throw new Error('Proyek belum memiliki slide.');
-  const manifest = toManifest(project, cpMinor);
   const files: Record<string, Uint8Array> = {};
-  files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
 
   // Ambil media elemen (termasuk gambar/audio hasil ekstraksi server) sambil
   // latar slide dirender, supaya preview dengan banyak gambar tidak lambat.
@@ -1046,7 +1114,9 @@ export async function buildH5p(
   }
 
   // Bundel library agar paket mandiri (Lumi Desktop menolak paket tanpa
-  // library bila Hub tak terjangkau). Gagal total → paket konten saja.
+  // library bila Hub tak terjangkau). Dependensi transitif ikut dicatat ke
+  // h5p.json supaya importer tahu semua library yang diperlukan.
+  let manifest = toManifest(project, cpMinor);
   let bundled: string[] = [];
   let missing: string[] = [];
   if (opts.includeLibraries !== false) {
@@ -1055,15 +1125,23 @@ export async function buildH5p(
       opts.readLibraryFile ?? fetchLibraryFile,
     );
     bundled = bundle.bundled;
-    missing = bundle.missing;
+    missing = [...new Set(bundle.missing)];
+    if (missing.length > 0 && opts.allowMissingLibraries !== true) {
+      throw new MissingLibrariesError(missing);
+    }
+    // Tulis ulang manifest setelah closure diketahui: preloadedDependencies
+    // memuat library langsung + transitif yang benar-benar ada di ZIP.
+    manifest = toManifest(project, cpMinor, bundle.dependencies);
     Object.assign(files, bundle.files);
   }
+  files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
+
   const zipped = zipSync(files, { level: 6 });
   // fflate hanya menulis entri berkas — selaras aturan `zip -rDX` (§5).
   return {
     blob: new Blob([zipped.buffer as ArrayBuffer], { type: 'application/zip' }),
     bundled,
-    missing: [...new Set(missing)],
+    missing,
     backgrounds: { real: bgReal, gradient: project.slides.length - bgReal },
     media: { bundled: media.size, failed: mediaFailed },
   };

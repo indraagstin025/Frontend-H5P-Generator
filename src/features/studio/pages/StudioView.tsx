@@ -3,7 +3,7 @@
  * Layar Susun memakai layout referensi gambar: 3 kolom
  * (daftar slide kiri | canvas tengah | panel elemen kanan).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Toast } from '../../../components/UI/Toast';
 import { useStudio } from '../../../context/StudioContext';
@@ -21,7 +21,7 @@ import { StudioLeftPanel } from '../components/StudioLeftPanel';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
-import { buildH5p, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
+import { buildH5p, detectAvailableCpMinor, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
 import { recordExport } from '../../exporter/api/exportHistory';
 
 const NOTICE_TIMEOUT_MS = 2600;
@@ -44,6 +44,24 @@ export function StudioView() {
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
   const [exporting, setExporting] = useState(false);
+  // Jangan timpa pilihan user saat probe library selesai.
+  const cpPickedByUser = useRef(false);
+
+  // Selaraskan versi dengan library yang benar-benar ada di public/h5p-libraries.
+  useEffect(() => {
+    let cancelled = false;
+    void detectAvailableCpMinor().then((detected) => {
+      if (!cancelled && detected !== null && !cpPickedByUser.current) setCpMinor(detected);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleCpMinorChange = (minor: number) => {
+    cpPickedByUser.current = true;
+    setCpMinor(minor);
+  };
 
   // File titipan modal (dibaca sekali saat mount)
   const [initialFile] = useState<File | null>(() => peekPendingFile());
@@ -103,7 +121,7 @@ export function StudioView() {
     setExporting(true);
     showNotice(`Mengemas file .h5p (v1.${cpMinor})...`);
     try {
-      const { blob, bundled, missing, media } = await buildH5p(project, cpMinor);
+      const { blob, bundled, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
@@ -111,11 +129,7 @@ export function StudioView() {
         media.failed.length > 0
           ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
           : '';
-      showNotice(
-        (missing.length > 0
-          ? `${name} terunduh (v1.${cpMinor}), tapi library ${missing.slice(0, 3).join(', ')} tidak ada lokal — pilih v1.26 untuk paket lengkap.`
-          : `Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).`) + mediaNote,
-      );
+      showNotice(`Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).${mediaNote}`);
     } catch (err) {
       showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
     } finally {
@@ -129,7 +143,7 @@ export function StudioView() {
         projectTitle={project.title}
         savedLabel={savedLabel}
         cpMinor={cpMinor}
-        onCpMinorChange={setCpMinor}
+        onCpMinorChange={handleCpMinorChange}
         onExport={handleExport}
         isExporting={exporting}
         onHome={goBack}
@@ -338,7 +352,7 @@ export function StudioView() {
           <ExportStep
             project={project}
             cpMinor={cpMinor}
-            onCpMinorChange={setCpMinor}
+            onCpMinorChange={handleCpMinorChange}
             onNotice={showNotice}
           />
         </section>

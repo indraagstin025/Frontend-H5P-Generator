@@ -40,7 +40,9 @@ export function H5PServerPlayer({
     setStatus('uploading');
     setError('');
     try {
-      const { blob, media } = await buildH5p(project, cpMinor);
+      // Pratinjau internal: library sudah ada di server, jadi paket tidak wajib
+      // mandiri. Ekspor untuk LMS tetap memakai default (blokir bila missing).
+      const { blob, media } = await buildH5p(project, cpMinor, { allowMissingLibraries: true });
       if (media.failed.length > 0) {
         onNotice(`Sebagian media gagal diambil: ${media.failed[0]}`);
       }
@@ -54,10 +56,15 @@ export function H5PServerPlayer({
       setPlayerUrl(`${API_ORIGIN}${json.data.playerUrl}`);
       setAttempts([]);
       setStatus('ready');
-    } catch {
+    } catch (err) {
       setStatus('error');
-      setError('Backend tidak terjangkau. Nyalakan backend lalu coba lagi, atau pakai mode lain.');
-      onNotice('Backend tidak terjangkau.');
+      const detail = err instanceof Error ? err.message : '';
+      setError(
+        detail
+          ? `Gagal menyiapkan pratinjau: ${detail}`
+          : 'Backend tidak terjangkau. Nyalakan backend lalu coba lagi, atau pakai mode lain.',
+      );
+      onNotice(detail || 'Backend tidak terjangkau.');
     }
   };
 

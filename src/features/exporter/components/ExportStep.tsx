@@ -8,7 +8,7 @@ import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries'
 import { countBlanks, isQuizElement } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
 import { recordExport } from '../api/exportHistory';
-import { buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
+import { MissingLibrariesError, buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
 
 type ServerCheck = { ok: boolean; issues: string[]; mainLibrary: string | null } | null;
 
@@ -157,8 +157,12 @@ export function ExportStep({
       const json = (await res.json()) as { data: ServerCheck };
       setServerCheck(json.data);
       if (json.data && !json.data.ok) onNotice('Validasi server menemukan masalah — lihat daftar.');
-    } catch {
-      onNotice('Backend tidak terjangkau. Download biasa tetap bisa dipakai.');
+    } catch (err) {
+      if (err instanceof MissingLibrariesError) {
+        onNotice(err.message);
+      } else {
+        onNotice('Backend tidak terjangkau. Download biasa tetap bisa dipakai.');
+      }
     } finally {
       setChecking(false);
     }
@@ -168,7 +172,7 @@ export function ExportStep({
     if (issues.length > 0 || loading) return;
     setLoading(true);
     try {
-      const { blob, bundled, missing, backgrounds, media } = await buildH5p(project, cpMinor);
+      const { blob, bundled, backgrounds, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       setResult({ name, sizeKb: Math.round(blob.size / 1024) });
@@ -182,13 +186,13 @@ export function ExportStep({
         media.failed.length > 0
           ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
           : '';
-      onNotice(
-        (missing.length > 0
-          ? `${name} terdownload, tapi library ${missing.slice(0, 3).join(', ')} tidak ketemu lokal — pilih 1.26 untuk paket lengkap.`
-          : `${name} sudah terdownload (${bits.join(', ')}).`) + mediaNote,
-      );
+      onNotice(`${name} sudah terdownload (${bits.join(', ')}).${mediaNote}`);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
+      if (err instanceof MissingLibrariesError) {
+        onNotice(err.message);
+      } else {
+        onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
+      }
     } finally {
       setLoading(false);
     }
@@ -222,15 +226,15 @@ export function ExportStep({
         </p>
       )}
       {libLocal === false && (
-        <p className="check-warn">
-          <ExclamationTriangleIcon /> Library versi ini tidak ada lokal — file tetap bisa diupload ke LMS yang sudah
-          punya library-nya, tapi belum tentu bisa dibuka di Lumi. Pilih 1.26 untuk paket lengkap.
+        <p className="check-bad">
+          <Cross2Icon /> Library v1.{cpMinor} tidak tersedia lokal, jadi paket tidak akan lengkap. Download
+          diblokir — pilih versi yang tersedia (v1.26) atau pasang folder library tersebut.
         </p>
       )}
-      <p className="muted">Isi paket: {manifest.preloadedDependencies.map((d) => `${d.machineName} ${d.majorVersion}.${d.minorVersion}`).join(' · ') || '—'}</p>
+      <p className="muted">Dependensi langsung: {manifest.preloadedDependencies.map((d) => `${d.machineName} ${d.majorVersion}.${d.minorVersion}`).join(' · ') || '—'} · dependensi transitif ditambahkan otomatis.</p>
 
       <div className="check-list">
-        {issues.length === 0 ? (
+        {issues.length === 0 && libLocal !== false ? (
           <p className="check-ok">
             <CheckIcon /> Semua beres — file siap diupload ke LMS.
           </p>
@@ -249,10 +253,10 @@ export function ExportStep({
       </div>
 
       <div className="export-actions">
-        <button className="primary-button" type="button" disabled={issues.length > 0 || loading} onClick={doExport}>
+        <button className="primary-button" type="button" disabled={issues.length > 0 || libLocal === false || loading} onClick={doExport}>
           <DownloadIcon /> {loading ? 'Menyiapkan file…' : 'Download file .h5p'}
         </button>
-        <button className="secondary-button" type="button" disabled={issues.length > 0 || checking} onClick={doServerCheck}>
+        <button className="secondary-button" type="button" disabled={issues.length > 0 || libLocal === false || checking} onClick={doServerCheck}>
           {checking ? 'Mengecek ke server…' : 'Cek validasi server (Lumi)'}
         </button>
         {serverCheck && (
