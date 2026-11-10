@@ -154,7 +154,7 @@ export function HomePage() {
               <h1>{tab === 'dashboard' ? 'Dashboard Utama' : 'Materi Pembelajaran Saya'}</h1>
               <p>
                 {tab === 'dashboard'
-                  ? 'Ringkasan aktivitas pembuatan konten pembelajaran interaktif & akses cepat LMS'
+                  ? 'Buat, kelola, dan lanjutkan materi pembelajaran Anda'
                   : 'Kelola, cari materi tersimpan, gandakan, atau buka kembali berkas .h5p'}
               </p>
             </div>

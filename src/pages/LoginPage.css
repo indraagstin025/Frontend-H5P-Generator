@@ -1,0 +1,43 @@
+.login-page { display: grid; grid-template-columns: 1fr 1fr; }
+.login-story { position: relative; padding: 48px clamp(28px, 5vw, 88px); background: #077c1a; color: white; display: flex; flex-direction: column; justify-content: space-between; gap: 70px; min-height: 100vh; }
+.login-story .edu-brand-title { color: white; font-size: 22px; }
+.login-story .edu-brand-logo-img { border-radius: 12px; padding: 0; }
+.login-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+.login-story h1 { color: white; font-size: clamp(34px, 3.7vw, 58px); line-height: 1.18; margin: 24px 0; letter-spacing: -.045em; }
+.login-story h1 span { color: #b8efb9; }
+.login-story p { color: #def0e0; line-height: 1.9; max-width: 440px; font-size: 15px; }
+.login-workflow { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+.login-workflow span { border: 1px solid #ffffff40; border-radius: 8px; padding: 10px 12px; font-size: 11px; }
+.login-caption { color: #d3ebd7; font-size: 11px; line-height: 1.7; }
+.login-form-panel { padding: 48px clamp(24px, 5vw, 88px); display: flex; flex-direction: column; background: #fff; }
+.login-back { display: inline-flex; align-items: center; gap: 8px; color: #52665a; text-decoration: none; font-size: 13px; align-self: flex-start; }
+.login-back:hover { color: #077c1a; }
+.login-card { width: 100%; max-width: 400px; margin: auto; padding-block: 56px; }
+.login-symbol { display: grid; place-items: center; background: #edf8ee; color: #077c1a; width: 56px; height: 56px; border-radius: 16px; margin-bottom: 28px; }
+.login-card .login-eyebrow { color: #077c1a; }
+.login-card h2 { font-size: clamp(26px, 2.5vw, 34px); margin: 12px 0; color: #163a23; line-height: 1.2; }
+.login-card p { font-size: 14px; color: #647469; line-height: 1.8; }
+.login-card form { margin-top: 32px; }
+.login-card label { display: block; color: #263d2d; font-size: 13px; font-weight: 650; margin: 22px 0 9px; }
+.login-card input { width: 100%; min-height: 50px; border: 1px solid #d5e0d7; border-radius: 10px; padding: 12px 14px; background: #fff; color: #163a23; font-size: 14px; }
+.login-card input::placeholder { color: #79877c; }
+.login-password { position: relative; }
+.login-password input { padding-right: 52px; }
+.login-password button { position: absolute; right: 5px; top: 5px; height: 40px; width: 40px; display: grid; place-items: center; color: #647469; background: transparent; border: 0; border-radius: 6px; }
+.login-submit { width: 100%; margin-top: 28px; min-height: 50px; justify-content: center; }
+.login-message { background: #fff8e8; border: 1px solid #efdcac; color: #725213; font-size: 13px; line-height: 1.7; padding: 12px; border-radius: 8px; margin-top: 18px; }
+.login-card .login-help { text-align: center; font-size: 12px; margin: 24px 0 0; }
+@media (max-width: 850px) { .login-page { grid-template-columns: 1fr; } .login-story { min-height: auto; padding: 28px; gap: 32px; } .login-story-copy { display: none; } .login-caption { display: none; } .login-form-panel { padding: 24px; } .login-card { padding-block: 40px; } }
+
+/* Updated transparent brand mark and a presentation-only Google sign-in option. */
+.login-story .edu-brand { gap: 8px; }
+.login-brand-logo { display: block; position: relative; width: 80px; height: 72px; overflow: hidden; flex-shrink: 0; }
+.login-brand-logo img { position: absolute; width: 160px; max-width: none; height: auto; left: -38px; top: -19px; }
+.login-divider { display: flex; align-items: center; gap: 12px; margin: 8px 0; line-height: 18px; color: #78857b; font-size: 12px; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: #e3e9e4; }
+.login-google { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; min-height: 50px; padding: 12px 18px; border: 1px solid #d5e0d7; border-radius: 10px; background: #fff; color: #2e3d33; font-size: 14px; font-weight: 600; transition: background .2s, border-color .2s; }
+.login-google svg { flex-shrink: 0; }
+.login-google:hover { background: #f7faf7; border-color: #a9bfaf; }
+.login-google:active { background: #edf4ee; }
+@media (max-width: 450px) { .login-story .edu-brand-title { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { .login-google { transition: none; } }

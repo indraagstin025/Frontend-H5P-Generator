@@ -2,18 +2,15 @@
  * Dashboard Ruang Kerja Pemateri — Redesign Profesional
  * Tema: Hijau Muda Solid (Tidak Transparan), Terstruktur & Informatif
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ArrowRightIcon,
   CheckCircledIcon,
-  CheckIcon,
   ClockIcon,
-  DownloadIcon,
   FileTextIcon,
   LayersIcon,
   PlusIcon,
   ReaderIcon,
-  TargetIcon,
 } from '@radix-ui/react-icons';
 import { loadExportHistory } from '../../exporter/api/exportHistory';
 import { isQuizElement } from '../../studio/constants/h5pModel';
@@ -53,8 +50,6 @@ function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | '
 export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }: DashboardProps) {
   const [exports] = useState(loadExportHistory);
   const create = onCreate ?? onGoMaterials;
-  const totalSlides = items.reduce((acc, p) => acc + p.slideCount, 0);
-  const totalQuizzes = items.reduce((acc, p) => acc + quizCountOf(p), 0);
   const recent = [...items].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -64,32 +59,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
       )
     : recent.slice(0, 6);
 
-  const stats = [
-    {
-      icon: LayersIcon,
-      value: String(items.length),
-      label: 'Total Materi',
-      context: `${totalSlides} slide di ruang kerja`,
-    },
-    {
-      icon: FileTextIcon,
-      value: String(totalSlides),
-      label: 'Total Slide',
-      context: items.length > 0 ? `Rata-rata ${(totalSlides / items.length).toFixed(1)} slide/materi` : 'Belum ada slide',
-    },
-    {
-      icon: TargetIcon,
-      value: String(totalQuizzes),
-      label: 'Elemen Kuis',
-      context: 'Soal interaktif aktif',
-    },
-    {
-      icon: DownloadIcon,
-      value: String(exports.length),
-      label: 'Paket Diekspor',
-      context: 'Siap diunggah ke LMS',
-    },
-  ];
+  const guideRef = useRef<HTMLDialogElement>(null);
 
   return (
     <>
@@ -114,10 +84,10 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
               <LayersIcon />
               <span>Buka Materi Saya</span>
             </button>
-            <a className="db-btn-secondary" href="#db-lms">
+            <button className="db-btn-secondary" type="button" onClick={() => guideRef.current?.showModal()}>
               <ReaderIcon />
               <span>Panduan LMS</span>
-            </a>
+            </button>
           </div>
         </div>
 
@@ -157,77 +127,6 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             <CheckCircledIcon />
             <span>Penyimpanan lokal aman dan instan di peramban</span>
           </div>
-        </div>
-      </section>
-
-      {/* Ringkasan Aktivitas (Stat Cards) */}
-      <section aria-label="Ringkasan aktivitas">
-        <div className="db-section-head">
-          <div>
-            <h2 className="db-section-title">Ringkasan Aktivitas</h2>
-            <p className="db-section-subtitle">Metrik modul ajar interaktif yang tersimpan di browser</p>
-          </div>
-        </div>
-        <div className="db-stats">
-          {stats.map(({ icon: Icon, value, label, context }) => (
-            <article className="db-card db-stat" key={label}>
-              <div className="db-stat-top">
-                <span className="db-stat-label">{label}</span>
-                <span className="db-icon-square" aria-hidden="true">
-                  <Icon />
-                </span>
-              </div>
-              <strong className="db-stat-number">{value}</strong>
-              <span className="db-stat-context">{context}</span>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Akses Cepat */}
-      <section aria-label="Akses cepat">
-        <div className="db-section-head">
-          <div>
-            <h2 className="db-section-title">Akses Cepat</h2>
-            <p className="db-section-subtitle">Pintasan navigasi untuk alur kerja pembuatan modul</p>
-          </div>
-        </div>
-        <div className="db-quick">
-          <article className="db-card db-action-card">
-            <span className="db-icon-square" aria-hidden="true">
-              <LayersIcon />
-            </span>
-            <h3>Materi Saya</h3>
-            <p>Kelola, cari, saring berdasarkan format, ganti judul, atau lanjutkan pengeditan modul Anda.</p>
-            <button className="db-text-action" type="button" onClick={onGoMaterials}>
-              <span>Buka Koleksi Materi</span>
-              <ArrowRightIcon />
-            </button>
-          </article>
-
-          <article className="db-card db-action-card featured">
-            <span className="db-icon-square" aria-hidden="true">
-              <PlusIcon />
-            </span>
-            <h3>Buat Materi Baru</h3>
-            <p>Mulai dari berkas presentasi PPTX/PDF untuk konversi otomatis, atau mulai kanvas kosong.</p>
-            <button className="db-btn-primary" type="button" onClick={create} style={{ marginTop: 'auto' }}>
-              <PlusIcon />
-              <span>Buat Materi Baru</span>
-            </button>
-          </article>
-
-          <article className="db-card db-action-card">
-            <span className="db-icon-square" aria-hidden="true">
-              <ReaderIcon />
-            </span>
-            <h3>Panduan Integrasi LMS</h3>
-            <p>Petunjuk praktis cara mengimpor berkas Course Presentation .h5p ke dalam LMS Moodle atau Canvas.</p>
-            <a className="db-text-action" href="#db-lms">
-              <span>Buka Panduan LMS</span>
-              <ArrowRightIcon />
-            </a>
-          </article>
         </div>
       </section>
 
@@ -323,7 +222,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
       )}
 
       {/* Riwayat Ekspor & Panel LMS Internal */}
-      <div className="db-cols">
+      <div className="db-export-section">
         {/* Kolom Kiri: Riwayat Ekspor */}
         <section aria-label="Aktivitas ekspor terbaru">
           <div className="db-section-head">
@@ -370,55 +269,21 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
           </div>
         </section>
 
-        {/* Kolom Kanan: Panduan & Status LMS */}
-        <div>
-          <section id="db-lms" className="db-card db-panel lms" aria-label="Panduan LMS Internal">
-            <div className="db-panel-head">
-              <span className="db-icon-square" aria-hidden="true">
-                <CheckCircledIcon />
-              </span>
-              <div>
-                <h2>Kompatibilitas LMS Internal</h2>
-                <span className="db-badge db-badge-green" style={{ marginTop: 2 }}>
-                  100% Standar H5P
-                </span>
-              </div>
-            </div>
-            <p>
-              Paket <code>.h5p</code> Course Presentation hasil generator ini dapat langsung diimpor ke seluruh
-              sistem LMS internal yang telah memiliki engine H5P aktif.
-            </p>
-            <div className="db-checklist">
-              <div className="db-checklist-item">
-                <CheckIcon />
-                <span>Kompatibel penuh dengan Moodle 3.9+ & Canvas</span>
-              </div>
-              <div className="db-checklist-item">
-                <CheckIcon />
-                <span>Nilai kuis tersambung otomatis ke Gradebook LMS</span>
-              </div>
-              <div className="db-checklist-item">
-                <CheckIcon />
-                <span>Pemrosesan lokal peramban tanpa latensi server</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="db-card db-panel steps" style={{ marginTop: 14 }} aria-label="Tahapan Pembuatan">
-            <h2>Tahapan Pembuatan Modul</h2>
-            <p>Empat langkah mudah menyusun materi pembelajaran aktif:</p>
-            <div className="db-flow-chain">
-              <span className="db-flow-item">1. Upload File</span>
-              <span className="db-flow-arrow">➔</span>
-              <span className="db-flow-item">2. Susun Kuis</span>
-              <span className="db-flow-arrow">➔</span>
-              <span className="db-flow-item">3. Uji Pratinjau</span>
-              <span className="db-flow-arrow">➔</span>
-              <span className="db-flow-item">4. Unduh .h5p</span>
-            </div>
-          </section>
-        </div>
       </div>
+
+      <dialog ref={guideRef} className="db-guide-dialog" aria-labelledby="db-guide-title">
+        <div className="db-guide-content">
+          <h2 id="db-guide-title">Panduan penggunaan di LMS</h2>
+          <p>Gunakan paket dari Studio pada LMS yang mendukung H5P.</p>
+          <ol>
+            <li>Ekspor materi dari Studio, lalu simpan berkas .h5p.</li>
+            <li>Buka kursus tujuan di LMS dan pilih aktivitas atau konten H5P.</li>
+            <li>Unggah berkas .h5p, simpan, lalu periksa materi melalui pratinjau LMS.</li>
+          </ol>
+          <p>Nama menu dapat berbeda pada setiap LMS. Hubungi administrator jika fitur H5P belum tersedia.</p>
+          <form method="dialog"><button className="db-btn-primary">Mengerti</button></form>
+        </div>
+      </dialog>
 
       {/* Footer */}
       <footer className="db-footer">
