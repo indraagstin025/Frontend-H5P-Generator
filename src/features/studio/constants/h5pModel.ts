@@ -141,7 +141,7 @@ export interface TrueFalseElement extends BaseElement, QuizBehaviour {
 export interface DragDropItem {
   id: string;
   text: string;
-  /** id zona jawaban yang benar */
+  /** id zona jawaban yang benar; string kosong untuk item pengecoh. */
   zoneId: string;
 }
 
@@ -532,7 +532,7 @@ export function createProject(title: string, aspect: AspectRatio, sourceFileName
 export function maxScoreOf(el: SlideElement): number {
   if (el.kind === 'blanks') return countBlanks(el.text);
   if (el.kind === 'dragWords') return countBlanks(el.text);
-  if (el.kind === 'dragDrop') return el.items.length;
+  if (el.kind === 'dragDrop') return el.items.filter((item) => el.zones.some((zone) => zone.id === item.zoneId)).length;
   if (el.kind === 'markWords') return 1;
   if (el.kind === 'summary') return 1;
   if (

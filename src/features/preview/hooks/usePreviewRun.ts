@@ -57,7 +57,9 @@ function scoreElement(el: SlideElement, answer: AnswerValue): number {
   if (el.kind === 'dragDrop') {
     if (!Array.isArray(answer)) return 0;
     const given = answer as string[];
-    return el.items.reduce((score, item, i) => (given[i] === item.zoneId ? score + 1 : score), 0);
+    return el.items.reduce((score, item, i) => (
+      el.zones.some((zone) => zone.id === item.zoneId) && given[i] === item.zoneId ? score + 1 : score
+    ), 0);
   }
   if (el.kind === 'summary') {
     if (!Array.isArray(answer)) return 0;

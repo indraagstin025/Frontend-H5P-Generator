@@ -534,7 +534,7 @@ function toAction(
       const itemHeight = Math.max(46, ...items.map((item) =>
         Math.ceil(Math.max(1, item.text.length) / Math.max(1, Math.floor((itemWidth - 16) / 9))) * 24 + 16,
       ));
-      const targetFor = (item: typeof items[number]) => zoneIndex.get(item.zoneId) ?? 0;
+      const targetFor = (item: typeof items[number]) => zoneIndex.get(item.zoneId) ?? -1;
       const capacity = dd.allowMultipleItemsPerZone === true ? items.length : 1;
       const zoneHeight = 40 + capacity * (itemHeight + 10);
       const zoneTop = gap + Math.ceil(items.length / columns) * (itemHeight + gap) + 32;
@@ -1612,7 +1612,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     const items = (question.task?.elements ?? []).map((item, index) => ({
       id: uid(),
       text: str(item.type?.params?.text).replace(/<[^>]*>/g, ''),
-      zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? zones[0]?.id ?? '',
+      zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? '',
     }));
     return { ...dd, position, displayAsButton, popupButtonInvisible, buttonLabel, title,
       question: str(question.settings?.questionTitle, dd.question), zones, items,
