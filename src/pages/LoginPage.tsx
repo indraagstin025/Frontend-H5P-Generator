@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import './LoginPage.css';
+import './PublicPageMotion.css';
 
 export function LoginPage() {
   const ornamentsRef = useRef<HTMLDivElement>(null);

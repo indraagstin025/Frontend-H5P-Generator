@@ -1,0 +1,89 @@
+/* Shared, optional motion for public pages. Content remains visible without animation support. */
+@media (prefers-reduced-motion: no-preference) {
+  .edu-landing :is(button, .login-back, .landing-hero-brand) {
+    transition: background-color 180ms ease, border-color 180ms ease,
+      color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .edu-landing button:not(:disabled):active { transform: translateY(1px); }
+
+  .landing-page .landing-start:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px #00341525;
+  }
+
+  .edu-landing .landing-hero-brand:hover { transform: translateY(-1px); }
+
+  .landing-page .landing-copy > *,
+  .login-story .landing-copy > *,
+  .login-card > *,
+  .login-back {
+    animation: public-soft-enter 600ms cubic-bezier(.2,.7,.3,1) backwards;
+    animation-delay: 650ms;
+  }
+
+  .landing-page .landing-copy > :nth-child(2),
+  .login-story .landing-copy > :nth-child(2),
+  .login-card > :nth-child(2) { animation-delay: 720ms; }
+
+  .landing-page .landing-copy > :nth-child(3),
+  .login-story .landing-copy > :nth-child(3),
+  .login-card > :nth-child(3) { animation-delay: 790ms; }
+
+  .landing-page .landing-copy > :nth-child(4),
+  .login-card > :nth-child(n+4) { animation-delay: 860ms; }
+
+  .landing-page .landing-visual {
+    animation: public-soft-enter 750ms 750ms cubic-bezier(.2,.7,.3,1) backwards;
+    transition: border-color 250ms ease, box-shadow 250ms ease;
+  }
+
+  .landing-page .landing-visual:hover {
+    border-color: #ffffff60;
+    box-shadow: 0 28px 64px #00341530;
+  }
+
+  .landing-page .landing-feature-card {
+    transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+  }
+
+  .login-page .login-card :is(input, button) {
+    transition: border-color 200ms ease, background-color 200ms ease,
+      box-shadow 200ms ease, transform 200ms ease;
+  }
+
+  .login-page .login-card input:focus {
+    box-shadow: 0 0 0 4px #077c1a12;
+  }
+
+  .login-back svg { transition: transform 200ms ease; }
+  .login-back:hover svg { transform: translateX(-3px); }
+  .login-email-tooltip, .login-message { animation: public-soft-enter 180ms ease backwards; }
+
+  @supports (animation-timeline: view()) {
+    .landing-page .landing-feature-card,
+    .landing-page .landing-features-heading {
+      animation: public-scroll-enter linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+
+  @keyframes public-soft-enter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes public-scroll-enter {
+    from { opacity: .25; translate: 0 16px; }
+    to { opacity: 1; translate: 0 0; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edu-landing :is(button, a, input),
+  .landing-page .landing-visual,
+  .login-back svg { transition: none; }
+  .edu-landing button:not(:disabled):hover { transform: none; }
+  .landing-page .landing-section-wave use { animation: none; }
+}
