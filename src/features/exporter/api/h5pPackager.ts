@@ -525,20 +525,35 @@ function toAction(
       const items = dd.items.length > 0 ? dd.items : [{ id: 'item-1', text: 'Item 1', zoneId: zones[0].id }];
       const zoneIndex = new Map(zones.map((z, i) => [z.id, i]));
       const taskWidth = 640;
-      const taskHeight = 420;
+      // DragQuestion uses percentages for x/y, but em for width/height.
+      // Its reference canvas font size is 16px (scaled by the runtime).
+      const columns = Math.min(3, Math.max(items.length, zones.length));
+      const gap = 16;
+      const cellWidth = (taskWidth - gap * (columns + 1)) / columns;
+      const itemWidth = cellWidth - 20;
+      const itemHeight = Math.max(46, ...items.map((item) =>
+        Math.ceil(Math.max(1, item.text.length) / Math.max(1, Math.floor((itemWidth - 16) / 9))) * 24 + 16,
+      ));
+      const targetFor = (item: typeof items[number]) => zoneIndex.get(item.zoneId) ?? 0;
+      const capacity = Math.max(1, ...zones.map((_, index) => items.filter((item) => targetFor(item) === index).length));
+      const zoneHeight = 40 + capacity * (itemHeight + 10);
+      const zoneTop = gap + Math.ceil(items.length / columns) * (itemHeight + gap) + 32;
+      const taskHeight = Math.max(420, zoneTop + Math.ceil(zones.length / columns) * (zoneHeight + gap));
+      const xPct = (px: number) => px / taskWidth * 100;
+      const yPct = (px: number) => px / taskHeight * 100;
       const dropZones = zones.map((zone, i) => ({
-        label: zone.label,
+        label: escapeHtml(zone.label),
         showLabel: true,
-        x: 16 + (i % 3) * 205,
-        y: 290 + Math.floor(i / 3) * 70,
-        width: 190,
-        height: 58,
+        x: xPct(gap + (i % columns) * (cellWidth + gap)),
+        y: yPct(zoneTop + Math.floor(i / columns) * (zoneHeight + gap)),
+        width: cellWidth / 16,
+        height: zoneHeight / 16,
         correctElements: items
-          .map((it, itemIndex) => (it.zoneId === zone.id ? String(itemIndex) : null))
+          .map((it, itemIndex) => (targetFor(it) === i ? String(itemIndex) : null))
           .filter((v): v is string => v !== null),
         backgroundOpacity: 100,
-        single: true,
-        autoAlign: false,
+        single: items.filter((item) => targetFor(item) === i).length <= 1,
+        autoAlign: true,
       }));
       const elements = items.map((item, i) => ({
         type: {
@@ -546,11 +561,12 @@ function toAction(
           params: { text: `<p>${escapeHtml(item.text)}</p>` },
           subContentId: item.id,
         },
-        x: 16 + (i % 3) * 205,
-        y: 16 + Math.floor(i / 3) * 56,
-        width: 190,
-        height: 46,
-        dropZones: [String(zoneIndex.get(item.zoneId) ?? 0)],
+        x: xPct(gap + (i % columns) * (cellWidth + gap) + 10),
+        y: yPct(gap + Math.floor(i / columns) * (itemHeight + gap)),
+        width: itemWidth / 16,
+        height: itemHeight / 16,
+        // Allow every destination; correctElements determines scoring.
+        dropZones: zones.map((_, index) => String(index)),
         backgroundOpacity: 100,
         multiple: false,
       }));
@@ -562,7 +578,7 @@ function toAction(
           tryAgain: 'Coba lagi',
           scoreExplanation: 'Penjelasan nilai',
           question: {
-            settings: { size: { width: taskWidth, height: taskHeight } },
+            settings: { questionTitle: escapeHtml(dd.question || dd.title || 'Seret item ke zona yang sesuai.'), size: { width: taskWidth, height: taskHeight } },
             task: { elements, dropZones },
           },
           behaviour: {
@@ -574,7 +590,7 @@ function toAction(
             autoAlignSpacing: 10,
             enableFullScreen: false,
             showScorePoints: true,
-            showTitle: false,
+            showTitle: true,
           },
         },
       };
