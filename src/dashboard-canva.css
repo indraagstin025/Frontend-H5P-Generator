@@ -2011,6 +2011,14 @@
 .db-main .db-table-action-btn { padding: 8px 12px; border-radius: 8px; font-weight: 650; color: #077c1a; }
 .db-main .db-badge { font-weight: 650; font-size: 10px; padding: 4px 8px; }
 .db-main .db-export-section { width: 100%; min-width: 0; }
+.db-export-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; color: var(--db-muted); font-size: 14px; }
+.db-export-pagination span { font-variant-numeric: tabular-nums; }
+.db-export-pagination button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--db-ink); cursor: pointer; }
+.db-export-pagination button:hover:not(:disabled) { background: var(--db-green-light); }
+.db-export-pagination button:active:not(:disabled) { background: var(--db-green-light-active); }
+.db-export-pagination button:disabled { opacity: .35; cursor: default; }
+.db-export-pagination button:focus-visible { outline: 2px solid var(--db-green-primary); outline-offset: 2px; }
+.db-export-pagination svg { width: 18px; height: 18px; }
 .db-main .db-empty { background: #fff; border: 1px solid #e0e8df; padding: 48px 24px; }
 .db-main .db-empty p { line-height: 1.8; }
 .db-main .db-footer { line-height: 1.8; font-size: 10px; margin-top: 0; }

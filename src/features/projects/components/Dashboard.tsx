@@ -5,6 +5,8 @@
 import { useRef, useState } from 'react';
 import {
   ArrowRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   FileTextIcon,
   LayersIcon,
@@ -48,6 +50,9 @@ function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | '
 
 export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }: DashboardProps) {
   const [exports] = useState(loadExportHistory);
+  const [exportPage, setExportPage] = useState(1);
+  const exportPageCount = Math.max(1, Math.ceil(exports.length / 5));
+  const visibleExports = exports.slice((exportPage - 1) * 5, exportPage * 5);
   const create = onCreate ?? onGoMaterials;
   const recent = [...items].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const q = query.trim().toLowerCase();
@@ -56,7 +61,13 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
         (p) =>
           p.title.toLowerCase().includes(q) || (p.sourceFileName ?? '').toLowerCase().includes(q),
       )
-    : recent.slice(0, 6);
+    : recent;
+  const [materialPagination, setMaterialPagination] = useState({ query: q, page: 1 });
+  const materialPageCount = Math.max(1, Math.ceil(filtered.length / 5));
+  const materialPage = materialPagination.query === q
+    ? Math.min(materialPagination.page, materialPageCount)
+    : 1;
+  const visibleMaterials = filtered.slice((materialPage - 1) * 5, materialPage * 5);
 
   const guideRef = useRef<HTMLDialogElement>(null);
 
@@ -133,7 +144,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
+                {visibleMaterials.map((p) => {
                   const src = sourceOf(p);
                   return (
                     <tr key={p.id}>
@@ -180,6 +191,27 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
               </p>
             )}
           </div>
+          {materialPageCount > 1 && (
+            <nav className="db-export-pagination" aria-label="Halaman materi terbaru">
+              <button
+                type="button"
+                aria-label="Halaman materi sebelumnya"
+                disabled={materialPage === 1}
+                onClick={() => setMaterialPagination({ query: q, page: materialPage - 1 })}
+              >
+                <ChevronLeftIcon />
+              </button>
+              <span aria-live="polite" aria-atomic="true">{materialPage} / {materialPageCount}</span>
+              <button
+                type="button"
+                aria-label="Halaman materi berikutnya"
+                disabled={materialPage === materialPageCount}
+                onClick={() => setMaterialPagination({ query: q, page: materialPage + 1 })}
+              >
+                <ChevronRightIcon />
+              </button>
+            </nav>
+          )}
         </section>
       )}
 
@@ -203,7 +235,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 </tr>
               </thead>
               <tbody>
-                {exports.slice(0, 5).map((e) => (
+                {visibleExports.map((e) => (
                   <tr key={e.id}>
                     <td>
                       <span className="db-table-title">{e.title}</span>
@@ -229,6 +261,27 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
               </p>
             )}
           </div>
+          {exportPageCount > 1 && (
+            <nav className="db-export-pagination" aria-label="Halaman riwayat ekspor">
+              <button
+                type="button"
+                aria-label="Halaman riwayat sebelumnya"
+                disabled={exportPage === 1}
+                onClick={() => setExportPage((page) => Math.max(1, page - 1))}
+              >
+                <ChevronLeftIcon />
+              </button>
+              <span aria-live="polite" aria-atomic="true">{exportPage} / {exportPageCount}</span>
+              <button
+                type="button"
+                aria-label="Halaman riwayat berikutnya"
+                disabled={exportPage === exportPageCount}
+                onClick={() => setExportPage((page) => Math.min(exportPageCount, page + 1))}
+              >
+                <ChevronRightIcon />
+              </button>
+            </nav>
+          )}
         </section>
 
       </div>
