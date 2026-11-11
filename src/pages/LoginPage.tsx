@@ -98,14 +98,16 @@ export function LoginPage() {
           <span className="login-ornament login-ornament-lower-circle" />
         </div>
       <section className="login-story" aria-label="H5P Generator">
-        <Link className="edu-brand" to="/">
-          <span className="login-brand-logo"><img src="/landing-logo.png" alt="" /></span>
-          <span className="edu-brand-title">H5P Generator</span>
+        <Link className="landing-hero-brand" to="/" aria-label="H5P Generator, beranda">
+          <span className="landing-hero-logo"><img src="/landing-logo.png" alt="" /></span>
+          <span className="landing-hero-brand-text"><strong>H5P Generator</strong><span>Ruang kreasi pembelajaran</span></span>
         </Link>
-        <div className="login-story-copy">
-          <span className="login-eyebrow">Ruang kreasi pembelajaran</span>
+        <div className="login-story-copy landing-hero">
+          <div className="landing-copy">
+          <span className="landing-kicker">Ruang kreasi pembelajaran</span>
           <h1>Materi Anda,<br /><span>lebih interaktif.</span></h1>
           <p>Siapkan materi pembelajaran dalam format H5P untuk LMS Anda.</p>
+          </div>
         </div>
       </section>
       <section className="login-form-panel" aria-labelledby="login-title">

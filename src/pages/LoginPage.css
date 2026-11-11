@@ -19,10 +19,9 @@
   .login-ornament-capsule { right: 8%; bottom: -55px; }
 }
 .login-eyebrow { display: block; padding-inline-start: 3px; font-size: 13px; font-weight: 600; letter-spacing: .01em; }
-.login-story h1 { color: white; font-size: clamp(46px, calc(4vw + 8px), 72px); line-height: 1.15; margin: 24px 0; letter-spacing: -.035em; }
-.login-story h1 span { color: #b8efb9; }
-.login-story p { color: #fff; line-height: 1.75; max-width: 440px; font-size: 16px; }
-.login-story-copy { margin-block: auto; }
+.login-story-copy { margin-block: 0; }
+.login-story-copy h1 { margin: 28px 0 24px; }
+.login-story-copy p { margin: 0 0 38px; }
 .login-form-panel { position: relative; z-index: 1; margin: 32px 0; border: 1px solid #ffffff70; border-radius: 28px; box-shadow: 0 24px 64px #00341540, 0 8px 20px #00341520; padding: 48px clamp(24px, 5vw, 88px); display: flex; flex-direction: column; background: #fff; }
 .login-back { display: inline-flex; align-items: center; gap: 8px; color: #52665a; text-decoration: none; font-size: 13px; align-self: flex-start; }
 .login-back:hover { color: #077c1a; }
@@ -70,8 +69,10 @@
 
 /* Keep the floating form compact enough for a desktop viewport. */
 @media (min-width: 851px) {
-  .login-story { padding-inline-end: 32px; }
-  .login-story-copy { width: 100%; max-width: 520px; margin-inline-start: auto; transform: translateY(-48px); }
+  .login-story { padding: 18px 32px 0 max(40px, calc((100vw - 1280px) / 2)); justify-content: flex-start; gap: 0; }
+  .login-story > .landing-hero-brand { align-self: flex-start; min-height: 72px; }
+  .login-story-copy { width: 100%; max-width: none; margin: 0; padding-inline: 0; display: flex; align-items: center; justify-content: flex-start; gap: 0; align-self: flex-start; }
+  .login-story-copy > .landing-copy { width: 100%; margin-inline: 0; text-align: left; }
   .login-form-panel { width: min(100%, 480px); justify-self: center; margin-block: 24px; padding-block: 24px; padding-inline: clamp(24px, 3vw, 40px); }
   .login-card { padding-block: 16px; }
   .login-card form { margin-top: 24px; }
@@ -85,3 +86,17 @@
   .login-card form { margin-top: 16px; }
   .login-divider { margin-block: 12px; }
 }
+@media (min-width: 851px) and (max-width: 960px) {
+  .login-story { padding-inline-start: 24px; }
+}
+@media (max-width: 850px) {
+  .login-story { padding: 18px 24px; }
+}
+@media (max-width: 680px) {
+  .login-story { padding-top: 12px; }
+}
+.login-story .landing-hero-brand:focus-visible { outline: 3px solid white; outline-offset: 5px; }
+.login-story .landing-hero-logo { width: 106px; height: 82px; }
+.login-story .landing-hero-logo img { width: 144px; height: 96px; left: -19px; top: -7px; }
+.login-story .landing-hero-brand-text strong { font-size: 22px; line-height: 24.8px; color: #fff; }
+.login-story .landing-hero-brand-text > span { font-size: 11px; line-height: 12.8px; color: #d0e7d4; }
