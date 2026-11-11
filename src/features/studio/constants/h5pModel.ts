@@ -51,6 +51,8 @@ interface BaseElement {
   /** FR-09: tampil inline vs ikon tombol pop-up */
   displayAsButton: boolean;
   buttonLabel: string;
+  /** Custom Course Presentation runtime: transparent but clickable pop-up trigger. */
+  popupButtonInvisible?: boolean;
   title: string;
 }
 

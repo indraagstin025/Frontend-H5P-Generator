@@ -47,6 +47,16 @@
 }
 
 .st-popup-button-face svg { width: 22px; height: 22px; flex-shrink: 0; }
+.canvas-element.is-popup-trigger:has(.st-popup-button-invisible) {
+  outline: 1px dashed #077c1a;
+  background: #077c1a0a;
+}
+.st-popup-button-face.st-popup-button-invisible {
+  background: #ffffffb0;
+  color: #526b5b;
+  box-shadow: none;
+  opacity: .55;
+}
 .st-popup-button-face > span {
   position: absolute;
   left: 100%;

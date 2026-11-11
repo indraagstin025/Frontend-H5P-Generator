@@ -700,6 +700,7 @@ export function toCpElement(
     displayAsButton: el.displayAsButton,
     buttonLabel: el.buttonLabel || undefined,
     buttonSize: 'big',
+    popupButtonInvisible: el.displayAsButton && el.popupButtonInvisible === true,
   };
   if (el.kind === 'goToSlide') {
     return {
@@ -1152,7 +1153,9 @@ export async function detectAvailableCpMinor(): Promise<number | null> {
 }
 
 async function fetchLibraryFile(relPath: string): Promise<Uint8Array> {
-  const res = await fetch(`/h5p-libraries/${relPath}`, { cache: 'force-cache' });
+  // Runtime assets may be patched without changing the H5P library version.
+  // Never bundle an older browser-cached copy into a newly exported package.
+  const res = await fetch(`/h5p-libraries/${relPath}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status} untuk ${relPath}`);
   return new Uint8Array(await res.arrayBuffer());
 }
@@ -1260,6 +1263,12 @@ export async function buildH5p(
   opts: H5pBuildOptions = {},
 ): Promise<H5pBuildResult> {
   if (project.slides.length === 0) throw new Error('Proyek belum memiliki slide.');
+  const needsTransparentButtons = project.slides.some((slide) =>
+    slide.elements.some((el) => el.kind !== 'goToSlide' && el.displayAsButton && el.popupButtonInvisible === true),
+  );
+  if (needsTransparentButtons && opts.includeLibraries === false) {
+    throw new Error('Tombol transparan memerlukan library H5P pendukung di dalam paket. Aktifkan penyertaan library saat ekspor.');
+  }
   const files: Record<string, Uint8Array> = {};
 
   // Ambil media elemen (termasuk gambar/audio hasil ekstraksi server) sambil
@@ -1311,6 +1320,23 @@ export async function buildH5p(
     Object.assign(files, bundle.files);
   }
   files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
+
+  if (needsTransparentButtons) {
+    const root = `H5P.CoursePresentation-1.${cpMinor}/`;
+    const marker = 'H5P Generator: transparent pop-up trigger';
+    const readText = (path: string) => files[root + path] ? strFromU8(files[root + path]) : '';
+    const runtime = readText('dist/h5p-course-presentation.js');
+    const styles = readText('dist/h5p-course-presentation.css');
+    const semanticsText = readText('semantics.json');
+    if (!runtime.includes(marker) || !runtime.includes('popupButtonInvisible') ||
+        !styles.includes(marker) || !styles.includes('h5p-generator-transparent-trigger') ||
+        !semanticsText.includes('"popupButtonInvisible"')) {
+      throw new Error(
+        'Ekspor dihentikan: library Course Presentation dalam paket belum mendukung tombol transparan. ' +
+        'Muat ulang aplikasi dan pastikan library terbaru tersedia, lalu ekspor kembali.',
+      );
+    }
+  }
 
   const zipped = zipSync(files, { level: 6 });
   // fflate hanya menulis entri berkas — selaras aturan `zip -rDX` (§5).
@@ -1432,6 +1458,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     height: num(e.height, 30),
   };
   const displayAsButton = bool(e.displayAsButton, false);
+  const popupButtonInvisible = bool(e.popupButtonInvisible, false);
   const buttonLabel = str(e.buttonLabel);
   const title = str(e.title);
 
@@ -1444,8 +1471,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...g,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       label: title || 'Pilihan',
       targetType,
@@ -1460,7 +1486,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
 
   if (machine === 'H5P.AdvancedText') {
     const t = createElement('advancedText', slideCount);
-    return { ...t, position, displayAsButton, buttonLabel, title, text: str(params.text, '') };
+    return { ...t, position, displayAsButton, popupButtonInvisible, buttonLabel, title, text: str(params.text, '') };
   }
   if (machine === 'H5P.Image') {
     const img = createElement('image', slideCount);
@@ -1470,8 +1496,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...img,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title: str(params.title, title),
       alt: str(params.alt),
       fileName: path.split('/').pop() ?? '',
@@ -1487,8 +1512,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...au,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       fileName: path.split('/').pop() ?? '',
       objectUrl: path && audioBytes ? bytesToUrl(audioBytes, mimeForPath(path)) : null,
@@ -1504,8 +1528,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...vd,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       videoUrl: isRemote ? path : '',
       fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
@@ -1520,8 +1543,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...m,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       question: str(params.question, 'Pertanyaan'),
       singleAnswer: bool(behaviour.singleAnswer, true),
@@ -1534,8 +1556,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...t,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       question: str(params.question, 'Pernyataan'),
       correctAnswer: correct === true || correct === 'true' || correct === 'True',
@@ -1556,12 +1577,11 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...b,
       position,
-      displayAsButton,
-      buttonLabel,
+      displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       text,
     };
   }
   const t = createElement('advancedText', slideCount);
-  return { ...t, position, displayAsButton, buttonLabel, title, text: '' };
+  return { ...t, position, displayAsButton, popupButtonInvisible, buttonLabel, title, text: '' };
 }

@@ -398,6 +398,13 @@ export function PropertyPanel({
               <span>Jadi tombol kecil (diklik baru kebuka)</span>
             </label>
             {element.displayAsButton && (
+              <label className="check-row compact">
+                <input type="checkbox" checked={element.popupButtonInvisible === true}
+                  onChange={(e) => patch({ popupButtonInvisible: e.target.checked })} />
+                <span>Tombol transparan (tetap bisa diklik)</span>
+              </label>
+            )}
+            {element.displayAsButton && (
               <label className="field-label">
                 Tulisan di tombolnya
                 <input
