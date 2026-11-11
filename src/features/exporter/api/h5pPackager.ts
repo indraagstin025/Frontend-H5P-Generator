@@ -717,6 +717,9 @@ export function toCpElement(
     buttonLabel: el.buttonLabel || undefined,
     buttonSize: 'big',
     popupButtonInvisible: el.displayAsButton && el.popupButtonInvisible === true,
+    popupButtonOpacity: clampPct(el.popupButtonOpacity ?? 100),
+    popupButtonAutoHide: el.displayAsButton && el.popupButtonAutoHide === true,
+    popupButtonVisibleSeconds: Math.min(300, Math.max(0.5, el.popupButtonVisibleSeconds ?? 3)),
   };
   if (el.kind === 'goToSlide') {
     return {
@@ -1280,7 +1283,8 @@ export async function buildH5p(
 ): Promise<H5pBuildResult> {
   if (project.slides.length === 0) throw new Error('Proyek belum memiliki slide.');
   const needsTransparentButtons = project.slides.some((slide) =>
-    slide.elements.some((el) => el.kind !== 'goToSlide' && el.displayAsButton && el.popupButtonInvisible === true),
+    slide.elements.some((el) => el.kind !== 'goToSlide' && el.displayAsButton &&
+      (el.popupButtonInvisible === true || el.popupButtonAutoHide === true || (el.popupButtonOpacity ?? 100) !== 100)),
   );
   if (needsTransparentButtons && opts.includeLibraries === false) {
     throw new Error('Tombol transparan memerlukan library H5P pendukung di dalam paket. Aktifkan penyertaan library saat ekspor.');
@@ -1344,7 +1348,7 @@ export async function buildH5p(
     const runtime = readText('dist/h5p-course-presentation.js');
     const styles = readText('dist/h5p-course-presentation.css');
     const semanticsText = readText('semantics.json');
-    if (!runtime.includes(marker) || !runtime.includes('popupButtonInvisible') ||
+    if (!runtime.includes(marker) || !runtime.includes('popupButtonInvisible') || !runtime.includes('popupButtonVisibleSeconds') ||
         !styles.includes(marker) || !styles.includes('h5p-generator-transparent-trigger') ||
         !semanticsText.includes('"popupButtonInvisible"')) {
       throw new Error(
@@ -1475,6 +1479,9 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   };
   const displayAsButton = bool(e.displayAsButton, false);
   const popupButtonInvisible = bool(e.popupButtonInvisible, false);
+  const popupButtonOpacity = clampPct(num(e.popupButtonOpacity, 100));
+  const popupButtonAutoHide = bool(e.popupButtonAutoHide, false);
+  const popupButtonVisibleSeconds = Math.min(300, Math.max(0.5, num(e.popupButtonVisibleSeconds, 3)));
   const buttonLabel = str(e.buttonLabel);
   const title = str(e.title);
 
@@ -1487,7 +1494,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...g,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       label: title || 'Pilihan',
       targetType,
@@ -1502,7 +1509,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
 
   if (machine === 'H5P.AdvancedText') {
     const t = createElement('advancedText', slideCount);
-    return { ...t, position, displayAsButton, popupButtonInvisible, buttonLabel, title, text: str(params.text, '') };
+    return { ...t, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: str(params.text, '') };
   }
   if (machine === 'H5P.Image') {
     const img = createElement('image', slideCount);
@@ -1512,7 +1519,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...img,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title: str(params.title, title),
       alt: str(params.alt),
       fileName: path.split('/').pop() ?? '',
@@ -1528,7 +1535,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...au,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       fileName: path.split('/').pop() ?? '',
       objectUrl: path && audioBytes ? bytesToUrl(audioBytes, mimeForPath(path)) : null,
@@ -1544,7 +1551,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...vd,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       videoUrl: isRemote ? path : '',
       fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
@@ -1559,7 +1566,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...m,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       question: str(params.question, 'Pertanyaan'),
       singleAnswer: bool(behaviour.singleAnswer, true),
@@ -1572,7 +1579,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...t,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       question: str(params.question, 'Pernyataan'),
       correctAnswer: correct === true || correct === 'true' || correct === 'True',
@@ -1593,7 +1600,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...b,
       position,
-      displayAsButton, popupButtonInvisible, buttonLabel,
+      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       text,
     };
@@ -1614,11 +1621,11 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       text: str(item.type?.params?.text).replace(/<[^>]*>/g, ''),
       zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? '',
     }));
-    return { ...dd, position, displayAsButton, popupButtonInvisible, buttonLabel, title,
+    return { ...dd, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title,
       question: str(question.settings?.questionTitle, dd.question), zones, items,
       allowMultipleItemsPerZone: rawZones.some((zone) => zone.single === false),
     };
   }
   const t = createElement('advancedText', slideCount);
-  return { ...t, position, displayAsButton, popupButtonInvisible, buttonLabel, title, text: '' };
+  return { ...t, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: '' };
 }

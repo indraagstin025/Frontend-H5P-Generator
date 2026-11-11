@@ -224,7 +224,8 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
               }}
             >
               {el.displayAsButton && el.kind !== 'goToSlide' ? (
-                <span className={`st-popup-button-face ${el.popupButtonInvisible ? 'st-popup-button-invisible' : ''}`}>
+                <span className={`st-popup-button-face ${el.popupButtonInvisible ? 'st-popup-button-invisible' : ''}`}
+                  style={{ opacity: el.popupButtonInvisible ? 0.35 : Math.max(0.15, Math.min(100, Math.max(0, el.popupButtonOpacity ?? 100)) / 100) }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 16v2" /></svg>
                   <span>{el.buttonLabel || el.title || elementLabel(el)}</span>
                 </span>

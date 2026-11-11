@@ -53,6 +53,9 @@ interface BaseElement {
   buttonLabel: string;
   /** Custom Course Presentation runtime: transparent but clickable pop-up trigger. */
   popupButtonInvisible?: boolean;
+  popupButtonOpacity?: number;
+  popupButtonAutoHide?: boolean;
+  popupButtonVisibleSeconds?: number;
   title: string;
 }
 

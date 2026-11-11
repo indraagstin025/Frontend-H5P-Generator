@@ -198,6 +198,31 @@
                     "label": "Transparent popup button",
                     "optional": true,
                     "default": false
+                  },
+                  {
+                    "name": "popupButtonOpacity",
+                    "type": "number",
+                    "label": "Button opacity",
+                    "min": 0,
+                    "max": 100,
+                    "default": 100,
+                    "optional": true
+                  },
+                  {
+                    "name": "popupButtonAutoHide",
+                    "type": "boolean",
+                    "label": "Auto-hide button",
+                    "default": false,
+                    "optional": true
+                  },
+                  {
+                    "name": "popupButtonVisibleSeconds",
+                    "type": "number",
+                    "label": "Visible seconds",
+                    "min": 0.5,
+                    "max": 300,
+                    "default": 3,
+                    "optional": true
                   }
                 ]
               }

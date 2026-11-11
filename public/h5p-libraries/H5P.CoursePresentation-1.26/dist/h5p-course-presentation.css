@@ -11,3 +11,6 @@
 .h5p-course-presentation .h5p-element-button-wrapper:has(> .h5p-generator-transparent-trigger) { width: var(--h5p-generator-trigger-width) !important; height: var(--h5p-generator-trigger-height) !important; }
 .h5p-course-presentation .h5p-element-button-wrapper > .h5p-generator-transparent-trigger { width: 100% !important; height: 100% !important; min-width: 1.5em; min-height: 1.5em; }
 .h5p-course-presentation .h5p-element-button-wrapper:has(> .h5p-generator-transparent-trigger:focus-visible) { outline: 2px solid #077c1a; outline-offset: 3px; }
+
+.h5p-course-presentation .h5p-element-button-wrapper:has(> .h5p-generator-opacity-trigger:focus-visible) { outline: 2px solid #077c1a; outline-offset: 3px; }
+@media(prefers-reduced-motion:reduce){.h5p-course-presentation .h5p-generator-opacity-trigger{transition:none !important;}}
