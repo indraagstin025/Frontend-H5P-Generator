@@ -103,6 +103,14 @@
 .login-logo-row .landing-hero-logo img { width: 144px; height: 96px; left: -38px; top: -19px; }
 .login-logo-reserved { height: 72px; flex: none; }
 .login-logo-row .landing-hero-brand:focus-visible { outline: 3px solid white; outline-offset: 5px; }
+.login-pull-transition::view-transition-old(root) { animation: none; z-index: 2; mix-blend-mode: normal; }
+.login-pull-transition::view-transition-image-pair(root) { animation: login-transition-blur 2200ms linear both; }
+.login-pull-transition::view-transition-new(root) { animation: none; z-index: 1; mix-blend-mode: normal; }
+.login-pull-transition::view-transition-group(root) { animation-duration: 2200ms; }
+@keyframes login-transition-blur {
+  0%, 100% { filter: blur(0); }
+  13.636%, 86.364% { filter: blur(2px); }
+}
 
 .login-story, .login-form-panel, .login-card, .login-logo-row .landing-hero-brand-text { min-width: 0; }
 .login-card p, .login-email-tooltip { overflow-wrap: anywhere; }

@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { flushSync } from 'react-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import './LandingPage.css';
 import './LoginPage.css';
 import './PublicPageMotion.css';
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const [enteringDashboard, setEnteringDashboard] = useState(false);
+
   const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
@@ -84,6 +88,43 @@ export function LoginPage() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (enteringDashboard) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      navigate('/dashboard');
+      return;
+    }
+    if (!document.startViewTransition) {
+      navigate('/dashboard');
+      return;
+    }
+    flushSync(() => setEnteringDashboard(true));
+    document.documentElement.classList.add('login-pull-transition');
+    const transition = document.startViewTransition(() => {
+      flushSync(() => navigate('/dashboard'));
+    });
+    void transition.ready.then(() => {
+      const duration = 1600;
+      const frames = Array.from({ length: 65 }, (_, index) => {
+        const progress = index / 64;
+        const edge = 112 - progress * 124;
+        const points = Array.from({ length: 81 }, (_, point) => {
+          const x = point / 80 * 100;
+          const y = edge + Math.sin(point / 80 * Math.PI * 4 + progress * Math.PI * 3) * 4;
+          return `${x}% ${y}%`;
+        });
+        return { clipPath: `polygon(0% 0%, 100% 0%, ${points.reverse().join(', ')})` };
+      });
+      document.documentElement.animate(frames, {
+        duration,
+        delay: 300,
+        easing: 'ease-in-out',
+        fill: 'forwards',
+        pseudoElement: '::view-transition-old(root)',
+      });
+    }).catch(() => {});
+    void transition.finished.catch(() => {}).finally(() => {
+      document.documentElement.classList.remove('login-pull-transition');
+    });
   }
 
   return (
@@ -118,7 +159,7 @@ export function LoginPage() {
         <Link to="/" className="login-back"><ArrowLeftIcon /> Kembali ke beranda</Link>
         <div className="login-card">
           <h2 id="login-title">Login ke akun Anda</h2>
-          <form aria-describedby="login-availability" onSubmit={handleSubmit} onChange={() => setMessage('')}>
+          <form noValidate onSubmit={handleSubmit} onChange={() => setMessage('')}>
             <label htmlFor="login-email">Email</label>
             <div className="login-email-field">
             <input
@@ -161,8 +202,10 @@ export function LoginPage() {
               <input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Masukkan kata sandi" required />
               <button type="button" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}</button>
             </div>
-            {/* TODO: Enable sign-in when authentication is available. */}
-            <button className="edu-btn-primary login-submit" type="submit" disabled>Login belum tersedia</button>
+            {/* Temporary dashboard access until database authentication is connected. */}
+            <button className="edu-btn-primary login-submit" type="submit" disabled={enteringDashboard} aria-busy={enteringDashboard}>
+              {enteringDashboard ? 'Membuka dashboard…' : 'Login'}
+            </button>
           </form>
           <div className="login-divider"><span>atau</span></div>
           {/* TODO: Enable Google sign-in when authentication is available. */}
