@@ -1,0 +1,93 @@
+.page-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  background: rgba(248, 250, 246, 0.18);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: page-transition-dismiss 750ms ease both;
+}
+
+.page-transition__content {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+}
+
+.page-transition__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 160px;
+  height: 160px;
+}
+
+.page-transition__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(27, 102, 59, 0.1);
+  border-top-color: var(--green-lime, #8cd629);
+  border-right-color: var(--green, #1b663b);
+  border-radius: 50%;
+  animation: page-transition-spin 1s linear infinite;
+}
+
+.page-transition__logo {
+  width: 116px;
+  height: 116px;
+  object-fit: contain;
+  animation: page-transition-pulse 1s ease-in-out infinite alternate;
+}
+
+.page-transition__label {
+  color: var(--green-deep, #0c3e25);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.page-transition__track {
+  width: 120px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(27, 102, 59, 0.1);
+}
+
+.page-transition__track span {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad-lime-deep, #1b663b);
+  animation: page-transition-progress 850ms ease-in-out infinite;
+}
+
+@keyframes page-transition-dismiss {
+  0%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes page-transition-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes page-transition-pulse {
+  from { transform: scale(0.94); opacity: 0.75; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes page-transition-progress {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(330%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation-duration: 150ms; }
+  .page-transition__ring,
+  .page-transition__logo,
+  .page-transition__track span { animation: none; }
+}

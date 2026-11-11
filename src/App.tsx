@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import './App.css';
+import { PageTransition } from './components/UI/PageTransition';
 import { StudioProvider } from './context/StudioContext';
 import { StudioView } from './features/studio/pages/StudioView';
 import { HomePage } from './pages/HomePage';
@@ -14,6 +15,7 @@ function LandingRoute() {
 function App() {
   return (
     <BrowserRouter>
+      <PageTransition />
       <StudioProvider>
         <Routes>
           <Route path="/" element={<LandingRoute />} />
