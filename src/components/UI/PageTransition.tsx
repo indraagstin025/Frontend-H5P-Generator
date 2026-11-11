@@ -33,5 +33,14 @@ function LogoLoader() {
 
 export function PageTransition() {
   const { pathname } = useLocation();
+  const [route, setRoute] = useState({ pathname, skipLoader: false });
+  if (route.pathname !== pathname) {
+    const workspacePaths = ['/dashboard', '/materi'];
+    setRoute({
+      pathname,
+      skipLoader: workspacePaths.includes(route.pathname) && workspacePaths.includes(pathname),
+    });
+  }
+  if (route.skipLoader) return null;
   return <LogoLoader key={pathname} />;
 }

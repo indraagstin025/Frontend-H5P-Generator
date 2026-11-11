@@ -89,6 +89,14 @@ export function LoginPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (enteringDashboard) return;
+    const email = String(new FormData(event.currentTarget).get('email') ?? '').trim();
+    const accountName = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
+    const displayName = accountName.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase('id-ID'));
+    try {
+      sessionStorage.setItem('h5p-generator:display-name', displayName);
+    } catch {
+      // Navigation remains available when browser storage is disabled.
+    }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       navigate('/dashboard');
       return;

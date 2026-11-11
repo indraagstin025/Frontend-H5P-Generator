@@ -1,22 +1,46 @@
-import { DashboardIcon, ExitIcon, LayersIcon, PlusIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, ExitIcon, LayersIcon } from '@radix-ui/react-icons';
+import { useEffect, useRef, useState } from 'react';
 
 interface HomeSidebarProps {
+  displayName: string;
   activeNav: 'dashboard' | 'materi';
   itemCount: number;
-  onOpenNewModal: () => void;
   onNavigateDashboard: () => void;
   onNavigateMateri: () => void;
   onLogout: () => void;
 }
 
 export function HomeSidebar({
+  displayName,
   activeNav,
   itemCount,
-  onOpenNewModal,
   onNavigateDashboard,
   onNavigateMateri,
   onLogout,
 }: HomeSidebarProps) {
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const name = displayName || 'Akun Anda';
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !profileRef.current?.contains(event.target)) setProfileOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setProfileOpen(false);
+        profileButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [profileOpen]);
   return (
     <aside className="db-sidebar" aria-label="Navigasi utama">
       <div className="db-brand">
@@ -27,13 +51,6 @@ export function HomeSidebar({
             <span className="db-brand-tag">Ruang kreasi pembelajaran</span>
           </div>
         </div>
-      </div>
-
-      <div className="db-sidebar-action">
-        <button type="button" className="db-btn-sidebar-create" onClick={onOpenNewModal}>
-          <PlusIcon />
-          <span>Buat materi baru</span>
-        </button>
       </div>
 
       <p className="db-nav-label">NAVIGASI UTAMA</p>
@@ -64,37 +81,27 @@ export function HomeSidebar({
         </button>
       </nav>
 
-      {/* Widget status penyimpanan browser */}
-      <div className="db-sidebar-widget">
-        <div className="db-sidebar-widget-head">
-          <span className="db-pulse-dot" />
-          <span>Penyimpanan Lokal</span>
-        </div>
-        <p>
-          {itemCount} materi aktif tersimpan di peramban, siap dikonversi ke paket .h5p kapan saja.
-        </p>
-      </div>
-
       {/* User profile footer di sidebar */}
-      <div className="db-side-foot">
-        <div className="db-user-card">
-          <div className="db-user-info">
+      <div className="db-side-foot" ref={profileRef} onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setProfileOpen(false);
+      }}>
+        <button className="db-profile-trigger" type="button" ref={profileButtonRef}
+          aria-expanded={profileOpen} aria-controls="db-profile-popup"
+          onClick={() => setProfileOpen((open) => !open)}>
+          <span className="db-user-info">
             <span className="db-avatar" aria-hidden="true">
-              P
+              {name.charAt(0).toLocaleUpperCase('id-ID')}
             </span>
-            <div>
-              <strong>Pemateri Internal</strong>
+            <span className="db-profile-name">
+              <strong>{name}</strong>
               <small>Instruktur LMS</small>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="db-btn-logout"
-            title="Kembali ke Beranda"
-            aria-label="Kembali ke Beranda Utama"
-            onClick={onLogout}
-          >
-            <ExitIcon />
+            </span>
+          </span>
+        </button>
+        <div id="db-profile-popup" className="db-profile-popup" hidden={!profileOpen}>
+          <p>Akun Anda</p>
+          <button type="button" onClick={() => { setProfileOpen(false); onLogout(); }}>
+            <ExitIcon aria-hidden="true" /><span>Logout</span>
           </button>
         </div>
       </div>
