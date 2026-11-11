@@ -5,7 +5,6 @@
 import { useRef, useState } from 'react';
 import {
   ArrowRightIcon,
-  CheckCircledIcon,
   ClockIcon,
   FileTextIcon,
   LayersIcon,
@@ -91,43 +90,6 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
           </div>
         </div>
 
-        {/* Hero Summary Flow Card: Menggantikan doodle kertas miring dengan ringkasan alur kerja profesional */}
-        <div className="db-hero-flow-card" aria-label="Alur produksi modul">
-          <div className="db-hfc-header">
-            <div className="db-hfc-header-left">
-              <span className="db-pulse-dot" />
-              <strong>Alur produksi H5P</strong>
-            </div>
-            <span className="db-badge db-badge-green">Standar v1.26</span>
-          </div>
-          <div className="db-hfc-steps">
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">1</span>
-              <div className="db-hfc-step-text">
-                <strong>Unggah dokumen atau mulai baru</strong>
-                <span>Konversi instan slide PPTX / PDF atau buat materi interaktif dari nol.</span>
-              </div>
-            </div>
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">2</span>
-              <div className="db-hfc-step-text">
-                <strong>Perkaya slide dan evaluasi kuis</strong>
-                <span>Sisipkan pilihan ganda, benar/salah, teks interaktif, dan multimedia.</span>
-              </div>
-            </div>
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">3</span>
-              <div className="db-hfc-step-text">
-                <strong>Ekspor paket .h5p</strong>
-                <span>Unduh paket Course Presentation siap pakai untuk Moodle atau Canvas.</span>
-              </div>
-            </div>
-          </div>
-          <div className="db-hfc-footer">
-            <CheckCircledIcon />
-            <span>Penyimpanan lokal aman dan instan di peramban</span>
-          </div>
-        </div>
       </section>
 
       {/* Materi Terbaru */}

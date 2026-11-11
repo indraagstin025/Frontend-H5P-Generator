@@ -20,7 +20,7 @@ export function HomeSidebar({
   return (
     <aside className="db-sidebar" aria-label="Navigasi utama">
       <div className="db-brand">
-        <img src="/logo.png" alt="H5P Generator" className="db-brand-logo" />
+        <img src="/dashboard-logo.png" alt="H5P Generator" className="db-brand-logo" width={68} height={60} />
         <div className="db-brand-text">
           <span className="db-brand-title">H5P Generator</span>
           <div className="db-brand-sub">
