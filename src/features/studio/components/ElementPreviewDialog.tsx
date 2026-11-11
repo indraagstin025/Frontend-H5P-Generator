@@ -16,7 +16,7 @@ export function ElementPreviewDialog({ project, slide, element, onClose }: {
     copy.settings.activeSurface = false;
     copy.settings.hideSummarySlide = true;
     copy.slides = [{ ...structuredClone(slide), order: 1, backgroundUrl: null,
-      elements: [{ ...structuredClone(element), displayAsButton: false,
+      elements: [{ ...structuredClone(element), displayAsButton: false, rotation: 0,
         position: { x: 3, y: 3, width: 94, height: 90 } }],
     }];
     return copy;

@@ -733,6 +733,7 @@ export function toCpElement(
     displayAsButton: el.displayAsButton,
     buttonLabel: el.buttonLabel || undefined,
     buttonSize: 'big',
+    rotation: ((el.rotation ?? 0) % 360 + 360) % 360,
     popupButtonInvisible: el.displayAsButton && el.popupButtonInvisible === true,
     popupButtonOpacity: clampPct(el.popupButtonOpacity ?? 100),
     popupButtonAutoHide: el.displayAsButton && el.popupButtonAutoHide === true,
@@ -1304,7 +1305,7 @@ export async function buildH5p(
       (el.popupButtonInvisible === true || el.popupButtonAutoHide === true || (el.popupButtonOpacity ?? 100) !== 100)),
   );
   if (needsTransparentButtons && opts.includeLibraries === false) {
-    throw new Error('Tombol transparan memerlukan library H5P pendukung di dalam paket. Aktifkan penyertaan library saat ekspor.');
+    throw new Error('Rotasi dan tampilan tombol custom memerlukan library H5P pendukung di dalam paket. Aktifkan penyertaan library saat ekspor.');
   }
   const files: Record<string, Uint8Array> = {};
 
@@ -1370,11 +1371,11 @@ export async function buildH5p(
     const runtime = readText('dist/h5p-course-presentation.js');
     const styles = readText('dist/h5p-course-presentation.css');
     const semanticsText = readText('semantics.json');
-    if (!runtime.includes(marker) || !runtime.includes('popupButtonInvisible') || !runtime.includes('popupButtonVisibleSeconds') ||
+    if (!runtime.includes(marker) || !runtime.includes('popupButtonInvisible') || !runtime.includes('popupButtonVisibleSeconds') || !runtime.includes('H5P Generator: element rotation') ||
         !styles.includes(marker) || !styles.includes('h5p-generator-transparent-trigger') ||
         !semanticsText.includes('"popupButtonInvisible"')) {
       throw new Error(
-        'Ekspor dihentikan: library Course Presentation dalam paket belum mendukung tombol transparan. ' +
+        'Ekspor dihentikan: library Course Presentation dalam paket belum mendukung rotasi dan tampilan tombol custom. ' +
         'Muat ulang aplikasi dan pastikan library terbaru tersedia, lalu ekspor kembali.',
       );
     }
@@ -1514,6 +1515,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     width: num(e.width, 40),
     height: num(e.height, 30),
   };
+  const rotation = ((num(e.rotation, 0) % 360) + 360) % 360;
   const displayAsButton = bool(e.displayAsButton, false);
   const popupButtonInvisible = bool(e.popupButtonInvisible, false);
   const popupButtonOpacity = clampPct(num(e.popupButtonOpacity, 100));
@@ -1531,7 +1533,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...g,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       label: title || 'Pilihan',
       targetType,
@@ -1544,7 +1546,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   const machine = str(action.library).split(' ')[0];
   const params = (action.params ?? {}) as Record<string, unknown>;
 
-  const common = { position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title };
+  const common = { position, rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title };
   const behaviour = (params.behaviour ?? {}) as Record<string, unknown>;
   const feedback = Array.isArray(params.overallFeedback) ? params.overallFeedback as Array<{from?: number; to?: number; feedback?: string}> : [];
   const quizSettings = {
@@ -1573,7 +1575,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   }
   if (machine === 'H5P.AdvancedText') {
     const t = createElement('advancedText', slideCount);
-    return { ...t, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: str(params.text, '') };
+    return { ...t, position, rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: str(params.text, '') };
   }
   if (machine === 'H5P.Image') {
     const img = createElement('image', slideCount);
@@ -1583,7 +1585,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...img,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title: str(params.title, title),
       alt: str(params.alt),
       fileName: path.split('/').pop() ?? '',
@@ -1599,7 +1601,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...au,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       fileName: path.split('/').pop() ?? '',
       objectUrl: path && audioBytes ? bytesToUrl(audioBytes, mimeForPath(path)) : null,
@@ -1615,7 +1617,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...vd,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       videoUrl: isRemote ? path : '',
       fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
@@ -1631,7 +1633,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       ...m,
       ...quizSettings,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       question: str(params.question, 'Pertanyaan'),
       singleAnswer: choiceBehaviour.type ? choiceBehaviour.type === 'single' : bool(choiceBehaviour.singleAnswer, false),
@@ -1645,7 +1647,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       ...t,
       ...quizSettings,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       question: str(params.question, 'Pernyataan'),
       correctAnswer: correct === true || correct === 'true' || correct === 'True',
@@ -1666,7 +1668,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     return {
       ...b,
       position,
-      displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
+      rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       text,
     };
@@ -1687,11 +1689,11 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       text: plainH5pText(str(item.type?.params?.text)),
       zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? '',
     }));
-    return { ...dd, ...quizSettings, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title,
+    return { ...dd, ...quizSettings, position, rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title,
       question: plainH5pText(str(question.settings?.questionTitle, dd.question)), zones, items,
       allowMultipleItemsPerZone: rawZones.some((zone) => zone.single === false),
     };
   }
   const t = createElement('advancedText', slideCount);
-  return { ...t, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: '' };
+  return { ...t, position, rotation, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: '' };
 }

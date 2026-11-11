@@ -57,6 +57,7 @@ interface BaseElement {
   popupButtonAutoHide?: boolean;
   popupButtonVisibleSeconds?: number;
   title: string;
+  rotation?: number;
 }
 
 export interface AdvancedTextElement extends BaseElement {

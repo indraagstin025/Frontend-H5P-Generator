@@ -29,3 +29,20 @@
   };
   proto.jumpToSlide=function(){var result=jump.apply(this,arguments);refresh(this);return result;};
 })();
+
+/* H5P Generator: element rotation */
+(function(){
+  var proto=H5P.CoursePresentation.prototype,attach=proto.attachElement;
+  proto.attachElement=function(element,instance,slide,index){
+    var result=attach.apply(this,arguments);
+    var angle=typeof element.rotation==='number'?((element.rotation%360)+360)%360:0;
+    if(angle){
+      var wrapper=slide.children('[role="document"]').first().children('.h5p-element').last();
+      wrapper.css({'transform':'rotate('+angle+'deg)','transform-origin':'50% 50%'});
+      if(element.displayAsButton){
+        wrapper.addClass('h5p-generator-rotated-trigger').css({'--h5p-generator-rotation-width':element.width+'%','--h5p-generator-rotation-height':element.height+'%'});
+      }
+    }
+    return result;
+  };
+})();

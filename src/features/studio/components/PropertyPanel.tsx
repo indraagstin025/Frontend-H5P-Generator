@@ -70,6 +70,10 @@ function PositionFields({
   };
   return (
     <div className="field-row">
+      <label className="field-label">Rotasi (°)
+        <input type="number" min="0" max="360" step="1" value={element.rotation ?? 0}
+          onChange={(e) => { const angle = Number(e.target.value); if (Number.isFinite(angle)) onUpdateElement(element.id, { rotation: ((angle % 360) + 360) % 360 }); }} />
+      </label>
       {(['x', 'y', 'width', 'height'] as const).map((key) => (
         <label className="field-label" key={key} htmlFor={`pos-${key}`}>
           {key === 'x' ? 'Kiri-kanan (%)' : key === 'y' ? 'Atas-bawah (%)' : key === 'width' ? 'Lebar (%)' : 'Tinggi (%)'}

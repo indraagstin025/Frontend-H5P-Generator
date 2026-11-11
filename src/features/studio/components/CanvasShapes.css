@@ -25,3 +25,67 @@
   overflow: visible;
   pointer-events: none;
 }
+
+.canvas-element { touch-action: none; }
+.canvas-element.kind-image:not(.is-popup-trigger):has(.st-canvas-image) {
+  padding: 0;
+  background: transparent;
+}
+.st-canvas-image { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
+
+.st-resize-frame {
+  position: absolute;
+  z-index: 9;
+  border: 1px solid #077c1a;
+  pointer-events: none;
+}
+.st-resize-handle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  touch-action: none;
+}
+.st-resize-handle::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #077c1a;
+  border-radius: 2px;
+  background: white;
+  box-shadow: 0 1px 3px #06231433;
+}
+.st-resize-nw { top: 0; left: 0; cursor: nwse-resize; }
+.st-resize-ne { top: 0; right: 0; cursor: nesw-resize; }
+.st-resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.st-resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.st-resize-nw::after { top: 0; left: 0; }
+.st-resize-ne::after { top: 0; right: 0; }
+.st-resize-sw::after { bottom: 0; left: 0; }
+.st-resize-se::after { bottom: 0; right: 0; }
+.st-resize-handle:hover::after, .st-resize-handle:focus-visible::after { background: #c5ebcd; }
+.st-rotate-handle {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #077c1a;
+  border-radius: 50%;
+  background: white;
+  color: #077c1a;
+  font-size: 22px;
+  cursor: grab;
+  touch-action: none;
+  pointer-events: auto;
+  box-shadow: 0 2px 5px #06231422;
+}
+.st-rotate-handle:active { cursor: grabbing; }

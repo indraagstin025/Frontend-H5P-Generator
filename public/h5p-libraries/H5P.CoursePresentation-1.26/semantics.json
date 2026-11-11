@@ -223,6 +223,15 @@
                     "max": 300,
                     "default": 3,
                     "optional": true
+                  },
+                  {
+                    "name": "rotation",
+                    "type": "number",
+                    "label": "Element rotation",
+                    "min": 0,
+                    "max": 360,
+                    "default": 0,
+                    "optional": true
                   }
                 ]
               }

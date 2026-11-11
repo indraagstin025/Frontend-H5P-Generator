@@ -223,6 +223,8 @@ export function StudioView() {
                   const el = state.activeSlide?.elements.find((e) => e.id === id);
                   if (el) actions.updateElement(id, { position: { ...el.position, x, y } });
                 }}
+                onResizeElement={(id, position) => actions.updateElement(id, { position })}
+                onRotateElement={(id, rotation) => actions.updateElement(id, { rotation })}
                 onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
                 onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
               />

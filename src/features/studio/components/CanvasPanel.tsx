@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import type { Project, Slide, SlideElement } from '../constants/h5pModel';
+import type { ElementPosition, Project, Slide, SlideElement } from '../constants/h5pModel';
+import { resizeElement, type ResizeCorner } from '../utils/resizeElement';
 import { ElementPreviewDialog } from './ElementPreviewDialog';
 import './CanvasShapes.css';
 
@@ -60,6 +61,8 @@ type CanvasPanelProps = {
   activeSurface: boolean;
   onSelectElement: (id: string | null) => void;
   onMoveElement: (id: string, x: number, y: number) => void;
+  onResizeElement: (id: string, position: ElementPosition) => void;
+  onRotateElement: (id: string, rotation: number) => void;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -78,7 +81,7 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-export function CanvasPanel({ project, slide, selectedElementId, onSelectElement, onMoveElement }: CanvasPanelProps) {
+export function CanvasPanel({ project, slide, selectedElementId, onSelectElement, onMoveElement, onResizeElement, onRotateElement }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ slideId: string; elementId: string } | null>(null);
   const previewElement = preview?.slideId === slide.id
@@ -87,6 +90,72 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
   const selectedPopup = slide.elements.find((el) => el.id === selectedElementId && el.displayAsButton && el.kind !== 'goToSlide');
   const drag = useRef<DragState | null>(null);
   const justDragged = useRef(false);
+  const resize = useRef<{ id: string; pointerId: number; x: number; y: number; start: ElementPosition; corner: ResizeCorner; canvasWidth: number; canvasHeight: number; preserveRatio: boolean; rotation: number } | null>(null);
+  const selected = slide.elements.find((el) => el.id === selectedElementId);
+  const rotate = useRef<{ id: string; pointerId: number; centerX: number; centerY: number; startAngle: number; rotation: number } | null>(null);
+  const startRotate = (el: SlideElement) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault(); event.stopPropagation();
+    const bounds = event.currentTarget.closest('.slide-canvas')?.getBoundingClientRect();
+    if (!bounds) return;
+    const centerX = bounds.left + (el.position.x + el.position.width / 2) / 100 * bounds.width;
+    const centerY = bounds.top + (el.position.y + el.position.height / 2) / 100 * bounds.height;
+    rotate.current = { id: el.id, pointerId: event.pointerId, centerX, centerY,
+      startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX), rotation: el.rotation ?? 0 };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const moveRotate = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const current = rotate.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    event.stopPropagation();
+    const delta = Math.atan2(event.clientY - current.centerY, event.clientX - current.centerX) - current.startAngle;
+    let angle = current.rotation + delta * 180 / Math.PI;
+    if (event.shiftKey) angle = Math.round(angle / 15) * 15;
+    else {
+      const normalized = ((angle % 360) + 360) % 360;
+      for (const target of [0, 90, 180]) {
+        const distance = Math.abs(normalized - target);
+        if (Math.min(distance, 360 - distance) <= 2) {
+          angle = target;
+          break;
+        }
+      }
+    }
+    onRotateElement(current.id, ((Math.round(angle) % 360) + 360) % 360);
+  };
+  const endRotate = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (rotate.current?.pointerId !== event.pointerId) return;
+    event.stopPropagation(); rotate.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  const startResize = (el: SlideElement, corner: ResizeCorner) => (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = event.currentTarget.closest('.slide-canvas')?.getBoundingClientRect();
+    if (!bounds?.width || !bounds.height) return;
+    drag.current = null;
+    resize.current = { id: el.id, pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+      start: { ...el.position }, corner, canvasWidth: bounds.width, canvasHeight: bounds.height, preserveRatio: el.kind === 'image', rotation: el.rotation ?? 0 };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const current = resize.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    event.stopPropagation();
+    onResizeElement(current.id, resizeElement(current.start,
+      (event.clientX - current.x) / current.canvasWidth * 100,
+      (event.clientY - current.y) / current.canvasHeight * 100, current.corner, current.preserveRatio, current.rotation, current.canvasWidth / current.canvasHeight));
+  };
+
+  const endResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (resize.current?.pointerId !== event.pointerId) return;
+    event.stopPropagation();
+    resize.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
 
   const beginDrag = (el: SlideElement) => (e: React.PointerEvent<HTMLButtonElement>) => {
     // Tombol mouse kiri / sentuhan saja; klik biasa tetap memilih
@@ -161,7 +230,7 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
   return (
     <div className="canvas-panel">
       <div className="st-canvas-interaction-tools">
-        <span>Klik untuk memilih, geser untuk memindahkan. Klik dua kali tombol untuk mencoba interaksi.</span>
+        <span>Klik untuk memilih, geser untuk memindahkan, tarik sudut untuk mengubah ukuran. Klik dua kali tombol untuk mencoba interaksi.</span>
         {selectedPopup && <button type="button" className="secondary-button" onClick={() => setPreview({ slideId: slide.id, elementId: selectedPopup.id })}>Coba interaksi</button>}
       </div>
       <div className="canvas-wrap">
@@ -201,6 +270,8 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
                 top: `${el.position.y}%`,
                 width: `${el.position.width}%`,
                 height: `${el.position.height}%`,
+                transform: `rotate(${el.rotation ?? 0}deg)`,
+                transformOrigin: 'center',
               }}
               title={`${elementLabel(el)} — geser untuk pindah, panah keyboard untuk presisi`}
               onPointerDown={beginDrag(el)}
@@ -231,6 +302,8 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 16v2" /></svg>
                   <span>{el.buttonLabel || el.title || elementLabel(el)}</span>
                 </span>
+              ) : el.kind === 'image' && el.objectUrl ? (
+                <img className="st-canvas-image" src={el.objectUrl} alt="" draggable={false} />
               ) : el.kind === 'shape' ? (
                 <svg className="st-canvas-shape" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                   {el.shapeType === 'circle' ? (
@@ -246,6 +319,40 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
               ) : <span className="canvas-element-label">{elementLabel(el)}</span>}
             </button>
           ))}
+          {selected && (
+            <div className="st-resize-frame" style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, transformOrigin: 'center' }}>
+              <button type="button" className="st-rotate-handle" aria-label={`Putar ${elementLabel(selected)}`}
+                style={{ top: selected.position.y < 8 ? 3 : -36 }}
+                title="Tarik untuk memutar; Shift untuk kelipatan 15 derajat"
+                onPointerDown={startRotate(selected)} onPointerMove={moveRotate} onPointerUp={endRotate} onPointerCancel={endRotate}
+                onLostPointerCapture={() => { rotate.current = null; }}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                  event.preventDefault(); event.stopPropagation();
+                  onRotateElement(selected.id, ((selected.rotation ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 15 : 1) + 360) % 360);
+                }}><span aria-hidden="true">↻</span></button>
+              {(['nw', 'ne', 'sw', 'se'] as const).map((corner) => (
+                <button key={corner} type="button" className={`st-resize-handle st-resize-${corner}`}
+                  aria-label={`Ubah ukuran ${elementLabel(selected)} dari sudut ${{ nw: 'kiri atas', ne: 'kanan atas', sw: 'kiri bawah', se: 'kanan bawah' }[corner]}`}
+                  title="Tarik untuk mengubah ukuran; tombol panah untuk presisi"
+                  onPointerDown={startResize(selected, corner)} onPointerMove={moveResize}
+                  onPointerUp={endResize} onPointerCancel={endResize}
+                  onLostPointerCapture={() => { resize.current = null; }}
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    const delta = event.shiftKey ? 5 : 1;
+                    const dx = event.key === 'ArrowRight' ? delta : event.key === 'ArrowLeft' ? -delta : 0;
+                    const dy = event.key === 'ArrowDown' ? delta : event.key === 'ArrowUp' ? -delta : 0;
+                    if (!dx && !dy) return;
+                    event.preventDefault(); event.stopPropagation();
+                    const bounds = event.currentTarget.closest('.slide-canvas')?.getBoundingClientRect();
+                    onResizeElement(selected.id, resizeElement(selected.position, dx, dy, corner, selected.kind === 'image', selected.rotation ?? 0, bounds?.height ? bounds.width / bounds.height : 16 / 9));
+                  }} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
       {previewElement && <ElementPreviewDialog project={project} slide={slide} element={previewElement} onClose={() => setPreview(null)} />}

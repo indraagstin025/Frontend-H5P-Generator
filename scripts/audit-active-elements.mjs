@@ -8,6 +8,7 @@ try {
   const model = await server.ssrLoadModule('/src/features/studio/constants/h5pModel.ts');
   const pack = await server.ssrLoadModule('/src/features/exporter/api/h5pPackager.ts');
   const validation = await server.ssrLoadModule('/src/features/studio/api/studioChecks.ts');
+  const { resizeElement } = await server.ssrLoadModule('/src/features/studio/utils/resizeElement.ts');
   const kinds = ['advancedText', 'link', 'image', 'shape', 'video', 'audio', 'goToSlide', 'trueFalse', 'dragDrop', 'summary', 'dragWords', 'multimediaChoice'];
   const png = await readFile('public/dashboard-logo.png');
   const project = model.createProject('Active element regression', '16:9', null);
@@ -21,6 +22,7 @@ try {
   slide.elements = kinds.map(kind => {
     const el = model.createElement(kind, 1);
     el.title = 'Audit ' + kind;
+    el.rotation = 30;
     if (kind === 'link') { el.url = 'https://example.com/path?q=1'; el.linkText = 'Test link'; }
     if (kind === 'shape') { el.shapeType = 'circle'; el.color = '#123456'; }
     if (kind === 'image') { el.file = new File([png], 'audit.png', { type: 'image/png' }); el.fileName = 'audit.png'; }
@@ -38,6 +40,7 @@ try {
       el.feedbackCorrect = 'Benar khusus'; el.feedbackWrong = 'Salah khusus';
     }
     if (kind !== 'goToSlide') el.displayAsButton = true;
+    el.position = resizeElement({ x: 20, y: 20, width: 30, height: 25 }, 10, 5, 'se', kind === 'image');
     el.popupButtonOpacity = 45; el.popupButtonAutoHide = kind !== 'goToSlide'; el.popupButtonVisibleSeconds = 2;
     return el;
   });
@@ -55,7 +58,8 @@ try {
   for (const [i, original] of slide.elements.entries()) {
     const restored = imported.slides[0].elements[i];
     assert.equal(restored.kind, original.kind, original.kind + ' identity');
-    for (const key of ['url', 'linkText', 'shapeType', 'color', 'text', 'question', 'intro', 'videoUrl', 'feedbackCorrect', 'feedbackWrong', 'enableRetry', 'showSolution', 'popupButtonOpacity', 'popupButtonAutoHide', 'popupButtonVisibleSeconds']) {
+    for (const key of ['x', 'y', 'width', 'height']) assert.ok(Math.abs(restored.position[key] - original.position[key]) <= 0.011, original.kind + ' resized ' + key);
+    for (const key of ['rotation', 'url', 'linkText', 'shapeType', 'color', 'text', 'question', 'intro', 'videoUrl', 'feedbackCorrect', 'feedbackWrong', 'enableRetry', 'showSolution', 'popupButtonOpacity', 'popupButtonAutoHide', 'popupButtonVisibleSeconds']) {
       if (key in original) assert.deepEqual(restored[key], original[key], original.kind + '.' + key);
     }
     if (original.kind === 'summary') assert.deepEqual(restored.statements.map(({ text, correct }) => ({ text, correct })), original.statements.map(({ text, correct }) => ({ text, correct })));
@@ -89,6 +93,34 @@ try {
     assert.equal(validation.getStudioChecks(project).find(x => x.id === 'ready').ok, false);
   }
   console.log('PASS: 12 active types, full ZIP, media assets, editor settings, native parsers, No Zone and shared validation.');
+  for (const corner of ['nw', 'ne', 'sw', 'se']) {
+    for (const ratio of [false, true]) {
+      for (const dx of [-200, -20, 0, 20, 200]) {
+        for (const dy of [-200, -20, 0, 20, 200]) {
+          const start = { x: 20, y: 25, width: 35, height: 30 };
+          const next = resizeElement(start, dx, dy, corner, ratio);
+          assert.ok(next.width >= 2 - 1e-9 && next.height >= 2 - 1e-9);
+          assert.ok(next.x >= -1e-9 && next.y >= -1e-9);
+          assert.ok(next.x + next.width <= 100 + 1e-9 && next.y + next.height <= 100 + 1e-9);
+          assert.ok(Math.abs((corner.includes('w') ? next.x + next.width : next.x) - (corner.includes('w') ? start.x + start.width : start.x)) < 1e-9);
+          assert.ok(Math.abs((corner.includes('n') ? next.y + next.height : next.y) - (corner.includes('n') ? start.y + start.height : start.y)) < 1e-9);
+          if (ratio) assert.ok(Math.abs(next.width / next.height - start.width / start.height) < 1e-9);
+        }
+      }
+    }
+  }
+  console.log('PASS: resized coordinates survive 12-type round-trip; 200 corner/ratio/bounds cases.');
+  for (const angle of [15, 45, 90, 180, 270, 359]) {
+    for (const corner of ['nw', 'ne', 'sw', 'se']) {
+      const start = { x: 30, y: 30, width: 20, height: 20 };
+      const next = resizeElement(start, 4, 3, corner, true, angle, 16 / 9);
+      assert.ok(Math.abs(next.width / next.height - 1) < 1e-9);
+      assert.ok(next.x >= 0 && next.y >= 0 && next.x + next.width <= 100 && next.y + next.height <= 100);
+    }
+  }
+  assert.ok(strFromU8(entries['H5P.CoursePresentation-1.26/dist/h5p-course-presentation.js']).includes('H5P Generator: element rotation'));
+  assert.ok(strFromU8(entries['H5P.CoursePresentation-1.26/semantics.json']).includes('"rotation"'));
+  console.log('PASS: rotation saved for 12 types, runtime/semantics bundled, 24 rotated-resize cases.');
 } finally {
   await server.close();
 }
