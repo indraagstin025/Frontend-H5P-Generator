@@ -344,11 +344,25 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/** Plain text fields exported into H5P HTML must decode once on re-import. */
+function plainH5pText(value: string): string {
+  return value.replace(/<[^>]*>/g, '').replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code: string) => {
+    const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+    if (!code.startsWith('#')) return named[code.toLowerCase()] ?? entity;
+    const point = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return point >= 0 && point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+  });
+}
+
 function tableHtml(el: { rows: number; cols: number }): string {
   const rows = Math.max(1, Math.min(20, Math.round(el.rows)));
   const cols = Math.max(1, Math.min(20, Math.round(el.cols)));
   const body = Array.from({ length: rows }, () => `<tr>${'<td>&nbsp;</td>'.repeat(cols)}</tr>`).join('');
   return `<figure class="table"><table class="h5p-table">${body}</table></figure>`;
+}
+
+function overallFeedbackOf(el: { feedbackCorrect: string; feedbackWrong: string }) {
+  return [{ from: 0, to: 99, feedback: el.feedbackWrong }, { from: 100, to: 100, feedback: el.feedbackCorrect }];
 }
 
 function toAction(
@@ -479,6 +493,7 @@ function toAction(
             },
           })),
           behaviour: behaviourOf(m, {
+            singlePoint: true,
             // MultimediaChoice mengikuti jumlah jawaban benar (auto);
             // MultiChoice tetap mengikuti sakelar singleAnswer.
             type:
@@ -577,6 +592,7 @@ function toAction(
           submit: 'Periksa',
           tryAgain: 'Coba lagi',
           scoreExplanation: 'Penjelasan nilai',
+          overallFeedback: overallFeedbackOf(dd),
           question: {
             settings: { questionTitle: escapeHtml(dd.question || dd.title || 'Seret item ke zona yang sesuai.'), size: { width: taskWidth, height: taskHeight } },
             task: { elements, dropZones },
@@ -620,6 +636,7 @@ function toAction(
         params: {
           taskDescription: dw.title || 'Lengkapi kalimat berikut',
           textField: dw.text,
+          overallFeedback: overallFeedbackOf(dw),
           behaviour: behaviourOf(dw, { enableCheckButton: true }),
         },
       };
@@ -1340,6 +1357,11 @@ export async function buildH5p(
     Object.assign(files, bundle.files);
   }
   files['h5p.json'] = strToU8(JSON.stringify(manifest, null, 2));
+  files['content/studio-metadata.json'] = strToU8(JSON.stringify({ version: 1, slides: project.slides.map(slide =>
+    slide.elements.map(el => ({ kind: el.kind, ...('enableRetry' in el ? {
+      enableRetry: el.enableRetry, showSolution: el.showSolution,
+      feedbackCorrect: el.feedbackCorrect, feedbackWrong: el.feedbackWrong,
+    } : {}) }))) }));
 
   if (needsTransparentButtons) {
     const root = `H5P.CoursePresentation-1.${cpMinor}/`;
@@ -1442,6 +1464,8 @@ export async function parseH5p(file: File): Promise<Project> {
   const ret = content.override?.retryButton;
   project.settings.retryButton = ret === undefined ? true : ret === 'on' || ret === true;
 
+  let editorMetadata: { version?: number; slides?: Array<Array<Record<string, unknown>>> } = {};
+  try { if (entries['content/studio-metadata.json']) editorMetadata = JSON.parse(strFromU8(entries['content/studio-metadata.json'])); } catch { /* Optional metadata; standard H5P content remains usable. */ }
   const cpSlides = content.presentation?.slides ?? [];
   const aspect: AspectRatio = '16:9';
   project.slides = cpSlides.map((cs, idx): Slide => {
@@ -1452,7 +1476,20 @@ export async function parseH5p(file: File): Promise<Project> {
     const bgPath = cs.slideBackgroundSelector?.imageSlideBackground?.path;
     const bgBytes = bgPath ? resolveContentEntry(entries, bgPath) : undefined;
     if (bgPath && bgBytes) slide.backgroundUrl = bytesToUrl(bgBytes, mimeForPath(bgPath));
-    slide.elements = (cs.elements ?? []).map((e) => parseElement(e, cpSlides.length, entries));
+    slide.elements = (cs.elements ?? []).map((e, elementIndex) => {
+      let parsed = parseElement(e, cpSlides.length, entries);
+      const metadata = editorMetadata?.version === 1 ? editorMetadata.slides?.[idx]?.[elementIndex] : undefined;
+      if (metadata && parsed.kind === 'multiChoice' && metadata.kind === 'multimediaChoice') {
+        parsed = { ...parsed, kind: 'multimediaChoice' };
+      }
+      if (metadata && 'enableRetry' in parsed) {
+        if (typeof metadata.enableRetry === 'boolean') parsed.enableRetry = metadata.enableRetry;
+        if (typeof metadata.showSolution === 'boolean') parsed.showSolution = metadata.showSolution;
+        if (typeof metadata.feedbackCorrect === 'string') parsed.feedbackCorrect = metadata.feedbackCorrect;
+        if (typeof metadata.feedbackWrong === 'string') parsed.feedbackWrong = metadata.feedbackWrong;
+      }
+      return parsed;
+    });
     return slide;
   });
   return project;
@@ -1507,6 +1544,33 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   const machine = str(action.library).split(' ')[0];
   const params = (action.params ?? {}) as Record<string, unknown>;
 
+  const common = { position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title };
+  const behaviour = (params.behaviour ?? {}) as Record<string, unknown>;
+  const feedback = Array.isArray(params.overallFeedback) ? params.overallFeedback as Array<{from?: number; to?: number; feedback?: string}> : [];
+  const quizSettings = {
+    enableRetry: bool(behaviour.enableRetry, true), showSolution: bool(behaviour.enableSolutionsButton, true),
+    feedbackCorrect: str(behaviour.feedbackOnCorrect, str(feedback.find(f => f.to === 100)?.feedback, 'Benar!')),
+    feedbackWrong: str(behaviour.feedbackOnWrong, str(feedback.find(f => f.from === 0)?.feedback, 'Coba lagi.')),
+  };
+  if (machine === 'H5P.Link') {
+    const link = (params.linkWidget ?? {}) as { protocol?: string; url?: string };
+    return { ...createElement('link', slideCount), ...common, linkText: str(params.title),
+      url: (link.protocol === 'other' ? '' : str(link.protocol)) + str(link.url) };
+  }
+  if (machine === 'H5P.Shape') {
+    const shape = (params.shape ?? {}) as {fillColor?: string};
+    const line = (params.line ?? {}) as {borderColor?: string};
+    const shapeType = ['circle','rectangle','vertical-line','horizontal-line'].includes(str(params.type)) ? str(params.type) as ShapeElement['shapeType'] : 'rectangle';
+    return { ...createElement('shape', slideCount), ...common, shapeType, color: str(shape.fillColor, str(line.borderColor, '#4CAF50')) };
+  }
+  if (machine === 'H5P.DragText') {
+    return { ...createElement('dragWords', slideCount), ...common, ...quizSettings, text: str(params.textField) };
+  }
+  if (machine === 'H5P.Summary') {
+    const groups = (params.summaries ?? []) as Array<{summary?: string[]; tip?: string}>;
+    return { ...createElement('summary', slideCount), ...common, ...quizSettings,
+      intro: str(params.intro), statements: (groups[0]?.summary ?? []).map((text,index) => ({id:uid(),text,correct:index===0})) };
+  }
   if (machine === 'H5P.AdvancedText') {
     const t = createElement('advancedText', slideCount);
     return { ...t, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title, text: str(params.text, '') };
@@ -1562,14 +1626,15 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
   if (machine === 'H5P.MultiChoice') {
     const m = createElement('multiChoice', slideCount);
     const answers = (params.answers ?? []) as Array<{ text?: unknown; correct?: boolean }>;
-    const behaviour = (params.behaviour ?? {}) as { singleAnswer?: boolean };
+    const choiceBehaviour = (params.behaviour ?? {}) as { singleAnswer?: boolean; type?: string };
     return {
       ...m,
+      ...quizSettings,
       position,
       displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
       question: str(params.question, 'Pertanyaan'),
-      singleAnswer: bool(behaviour.singleAnswer, true),
+      singleAnswer: choiceBehaviour.type ? choiceBehaviour.type === 'single' : bool(choiceBehaviour.singleAnswer, false),
       options: answers.map((a) => ({ id: uid(), text: mcAnswerText(a.text), correct: bool(a.correct, false) })),
     };
   }
@@ -1578,6 +1643,7 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
     const correct = params.correct;
     return {
       ...t,
+      ...quizSettings,
       position,
       displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel,
       title,
@@ -1615,14 +1681,14 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       };
     };
     const rawZones = question.task?.dropZones ?? [];
-    const zones = rawZones.map((zone) => ({ id: uid(), label: str(zone.label).replace(/<[^>]*>/g, '') }));
+    const zones = rawZones.map((zone) => ({ id: uid(), label: plainH5pText(str(zone.label)) }));
     const items = (question.task?.elements ?? []).map((item, index) => ({
       id: uid(),
-      text: str(item.type?.params?.text).replace(/<[^>]*>/g, ''),
+      text: plainH5pText(str(item.type?.params?.text)),
       zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? '',
     }));
-    return { ...dd, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title,
-      question: str(question.settings?.questionTitle, dd.question), zones, items,
+    return { ...dd, ...quizSettings, position, displayAsButton, popupButtonInvisible, popupButtonOpacity, popupButtonAutoHide, popupButtonVisibleSeconds, buttonLabel, title,
+      question: plainH5pText(str(question.settings?.questionTitle, dd.question)), zones, items,
       allowMultipleItemsPerZone: rawZones.some((zone) => zone.single === false),
     };
   }

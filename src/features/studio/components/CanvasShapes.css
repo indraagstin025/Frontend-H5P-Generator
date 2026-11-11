@@ -1,0 +1,27 @@
+.canvas-element.kind-shape:not(.is-popup-trigger) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  touch-action: none;
+}
+
+.canvas-element.kind-shape:not(.is-popup-trigger):hover {
+  outline: 1px dashed var(--hs-green, #077c1a);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.canvas-element.kind-shape:not(.is-popup-trigger).selected {
+  outline: 2px dashed var(--hs-green, #077c1a);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.st-canvas-shape {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}

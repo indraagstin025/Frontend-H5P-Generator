@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { Project, Slide, SlideElement } from '../constants/h5pModel';
 import { ElementPreviewDialog } from './ElementPreviewDialog';
+import './CanvasShapes.css';
 
 function elementLabel(el: SlideElement): string {
   switch (el.kind) {
@@ -193,6 +194,7 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
             <button
               key={el.id}
               type="button"
+              aria-label={elementLabel(el)}
               className={`canvas-element kind-${el.kind} ${el.displayAsButton && el.kind !== 'goToSlide' ? 'is-popup-trigger' : ''} ${selectedElementId === el.id ? 'selected' : ''} ${el.kind === 'goToSlide' && el.invisible ? 'is-invisible' : ''} ${dragId === el.id ? 'st-drag' : ''}`}
               style={{
                 left: `${el.position.x}%`,
@@ -229,6 +231,18 @@ export function CanvasPanel({ project, slide, selectedElementId, onSelectElement
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 16v2" /></svg>
                   <span>{el.buttonLabel || el.title || elementLabel(el)}</span>
                 </span>
+              ) : el.kind === 'shape' ? (
+                <svg className="st-canvas-shape" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  {el.shapeType === 'circle' ? (
+                    <ellipse cx="50" cy="50" rx="49" ry="49" fill={el.color} stroke="#1f2937" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  ) : el.shapeType === 'vertical-line' ? (
+                    <line x1="50" y1="0" x2="50" y2="100" stroke={el.color} strokeWidth="4" vectorEffect="non-scaling-stroke" />
+                  ) : el.shapeType === 'horizontal-line' ? (
+                    <line x1="0" y1="50" x2="100" y2="50" stroke={el.color} strokeWidth="4" vectorEffect="non-scaling-stroke" />
+                  ) : (
+                    <rect x="1" y="1" width="98" height="98" fill={el.color} stroke="#1f2937" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  )}
+                </svg>
               ) : <span className="canvas-element-label">{elementLabel(el)}</span>}
             </button>
           ))}

@@ -16,7 +16,7 @@ type DropdownItem = {
 
 const DROPDOWN_ITEMS: DropdownItem[] = [
   { kind: 'dragWords', label: 'Drag the Words' },
-  { kind: 'multimediaChoice', label: 'Multimedia Choice' },
+  { kind: 'multimediaChoice', label: 'Multimedia Choice (teks)' },
 ];
 
 const INTERACTION_ITEMS: Array<{ kind: ElementKind; label: string }> = [

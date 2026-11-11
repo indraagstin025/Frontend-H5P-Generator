@@ -279,6 +279,9 @@ function DragDropWidget({
   const values = Array.isArray(answer) ? answer : [];
   const setValue = (index: number, zoneId: string) => {
     const next = [...values];
+    if (!el.allowMultipleItemsPerZone && zoneId) {
+      next.forEach((value, i) => { if (i !== index && value === zoneId) next[i] = ''; });
+    }
     next[index] = zoneId;
     onAnswer(el.id, next);
   };
@@ -294,7 +297,7 @@ function DragDropWidget({
               aria-label={`Zona untuk ${item.text}`}
               onChange={(e) => setValue(i, e.target.value)}
             >
-              <option value="">Pilih zona…</option>
+              <option value="">Di luar zona</option>
               {el.zones.map((zone) => (
                 <option key={zone.id} value={zone.id}>
                   {zone.label}
