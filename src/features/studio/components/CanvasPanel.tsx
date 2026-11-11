@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import type { Slide, SlideElement } from '../constants/h5pModel';
+import type { Project, Slide, SlideElement } from '../constants/h5pModel';
+import { ElementPreviewDialog } from './ElementPreviewDialog';
 
 function elementLabel(el: SlideElement): string {
   switch (el.kind) {
@@ -51,6 +52,7 @@ function elementLabel(el: SlideElement): string {
 }
 
 type CanvasPanelProps = {
+  project: Project;
   slide: Slide;
   total: number;
   selectedElementId: string | null;
@@ -75,8 +77,13 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
-export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveElement }: CanvasPanelProps) {
+export function CanvasPanel({ project, slide, selectedElementId, onSelectElement, onMoveElement }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ slideId: string; elementId: string } | null>(null);
+  const previewElement = preview?.slideId === slide.id
+    ? slide.elements.find((el) => el.id === preview.elementId && el.displayAsButton && el.kind !== 'goToSlide')
+    : undefined;
+  const selectedPopup = slide.elements.find((el) => el.id === selectedElementId && el.displayAsButton && el.kind !== 'goToSlide');
   const drag = useRef<DragState | null>(null);
   const justDragged = useRef(false);
 
@@ -152,6 +159,10 @@ export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveE
 
   return (
     <div className="canvas-panel">
+      <div className="st-canvas-interaction-tools">
+        <span>Klik untuk memilih, geser untuk memindahkan. Klik dua kali tombol untuk mencoba interaksi.</span>
+        {selectedPopup && <button type="button" className="secondary-button" onClick={() => setPreview({ slideId: slide.id, elementId: selectedPopup.id })}>Coba interaksi</button>}
+      </div>
       <div className="canvas-wrap">
         <div
           className={`slide-canvas ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
@@ -182,7 +193,7 @@ export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveE
             <button
               key={el.id}
               type="button"
-              className={`canvas-element kind-${el.kind} ${selectedElementId === el.id ? 'selected' : ''} ${el.kind === 'goToSlide' && el.invisible ? 'is-invisible' : ''} ${dragId === el.id ? 'st-drag' : ''}`}
+              className={`canvas-element kind-${el.kind} ${el.displayAsButton && el.kind !== 'goToSlide' ? 'is-popup-trigger' : ''} ${selectedElementId === el.id ? 'selected' : ''} ${el.kind === 'goToSlide' && el.invisible ? 'is-invisible' : ''} ${dragId === el.id ? 'st-drag' : ''}`}
               style={{
                 left: `${el.position.x}%`,
                 top: `${el.position.y}%`,
@@ -195,6 +206,12 @@ export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveE
               onPointerUp={endDrag(el)}
               onPointerCancel={endDrag(el)}
               onKeyDown={nudge(el)}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                if (!justDragged.current && el.displayAsButton && el.kind !== 'goToSlide') {
+                  setPreview({ slideId: slide.id, elementId: el.id });
+                }
+              }}
               onClickCapture={(ev) => {
                 if (justDragged.current) {
                   ev.stopPropagation();
@@ -206,12 +223,17 @@ export function CanvasPanel({ slide, selectedElementId, onSelectElement, onMoveE
                 onSelectElement(el.id);
               }}
             >
-              <span className="canvas-element-label">{elementLabel(el)}</span>
-              {el.displayAsButton && <span className="canvas-element-badge">pop-up</span>}
+              {el.displayAsButton && el.kind !== 'goToSlide' ? (
+                <span className="st-popup-button-face">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 16v2" /></svg>
+                  <span>{el.buttonLabel || el.title || elementLabel(el)}</span>
+                </span>
+              ) : <span className="canvas-element-label">{elementLabel(el)}</span>}
             </button>
           ))}
         </div>
       </div>
+      {previewElement && <ElementPreviewDialog project={project} slide={slide} element={previewElement} onClose={() => setPreview(null)} />}
     </div>
   );
 }

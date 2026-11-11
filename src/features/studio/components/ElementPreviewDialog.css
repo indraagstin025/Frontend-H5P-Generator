@@ -1,0 +1,97 @@
+.st-canvas-interaction-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.canvas-element.is-popup-trigger {
+  background: transparent;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  touch-action: none;
+}
+
+.canvas-element.is-popup-trigger.selected {
+  outline: 2px dashed var(--hs-green, #077c1a);
+  outline-offset: 2px;
+}
+
+.st-popup-button-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 0;
+  border-radius: 50%;
+  background: #0075b9;
+  color: #fff;
+  box-shadow: 0 2px 5px #0005;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.st-popup-button-face svg { width: 22px; height: 22px; flex-shrink: 0; }
+.st-popup-button-face > span {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  max-width: 180px;
+  padding: 0 12px;
+  border-radius: 0 18px 18px 0;
+  background: #303030;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-element-preview {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #dae5db;
+  border-radius: 16px;
+  background: #f8faf6;
+  color: #173d25;
+  box-shadow: 0 24px 80px #06231438;
+}
+
+.st-element-preview::backdrop { background: #06231466; backdrop-filter: blur(6px); }
+.st-element-preview-header { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.st-element-preview-header h2 { margin: 0 0 8px; font-size: 20px; }
+.st-element-preview-header p { margin: 0; color: #526b5b; font-size: 13px; line-height: 1.6; }
+.st-element-preview-header button { flex-shrink: 0; }
+.st-element-preview .pv-xapi { display: none; }
+
+@media (max-width: 600px) {
+  .st-element-preview { padding: 14px; }
+  .st-element-preview-header { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .st-element-preview[open] { animation: st-element-dialog-enter 180ms ease both; }
+  @keyframes st-element-dialog-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}

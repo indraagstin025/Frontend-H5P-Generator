@@ -205,6 +205,7 @@ export function StudioView() {
 
             {state.activeSlide ? (
               <CanvasPanel
+                project={project}
                 slide={state.activeSlide}
                 total={state.slides.length}
                 selectedElementId={state.selectedElementId}
