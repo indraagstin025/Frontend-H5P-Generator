@@ -155,6 +155,7 @@ export interface DragDropElement extends BaseElement, QuizBehaviour {
   question: string;
   items: DragDropItem[];
   zones: DragDropZone[];
+  allowMultipleItemsPerZone?: boolean;
 }
 
 export interface SummaryStatement {
@@ -446,6 +447,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
         ...base,
         kind,
         question: 'Drag item ke tempat yang sesuai',
+        allowMultipleItemsPerZone: false,
         zones: [zoneA, zoneB],
         items: [
           { id: uid(), text: 'Item 1', zoneId: zoneA.id },

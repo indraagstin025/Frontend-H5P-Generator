@@ -535,7 +535,7 @@ function toAction(
         Math.ceil(Math.max(1, item.text.length) / Math.max(1, Math.floor((itemWidth - 16) / 9))) * 24 + 16,
       ));
       const targetFor = (item: typeof items[number]) => zoneIndex.get(item.zoneId) ?? 0;
-      const capacity = Math.max(1, ...zones.map((_, index) => items.filter((item) => targetFor(item) === index).length));
+      const capacity = dd.allowMultipleItemsPerZone === true ? items.length : 1;
       const zoneHeight = 40 + capacity * (itemHeight + 10);
       const zoneTop = gap + Math.ceil(items.length / columns) * (itemHeight + gap) + 32;
       const taskHeight = Math.max(420, zoneTop + Math.ceil(zones.length / columns) * (zoneHeight + gap));
@@ -552,7 +552,7 @@ function toAction(
           .map((it, itemIndex) => (targetFor(it) === i ? String(itemIndex) : null))
           .filter((v): v is string => v !== null),
         backgroundOpacity: 100,
-        single: items.filter((item) => targetFor(item) === i).length <= 1,
+        single: dd.allowMultipleItemsPerZone !== true,
         autoAlign: true,
       }));
       const elements = items.map((item, i) => ({
@@ -1596,6 +1596,27 @@ function parseElement(e: Record<string, unknown>, slideCount: number, entries: R
       displayAsButton, popupButtonInvisible, buttonLabel,
       title,
       text,
+    };
+  }
+  if (machine === 'H5P.DragQuestion') {
+    const dd = createElement('dragDrop', slideCount);
+    const question = (params.question ?? {}) as {
+      settings?: { questionTitle?: string };
+      task?: {
+        dropZones?: Array<{ label?: string; single?: boolean; correctElements?: string[] }>;
+        elements?: Array<{ type?: { params?: { text?: string } } }>;
+      };
+    };
+    const rawZones = question.task?.dropZones ?? [];
+    const zones = rawZones.map((zone) => ({ id: uid(), label: str(zone.label).replace(/<[^>]*>/g, '') }));
+    const items = (question.task?.elements ?? []).map((item, index) => ({
+      id: uid(),
+      text: str(item.type?.params?.text).replace(/<[^>]*>/g, ''),
+      zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? zones[0]?.id ?? '',
+    }));
+    return { ...dd, position, displayAsButton, popupButtonInvisible, buttonLabel, title,
+      question: str(question.settings?.questionTitle, dd.question), zones, items,
+      allowMultipleItemsPerZone: rawZones.some((zone) => zone.single === false),
     };
   }
   const t = createElement('advancedText', slideCount);
