@@ -331,7 +331,7 @@ export function QuizQuestionFields({
                   })
                 }
               >
-                <option value="">Tanpa zona</option>
+                <option value="">No Zone</option>
                 {dd.zones.map((z) => (
                   <option key={z.id} value={z.id}>
                     {z.label}
