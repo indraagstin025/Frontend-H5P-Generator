@@ -103,3 +103,32 @@
 .login-logo-row .landing-hero-logo img { width: 144px; height: 96px; left: -38px; top: -19px; }
 .login-logo-reserved { height: 72px; flex: none; }
 .login-logo-row .landing-hero-brand:focus-visible { outline: 3px solid white; outline-offset: 5px; }
+
+.login-story, .login-form-panel, .login-card, .login-logo-row .landing-hero-brand-text { min-width: 0; }
+.login-card p, .login-email-tooltip { overflow-wrap: anywhere; }
+.login-back { min-height: 44px; }
+
+@media (min-width: 1101px) and (max-width: 1400px) {
+  .login-story-copy { width: calc(100% - 32px); margin-inline-start: 32px; }
+  .login-story-copy h1 { font-size: clamp(36px, 3.4vw, 48px); }
+}
+
+@media (max-width: 1100px) {
+  .login-page { grid-template-columns: minmax(0, 1fr); align-content: start; min-height: 100svh; }
+  .login-page > .login-logo-row { position: relative; inset: auto; margin-block: 0; }
+  .login-logo-row .landing-hero-brand { margin-inline-start: 0; }
+  .login-story { display: none; }
+  .login-form-panel { width: min(520px, calc(100% - 32px)); margin: 20px auto 32px; padding: clamp(20px, 5vw, 32px); border-radius: 24px; justify-self: center; }
+  .login-card { padding-block: 16px; }
+  .login-card input { font-size: 16px; }
+  .login-card form { margin-top: 24px; }
+  .login-card label { margin-top: 18px; }
+  .login-submit { margin-top: 24px; }
+  .login-password button { width: 44px; height: 44px; top: 3px; right: 3px; }
+  .login-email-tooltip { position: relative; top: auto; margin-top: 10px; }
+  .login-email-tooltip > span:nth-child(2) { min-width: 0; flex: 1; }
+}
+
+@media (max-width: 360px) {
+  .login-form-panel { padding: 20px 16px; }
+}
