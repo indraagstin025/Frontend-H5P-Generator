@@ -97,11 +97,14 @@ export function LoginPage() {
           <span className="login-ornament login-ornament-capsule" />
           <span className="login-ornament login-ornament-lower-circle" />
         </div>
-      <section className="login-story" aria-label="H5P Generator">
+      <div className="landing-hero-brand-row login-logo-row">
         <Link className="landing-hero-brand" to="/" aria-label="H5P Generator, beranda">
           <span className="landing-hero-logo"><img src="/landing-logo.png" alt="" /></span>
           <span className="landing-hero-brand-text"><strong>H5P Generator</strong><span>Ruang kreasi pembelajaran</span></span>
         </Link>
+      </div>
+      <section className="login-story" aria-label="H5P Generator">
+        <div className="login-logo-reserved" aria-hidden="true" />
         <div className="login-story-copy landing-hero">
           <div className="landing-copy">
           <span className="landing-kicker">Ruang kreasi pembelajaran</span>

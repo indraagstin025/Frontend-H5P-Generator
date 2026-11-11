@@ -71,7 +71,7 @@
 @media (min-width: 851px) {
   .login-story { padding: 18px 32px 0 max(40px, calc((100vw - 1280px) / 2)); justify-content: flex-start; gap: 0; }
   .login-story > .landing-hero-brand { align-self: flex-start; min-height: 72px; }
-  .login-story-copy { width: 100%; max-width: none; margin: 0; padding-inline: 0; display: flex; align-items: center; justify-content: flex-start; gap: 0; align-self: flex-start; }
+  .login-story-copy { width: calc(100% - 67px); max-width: none; margin: 0 0 0 67px; padding-inline: 0; display: flex; align-items: center; justify-content: flex-start; gap: 0; align-self: flex-start; }
   .login-story-copy > .landing-copy { width: 100%; margin-inline: 0; text-align: left; }
   .login-form-panel { width: min(100%, 480px); justify-self: center; margin-block: 24px; padding-block: 24px; padding-inline: clamp(24px, 3vw, 40px); }
   .login-card { padding-block: 16px; }
@@ -96,7 +96,10 @@
   .login-story { padding-top: 12px; }
 }
 .login-story .landing-hero-brand:focus-visible { outline: 3px solid white; outline-offset: 5px; }
-.login-story .landing-hero-logo { width: 106px; height: 82px; }
-.login-story .landing-hero-logo img { width: 144px; height: 96px; left: -19px; top: -7px; }
-.login-story .landing-hero-brand-text strong { font-size: 22px; line-height: 24.8px; color: #fff; }
-.login-story .landing-hero-brand-text > span { font-size: 11px; line-height: 12.8px; color: #d0e7d4; }
+.login-page > .login-logo-row { position: absolute; inset: 0 0 auto; z-index: 2; pointer-events: none; }
+.login-logo-row .landing-hero-brand { pointer-events: auto; margin-inline-start: 64px; gap: 8px; }
+.login-logo-row .landing-hero-brand-text strong { font-size: 22px; }
+.login-logo-row .landing-hero-brand-text > span { font-size: 11px; }
+.login-logo-row .landing-hero-logo img { width: 144px; height: 96px; left: -38px; top: -19px; }
+.login-logo-reserved { height: 72px; flex: none; }
+.login-logo-row .landing-hero-brand:focus-visible { outline: 3px solid white; outline-offset: 5px; }
