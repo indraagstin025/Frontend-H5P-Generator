@@ -109,7 +109,7 @@ export function ExportStep({
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
       setResult({ name, sizeKb: Math.round(blob.size / 1024) });
-      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
+      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024), sourceFileName: project.sourceFileName });
       const bits: string[] = [];
       if (bundled.length > 0) bits.push(`${bundled.length} library ikut di dalam`);
       if (media.bundled > 0) bits.push(`${media.bundled} media ikut di paket`);

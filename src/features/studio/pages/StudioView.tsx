@@ -124,7 +124,7 @@ export function StudioView() {
       const { blob, bundled, media } = await buildH5p(project, cpMinor);
       const name = safeFileName(project.title);
       downloadBlob(blob, name);
-      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
+      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024), sourceFileName: project.sourceFileName });
       const mediaNote =
         media.failed.length > 0
           ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`

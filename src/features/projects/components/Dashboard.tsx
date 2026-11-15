@@ -42,7 +42,10 @@ function quizCountOf(item: StoredProjectMeta): number {
   return item.snapshot.slides.flatMap((s) => s.elements).filter(isQuizElement).length;
 }
 
-function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | 'h5p'; label: string; badgeClass: string } {
+type SourceFilter = 'all' | 'manual' | 'pptx' | 'pdf' | 'h5p';
+const sourceOptions = [{ value: 'all', label: 'Semua sumber' }, { value: 'pptx', label: 'PPTX' }, { value: 'pdf', label: 'PDF' }, { value: 'h5p', label: 'H5P' }, { value: 'manual', label: 'Dari nol' }] as const;
+
+function sourceOf(item: { sourceFileName?: string | null }): { key: 'manual' | 'pptx' | 'pdf' | 'h5p'; label: string; badgeClass: string } {
   const fn = item.sourceFileName?.toLowerCase() ?? '';
   if (!fn) return { key: 'manual', label: 'Dari nol', badgeClass: 'db-badge-manual' };
   if (fn.endsWith('.h5p')) return { key: 'h5p', label: 'File H5P', badgeClass: 'db-badge-h5p' };
@@ -55,7 +58,15 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
   const [exports] = useState(loadExportHistory);
   const [exportPage, setExportPage] = useState(1);
   const [exportQuery, setExportQuery] = useState('');
-  const filteredExports = exports.filter((entry) => `${entry.title} ${entry.format}`.toLowerCase().includes(exportQuery.trim().toLowerCase()));
+  const [materialSource, setMaterialSource] = useState<SourceFilter>('all');
+  const [exportSource, setExportSource] = useState<SourceFilter>('all');
+  const filteredExports = exports.filter((entry) => {
+    if (!`${entry.title} ${entry.format}`.toLowerCase().includes(exportQuery.trim().toLowerCase())) return false;
+    if (exportSource === 'all') return true;
+    if (entry.sourceFileName !== undefined) return sourceOf(entry).key === exportSource;
+    const matches = items.filter((item) => item.title === entry.title);
+    return matches.length === 1 && sourceOf(matches[0]).key === exportSource;
+  });
   const exportPageCount = Math.max(1, Math.ceil(filteredExports.length / 5));
   const visibleExports = filteredExports.slice((exportPage - 1) * 5, exportPage * 5);
   const create = onCreate ?? onGoMaterials;
@@ -67,12 +78,13 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
           p.title.toLowerCase().includes(q) || (p.sourceFileName ?? '').toLowerCase().includes(q),
       )
     : recent;
+  const sourceFiltered = filtered.filter((item) => materialSource === 'all' || sourceOf(item).key === materialSource);
   const [materialPagination, setMaterialPagination] = useState({ query: q, page: 1 });
-  const materialPageCount = Math.max(1, Math.ceil(filtered.length / 5));
+  const materialPageCount = Math.max(1, Math.ceil(sourceFiltered.length / 5));
   const materialPage = materialPagination.query === q
     ? Math.min(materialPagination.page, materialPageCount)
     : 1;
-  const visibleMaterials = filtered.slice((materialPage - 1) * 5, materialPage * 5);
+  const visibleMaterials = sourceFiltered.slice((materialPage - 1) * 5, materialPage * 5);
 
   const guideRef = useRef<HTMLDialogElement>(null);
   const totalSlides = items.reduce((total, item) => total + item.slideCount, 0);
@@ -175,6 +187,12 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
               <input id="db-material-search" ref={searchInputRef} type="search" placeholder="Cari judul materi atau berkas…" value={query} onChange={(event) => onQueryChange(event.target.value)} />
             </div>
           </div>
+          <div className="db-source-filters">
+            <select aria-label="Sumber materi" value={materialSource} onChange={(event) => { setMaterialSource(event.target.value as SourceFilter); setMaterialPagination({ query: q, page: 1 }); }}>
+              {sourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <button type="button" onClick={() => { setMaterialSource('all'); onQueryChange(''); setMaterialPagination({ query: '', page: 1 }); }}>Reset filter</button>
+          </div>
           <div className="db-card db-table-wrap">
             <table className="db-table">
               <thead>
@@ -233,7 +251,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
                 })}
               </tbody>
             </table>
-            {filtered.length === 0 && (
+            {sourceFiltered.length === 0 && (
               <p className="muted" style={{ textAlign: 'center', padding: '24px 16px', fontSize: 12 }}>
                 Tidak ada materi yang cocok dengan pencarian "{query}". Coba kata kunci lain.
               </p>
@@ -241,7 +259,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
           </div>
           <div className="db-pagination-row">
             <span className="db-pagination-summary">
-              {filtered.length === 0 ? '0 materi' : `${(materialPage - 1) * 5 + 1}–${Math.min(materialPage * 5, filtered.length)} dari ${filtered.length} materi`}
+              {sourceFiltered.length === 0 ? '0 materi' : `${(materialPage - 1) * 5 + 1}–${Math.min(materialPage * 5, sourceFiltered.length)} dari ${sourceFiltered.length} materi`}
             </span>
           {materialPageCount > 1 && (
             <nav className="db-export-pagination" aria-label="Halaman materi terbaru">
@@ -284,6 +302,12 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
               <MagnifyingGlassIcon aria-hidden="true" />
               <input id="db-export-search" type="search" placeholder="Cari nama modul atau format paket…" value={exportQuery} onChange={(event) => { setExportQuery(event.target.value); setExportPage(1); }} />
             </div>
+          </div>
+          <div className="db-source-filters">
+            <select aria-label="Sumber riwayat ekspor" value={exportSource} onChange={(event) => { setExportSource(event.target.value as SourceFilter); setExportPage(1); }}>
+              {sourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <button type="button" onClick={() => { setExportSource('all'); setExportQuery(''); setExportPage(1); }}>Reset filter</button>
           </div>
           <div className="db-card db-table-wrap">
             <table className="db-table">

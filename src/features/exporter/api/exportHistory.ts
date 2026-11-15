@@ -9,6 +9,7 @@ export interface ExportRecord {
   format: 'H5P' | 'SCORM 1.2';
   sizeKb: number;
   at: string;
+  sourceFileName?: string | null;
 }
 
 const KEY = 'h5p-generator:exports:v1';
