@@ -37,7 +37,8 @@ interface StudioContextValue {
   currentId: string | null;
   savedLabel: string;
   openProject: (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => void;
-  saveDraft: () => Promise<void>;
+  adoptProject: (project: Project, opts?: { saved?: boolean }) => void;
+  saveDraft: () => Promise<boolean>;
 }
 
 const StudioContext = createContext<StudioContextValue | null>(null);
@@ -95,12 +96,34 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  const adoptProject = useCallback(
+    (project: Project, opts?: { saved?: boolean }) => {
+      const hydrated = hydrateProject(project);
+      actions.replaceProject(hydrated);
+      savedSnapshot.current = opts?.saved ? hydrated : null;
+      setCurrentId(hydrated.id);
+      setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
+      if (opts?.saved) {
+        store.save(hydrated);
+      }
+      try {
+        sessionStorage.setItem(getCurrentProjectSessionKey(userId), hydrated.id);
+      } catch {
+        // abaikan
+      }
+    },
+    [actions, store, userId],
+  );
+
   const openProject = useCallback(
     (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => {
       actions.replaceProject(hydrateProject(project));
       savedSnapshot.current = opts?.saved ? project : null;
       setCurrentId(project.id);
       setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
+      if (opts?.saved) {
+        store.save(project);
+      }
       try {
         sessionStorage.setItem(getCurrentProjectSessionKey(userId), project.id);
       } catch {
@@ -117,6 +140,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         fetchServerProject(project.id)
           .then((full) => {
             actions.replaceProject(hydrateProject(full));
+            savedSnapshot.current = full;
             store.save(full);
           })
           .catch(() => undefined);
@@ -127,7 +151,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     [actions, navigate, store, userId],
   );
 
-  const saveDraft = useCallback(async () => {
+  const saveDraft = useCallback(async (): Promise<boolean> => {
     store.save(state.project);
     savedSnapshot.current = state.project;
 
@@ -136,23 +160,42 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     if (id && !id.startsWith('temp-') && !id.startsWith('local-')) {
       try {
-        await apiFetch(`/projects/${id}/slides`, {
-          method: 'PUT',
-          body: { slides: state.project.slides },
-        });
+        await Promise.all([
+          apiFetch(`/projects/${id}/slides`, {
+            method: 'PUT',
+            body: { slides: state.project.slides },
+          }),
+          apiFetch(`/projects/${id}`, {
+            method: 'PATCH',
+            body: {
+              title: state.project.title,
+              settings: {
+                language: state.project.settings.language,
+                keywordListEnabled: state.project.settings.keywordListEnabled,
+                activeSurface: state.project.settings.activeSurface,
+                hideSummarySlide: state.project.settings.hideSummarySlide,
+                showSolutionButton: state.project.settings.showSolutionButton,
+                retryButton: state.project.settings.retryButton,
+              },
+            },
+          }),
+        ]);
         setSavedLabel(`Tersimpan di server ${time}`);
-        return;
+        return true;
       } catch (err) {
-        console.warn('Gagal sinkronisasi slide ke backend, tersimpan di lokal:', err);
+        console.warn('Gagal sinkronisasi slide & pengaturan ke backend, tersimpan di lokal:', err);
+        setSavedLabel(`Tersimpan lokal ${time}`);
+        return false;
       }
     }
 
     setSavedLabel(`Tersimpan ${time}`);
+    return true;
   }, [store, state.project]);
 
   const value = useMemo(
-    () => ({ store, state, actions, currentId, savedLabel, openProject, saveDraft }),
-    [store, state, actions, currentId, savedLabel, openProject, saveDraft],
+    () => ({ store, state, actions, currentId, savedLabel, openProject, adoptProject, saveDraft }),
+    [store, state, actions, currentId, savedLabel, openProject, adoptProject, saveDraft],
   );
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;

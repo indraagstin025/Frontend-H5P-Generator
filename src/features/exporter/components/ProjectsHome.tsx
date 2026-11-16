@@ -16,15 +16,16 @@ import {
 } from '@radix-ui/react-icons';
 import { createProject, isQuizElement } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project } from '../../studio/constants/h5pModel';
+import { createServerProject, persistImportedH5pProject } from '../../ingest/api/serverIngest';
 import { parseH5p } from '../api/h5pPackager';
 import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
 
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
-  onOpen: (project: Project) => void;
+  onOpen: (project: Project, opts?: { saved?: boolean }) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
-  onDuplicate: (id: string) => void;
+  onDuplicate: (id: string) => void | Promise<boolean>;
   onNotice: (message: string) => void;
 };
 
@@ -52,6 +53,7 @@ function sourceOf(item: StoredProjectMeta): { key: Exclude<SourceFilter, 'all'>;
 export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
+  const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SourceFilter>('all');
@@ -61,17 +63,39 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
   const importRef = useRef<HTMLInputElement>(null);
   const recent = [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3);
 
-  const createNew = () => {
-    onOpen(createProject(title || 'Modul baru', aspect, null));
+  const createNew = async () => {
+    if (creating) return;
+    setCreating(true);
+    const finalTitle = title.trim() || 'Modul baru';
+    const localDraft = createProject(finalTitle, aspect, null);
+    try {
+      const serverProject = await createServerProject({
+        title: finalTitle,
+        aspect,
+        initialSlides: localDraft.slides,
+      });
+      onOpen(serverProject, { saved: true });
+    } catch {
+      onOpen(localDraft);
+      onNotice('Server tidak terjangkau — membuka draf lokal.');
+    } finally {
+      setCreating(false);
+    }
   };
 
   const importFile = async (file: File | undefined) => {
     if (!file) return;
     setImporting(true);
     try {
-      const project = await parseH5p(file);
-      onOpen(project);
-      onNotice(`${project.title} berhasil dibuka. Silakan lanjutkan pengeditan.`);
+      const parsed = await parseH5p(file);
+      try {
+        const persisted = await persistImportedH5pProject(parsed);
+        onOpen(persisted, { saved: true });
+        onNotice(`${persisted.title} berhasil diunggah & tersimpan di server.`);
+      } catch {
+        onOpen(parsed);
+        onNotice(`${parsed.title} dibuka sebagai draf lokal (server gagal dihubungi).`);
+      }
     } catch (err) {
       onNotice(err instanceof Error ? err.message : 'Berkas gagal dibuka.');
     } finally {
@@ -149,8 +173,8 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </label>
         </div>
         <div className="new-project-actions">
-          <button className="primary-button" type="button" onClick={createNew}>
-            <FilePlusIcon /> Buat materi baru
+          <button className="primary-button" type="button" disabled={creating} onClick={() => void createNew()}>
+            <FilePlusIcon /> {creating ? 'Menyiapkan...' : 'Buat materi baru'}
           </button>
           <input
             ref={importRef}
@@ -213,7 +237,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </p>
           <div className="db-empty-actions">
             {items.length === 0 ? (
-              <button className="primary-button" type="button" onClick={createNew}>
+              <button className="primary-button" type="button" disabled={creating} onClick={() => void createNew()}>
                 <FilePlusIcon /> Buat materi kosong
               </button>
             ) : (
@@ -288,8 +312,9 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   title="Gandakan"
                   aria-label="Gandakan materi"
                   onClick={() => {
-                    onDuplicate(item.id);
-                    onNotice('Materi sudah digandakan.');
+                    void Promise.resolve(onDuplicate(item.id)).then((ok) => {
+                      onNotice(ok === false ? 'Gagal menggandakan materi.' : 'Materi sudah digandakan.');
+                    });
                   }}
                 >
                   <CopyIcon />

@@ -74,6 +74,7 @@ export interface LinkElement extends BaseElement {
 export interface ImageElement extends BaseElement {
   kind: 'image';
   alt: string;
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;
@@ -88,6 +89,7 @@ export interface ShapeElement extends BaseElement {
 export interface VideoElement extends BaseElement {
   kind: 'video';
   videoUrl: string;
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;
@@ -95,6 +97,7 @@ export interface VideoElement extends BaseElement {
 
 export interface AudioElement extends BaseElement {
   kind: 'audio';
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;

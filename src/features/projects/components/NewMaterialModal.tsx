@@ -8,6 +8,7 @@ import { Cross2Icon, FileTextIcon } from '@radix-ui/react-icons';
 import { useStudio } from '../../../context/StudioContext';
 import { UploadDock } from '../../ingest/components/UploadDock';
 import { setPendingFile } from '../../ingest/api/pendingUpload';
+import { createServerProject } from '../../ingest/api/serverIngest';
 import { createProject } from '../../studio/constants/h5pModel';
 import type { AspectRatio } from '../../studio/constants/h5pModel';
 
@@ -28,6 +29,7 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -44,15 +46,33 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
     };
   }, [onClose]);
 
-  const start = () => {
+  const start = async () => {
+    if (creating) return;
     const finalTitle = title.trim() || (file ? baseName(file.name) : 'Modul baru');
     if (file) {
       setPendingFile(file);
       openProject(createProject(finalTitle, '16:9', file.name), pathname, { step: 1 });
-    } else {
-      openProject(createProject(finalTitle, aspect, null), pathname, { step: 2 });
+      onClose();
+      return;
     }
-    onClose();
+
+    setCreating(true);
+    const localDraft = createProject(finalTitle, aspect, null);
+    try {
+      const serverProject = await createServerProject({
+        title: finalTitle,
+        aspect,
+        initialSlides: localDraft.slides,
+      });
+      openProject(serverProject, pathname, { step: 2, saved: true });
+      onNotice(`Materi "${serverProject.title}" tersimpan di server.`);
+    } catch {
+      openProject(localDraft, pathname, { step: 2 });
+      onNotice('Server tidak terjangkau — materi dibuka dalam mode draf lokal.');
+    } finally {
+      setCreating(false);
+      onClose();
+    }
   };
 
   return (
@@ -148,8 +168,8 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
             <button className="db-btn-secondary" type="button" onClick={onClose}>
               Batal
             </button>
-            <button className="db-btn-primary" type="button" onClick={start}>
-              {file ? 'Unggah dan mulai' : 'Buat materi kosong'}
+            <button className="db-btn-primary" type="button" disabled={creating} onClick={() => void start()}>
+              {creating ? 'Menyiapkan…' : file ? 'Unggah dan mulai' : 'Buat materi kosong'}
             </button>
           </div>
         </footer>

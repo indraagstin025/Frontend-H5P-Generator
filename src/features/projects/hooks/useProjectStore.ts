@@ -10,6 +10,11 @@ import type { Project } from '../../studio/constants/h5pModel';
 import { registerSlideBg } from '../../studio/utils/mediaRegistry';
 import { apiFetch } from '../../../services/api';
 import { getProjectsStorageKey } from '../../../services/authService';
+import {
+  duplicateServerProject,
+  isServerProjectId,
+  parseProjectSettings,
+} from '../../ingest/api/serverIngest';
 
 export const PROJECTS_STORAGE_KEY = 'h5p-generator:projects:v1';
 
@@ -35,12 +40,11 @@ function loadAllForUser(userId?: string | null): StoredProjectMeta[] {
 }
 
 /**
- * Aset yang disajikan backend (http/https) tetap valid setelah reload,
- * sedangkan blob:/data: hanya hidup selama tab ini. Jadi hanya URL server
- * yang ikut disimpan ke draf.
+ * Aset yang disajikan backend (http/https atau path relatif /api/...) tetap valid
+ * setelah reload, sedangkan blob:/data: hanya hidup selama tab ini.
  */
 function persistentAssetUrl(url: string | null): string | null {
-  return typeof url === 'string' && /^https?:\/\//i.test(url) ? url : null;
+  return typeof url === 'string' && /^(https?:\/\/|\/api\/)/i.test(url) ? url : null;
 }
 
 function snapshotProject(project: Project): Project {
@@ -93,6 +97,7 @@ export function useProjectStore() {
         title: string;
         sourceFileName: string | null;
         aspect: string;
+        settingsJson?: string;
         createdAt: string;
         updatedAt: string;
         _count?: { slides: number };
@@ -111,6 +116,7 @@ export function useProjectStore() {
 
           // 2. Satukan atau perbarui dengan proyek resmi milik userId dari backend
           for (const srv of res.data) {
+            const aspect = srv.aspect === '4:3' ? '4:3' : '16:9';
             const existing = prev.find((p) => p.id === srv.id);
             if (existing) {
               map.set(srv.id, {
@@ -119,12 +125,18 @@ export function useProjectStore() {
                 sourceFileName: srv.sourceFileName,
                 slideCount: srv._count?.slides ?? existing.slideCount,
                 updatedAt: srv.updatedAt || existing.updatedAt,
+                snapshot: {
+                  ...existing.snapshot,
+                  title: srv.title,
+                  settings: parseProjectSettings(srv.settingsJson, srv.title, aspect, existing.snapshot.settings),
+                },
               });
             } else {
-              const snap = createProject(srv.title, srv.aspect === '4:3' ? '4:3' : '16:9', srv.sourceFileName);
+              const snap = createProject(srv.title, aspect, srv.sourceFileName);
               snap.id = srv.id;
               snap.createdAt = srv.createdAt;
               snap.updatedAt = srv.updatedAt;
+              snap.settings = parseProjectSettings(srv.settingsJson, srv.title, aspect, snap.settings);
               map.set(srv.id, {
                 id: srv.id,
                 title: srv.title,
@@ -197,7 +209,26 @@ export function useProjectStore() {
     }
   }, []);
 
-  const duplicate = useCallback((id: string) => {
+  const duplicate = useCallback(async (id: string): Promise<boolean> => {
+    if (isServerProjectId(id)) {
+      try {
+        const copy = await duplicateServerProject(id);
+        const snapshot = snapshotProject(copy);
+        const meta: StoredProjectMeta = {
+          id: snapshot.id,
+          title: snapshot.title,
+          sourceFileName: snapshot.sourceFileName,
+          slideCount: snapshot.slides.length,
+          updatedAt: snapshot.updatedAt,
+          snapshot,
+        };
+        setItems((prev) => [meta, ...prev.filter((p) => p.id !== meta.id)].slice(0, 50));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     setItems((prev) => {
       const src = prev.find((p) => p.id === id);
       if (!src) return prev;
@@ -206,7 +237,7 @@ export function useProjectStore() {
       snap.id = uid();
       snap.createdAt = now;
       snap.updatedAt = now;
-      snap.title = `${src.title} (salinan)`;
+      snap.title = `${src.title} (Salinan)`;
       snap.settings = { ...snap.settings, projectTitle: snap.title };
       // URL server tetap valid; hanya blob/data yang tidak bertahan antar sesi.
       snap.slides = snap.slides.map((s) => ({
@@ -226,8 +257,9 @@ export function useProjectStore() {
         updatedAt: now,
         snapshot: snap,
       };
-      return [meta, ...prev].slice(0, 30);
+      return [meta, ...prev].slice(0, 50);
     });
+    return true;
   }, []);
 
   return { items, save, remove, rename, duplicate };

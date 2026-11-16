@@ -1,15 +1,16 @@
 import { getProjectIssues } from '../../studio/api/studioChecks';
 /**
- * Tahap 5 — Pengemasan & unduh .h5p untuk LMS Internal (FR-11, UAT-04).
+ * Tahap 5 — Pengemasan & unduh .h5p (Opsi B: Ekspor Server Lumi Utama + Fallback Lokal).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { CheckIcon, Cross2Icon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { API_BASE_URL } from '../../../config/env';
+import { apiUpload } from '../../../services/apiUpload';
+import { fetchProjectExportReport, isServerProjectId } from '../../ingest/api/serverIngest';
 import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import { isQuizElement } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
-import { recordExport } from '../api/exportHistory';
-import { MissingLibrariesError, buildH5p, downloadBlob, safeFileName, toManifest } from '../api/h5pPackager';
+import { exportH5pPackage } from '../api/exportService';
+import { MissingLibrariesError, buildH5p, safeFileName, toManifest } from '../api/h5pPackager';
 
 type ServerCheck = { ok: boolean; issues: string[]; mainLibrary: string | null } | null;
 
@@ -17,11 +18,13 @@ export function ExportStep({
   project,
   cpMinor,
   onCpMinorChange,
+  onBeforeExport,
   onNotice,
 }: {
   project: Project;
   cpMinor: number;
   onCpMinorChange: (minor: number) => void;
+  onBeforeExport?: () => Promise<boolean>;
   onNotice: (m: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -29,6 +32,7 @@ export function ExportStep({
   const [result, setResult] = useState<{ name: string; sizeKb: number } | null>(null);
   const [serverCheck, setServerCheck] = useState<ServerCheck>(null);
   const [libLocal, setLibLocal] = useState<boolean | null>(null);
+  const isServerProject = isServerProjectId(project.id);
 
   // Tandai apakah library versi terpilih tersedia lokal (ikut dibundel).
   useEffect(() => {
@@ -63,7 +67,7 @@ export function ExportStep({
           (el.kind === 'image' || el.kind === 'audio' || el.kind === 'video') &&
           !el.file &&
           el.objectUrl &&
-          !/^(https?:|blob:|data:)/i.test(el.objectUrl)
+          !/^(https?:|blob:|data:|\/api\/)/i.test(el.objectUrl)
         ) {
           list.push(`Slide ${s.order}: media tidak bisa diambil ulang — unggah ulang berkasnya agar ikut ke paket.`);
           break;
@@ -82,19 +86,28 @@ export function ExportStep({
     setChecking(true);
     setServerCheck(null);
     try {
-      const { blob } = await buildH5p(project, cpMinor);
-      const form = new FormData();
-      form.append('package', blob, safeFileName(project.title));
-      const res = await fetch(`${API_BASE_URL}/h5p/packages/validate`, { method: 'POST', body: form });
-      if (!res.ok) throw new Error(`Server menjawab ${res.status}.`);
-      const json = (await res.json()) as { data: ServerCheck };
-      setServerCheck(json.data);
-      if (json.data && !json.data.ok) onNotice('Validasi server menemukan masalah — lihat daftar.');
+      if (isServerProject) {
+        if (onBeforeExport) await onBeforeExport();
+        const report = await fetchProjectExportReport(project.id);
+        setServerCheck({
+          ok: report.ok,
+          issues: report.issues,
+          mainLibrary: report.mainLibrary,
+        });
+        if (!report.ok) onNotice('Validasi server menemukan masalah — lihat daftar.');
+      } else {
+        const { blob } = await buildH5p(project, cpMinor);
+        const form = new FormData();
+        form.append('package', blob, safeFileName(project.title));
+        const json = await apiUpload<{ data: ServerCheck }>('/h5p/packages/validate', form);
+        setServerCheck(json.data);
+        if (json.data && !json.data.ok) onNotice('Validasi server menemukan masalah — lihat daftar.');
+      }
     } catch (err) {
       if (err instanceof MissingLibrariesError) {
         onNotice(err.message);
       } else {
-        onNotice('Backend tidak terjangkau. Download biasa tetap bisa dipakai.');
+        onNotice(err instanceof Error ? err.message : 'Backend tidak terjangkau. Download lokal tetap tersedia untuk draf offline.');
       }
     } finally {
       setChecking(false);
@@ -105,27 +118,15 @@ export function ExportStep({
     if (issues.length > 0 || loading) return;
     setLoading(true);
     try {
-      const { blob, bundled, backgrounds, media } = await buildH5p(project, cpMinor);
-      const name = safeFileName(project.title);
-      downloadBlob(blob, name);
-      setResult({ name, sizeKb: Math.round(blob.size / 1024) });
-      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024), sourceFileName: project.sourceFileName });
-      const bits: string[] = [];
-      if (bundled.length > 0) bits.push(`${bundled.length} library ikut di dalam`);
-      if (media.bundled > 0) bits.push(`${media.bundled} media ikut di paket`);
-      if (backgrounds.real > 0) bits.push(`${backgrounds.real} latar asli ikut di paket`);
-      else bits.push('latar gradien (gambar asli tidak ketemu)');
-      const mediaNote =
-        media.failed.length > 0
-          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
-          : '';
-      onNotice(`${name} sudah terdownload (${bits.join(', ')}).${mediaNote}`);
+      const exported = await exportH5pPackage({
+        project,
+        cpMinor,
+        onBeforeExport,
+      });
+      setResult({ name: exported.name, sizeKb: exported.sizeKb });
+      onNotice(exported.notice);
     } catch (err) {
-      if (err instanceof MissingLibrariesError) {
-        onNotice(err.message);
-      } else {
-        onNotice(err instanceof Error ? err.message : 'Gagal bikin file.');
-      }
+      onNotice(err instanceof Error ? err.message : 'Gagal membuat file .h5p.');
     } finally {
       setLoading(false);
     }
@@ -186,10 +187,20 @@ export function ExportStep({
       </div>
 
       <div className="export-actions">
-        <button className="primary-button" type="button" disabled={issues.length > 0 || libLocal === false || loading} onClick={doExport}>
-          <DownloadIcon /> {loading ? 'Menyiapkan file…' : 'Download file .h5p'}
+        <button
+          className="primary-button"
+          type="button"
+          disabled={issues.length > 0 || (!isServerProject && libLocal === false) || loading}
+          onClick={doExport}
+        >
+          <DownloadIcon /> {loading ? 'Menyiapkan file…' : isServerProject ? 'Download file .h5p (Server Lumi)' : 'Download file .h5p'}
         </button>
-        <button className="secondary-button" type="button" disabled={issues.length > 0 || libLocal === false || checking} onClick={doServerCheck}>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={issues.length > 0 || (!isServerProject && libLocal === false) || checking}
+          onClick={doServerCheck}
+        >
           {checking ? 'Mengecek ke server…' : 'Cek validasi server (Lumi)'}
         </button>
         {serverCheck && (

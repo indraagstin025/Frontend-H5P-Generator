@@ -103,7 +103,7 @@ export function HomePage() {
             ) : (
               <ProjectsHome
                 items={store.items}
-                onOpen={(p) => openProject(p, pathname, { saved: true })}
+                onOpen={(p, opts) => openProject(p, pathname, { saved: opts?.saved ?? true })}
                 onDelete={store.remove}
                 onRename={store.rename}
                 onDuplicate={store.duplicate}

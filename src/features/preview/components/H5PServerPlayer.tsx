@@ -5,6 +5,9 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../../config/env';
+import { apiFetch } from '../../../services/api';
+import { apiUpload } from '../../../services/apiUpload';
+import { fetchProjectAttempts, isServerProjectId } from '../../ingest/api/serverIngest';
 import { DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
 import { buildH5p, safeFileName } from '../../exporter/api/h5pPackager';
@@ -49,9 +52,13 @@ export function H5PServerPlayer({
       const form = new FormData();
       form.append('package', blob, safeFileName(project.title));
       form.append('title', project.title);
-      const res = await fetch(`${API_BASE_URL}/h5p/preview-sessions`, { method: 'POST', body: form });
-      if (!res.ok) throw new Error(`Server menjawab ${res.status}.`);
-      const json = (await res.json()) as { data: { sessionId: string; playerUrl: string } };
+      if (isServerProjectId(project.id)) {
+        form.append('projectId', project.id);
+      }
+      const json = await apiUpload<{ data: { sessionId: string; playerUrl: string } }>(
+        '/h5p/preview-sessions',
+        form,
+      );
       setSessionId(json.data.sessionId);
       setPlayerUrl(`${API_ORIGIN}${json.data.playerUrl}`);
       setAttempts([]);
@@ -72,9 +79,12 @@ export function H5PServerPlayer({
     if (status !== 'ready' || !sessionId) return;
     const poll = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/h5p/session/${sessionId}/attempts`);
-        if (!res.ok) return;
-        const json = (await res.json()) as { data: Attempt[] };
+        if (isServerProjectId(project.id)) {
+          const list = await fetchProjectAttempts(project.id);
+          setAttempts(list ?? []);
+          return;
+        }
+        const json = await apiFetch<{ data: Attempt[] }>(`/h5p/session/${sessionId}/attempts`);
         setAttempts(json.data ?? []);
       } catch {
         // abaikan — polling berikutnya mencoba lagi
@@ -85,7 +95,7 @@ export function H5PServerPlayer({
     return () => {
       if (timer.current) window.clearInterval(timer.current);
     };
-  }, [status, sessionId]);
+  }, [status, sessionId, project.id]);
 
   if (status === 'idle' || status === 'error') {
     return (

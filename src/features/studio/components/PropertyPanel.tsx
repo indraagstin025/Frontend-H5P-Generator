@@ -117,6 +117,7 @@ export function PropertyPanel({
       <div className="inspector-body">
         {(!quiz || tab === 'konten') && (
           <ElementContentFields
+            projectId={project.id}
             slide={slide}
             slides={slides}
             element={element}

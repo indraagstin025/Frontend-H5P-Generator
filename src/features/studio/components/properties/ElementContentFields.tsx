@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { PlusIcon, TrashIcon } from '@radix-ui/react-icons';
+import { isServerProjectId, uploadProjectMediaAsset } from '../../../ingest/api/serverIngest';
 import type { Slide, SlideElement } from '../../constants/h5pModel';
 import { uid } from '../../constants/h5pModel';
 import { registerMedia } from '../../utils/mediaRegistry';
@@ -6,6 +8,7 @@ import { KIND_LABEL } from './constants';
 import { PositionFields } from './PositionFields';
 
 interface ElementContentFieldsProps {
+  projectId: string;
   slide: Slide;
   slides: Slide[];
   element: SlideElement | null;
@@ -16,6 +19,7 @@ interface ElementContentFieldsProps {
 }
 
 export function ElementContentFields({
+  projectId,
   slide,
   slides,
   element,
@@ -24,32 +28,68 @@ export function ElementContentFields({
   onUpdateKeyword,
   onNotice,
 }: ElementContentFieldsProps) {
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   const pickMedia = (kind: 'image' | 'audio' | 'video', file: File | undefined) => {
     if (!file || !element) return;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const okImage = ['png', 'jpg', 'jpeg', 'gif', 'svg'].includes(ext);
-    const okAudio = ['mp3', 'wav'].includes(ext);
-    const okVideo = ['mp4', 'webm', 'ogv'].includes(ext);
+    const okImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext);
+    const okAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
+    const okVideo = ['mp4', 'm4v', 'webm', 'ogv'].includes(ext);
     if (kind === 'image' && !okImage) {
-      onNotice('Gambar harus .png/.jpg/.jpeg/.gif/.svg ya.');
+      onNotice('Gambar harus .png/.jpg/.jpeg/.gif/.webp/.svg ya.');
       return;
     }
     if (kind === 'audio' && !okAudio) {
-      onNotice('Suara harus .mp3/.wav ya.');
+      onNotice('Suara harus .mp3/.wav/.ogg/.m4a ya.');
       return;
     }
     if (kind === 'video' && !okVideo) {
-      onNotice('Video harus .mp4/.webm/.ogv ya.');
+      onNotice('Video harus .mp4/.m4v/.webm/.ogv ya.');
       return;
     }
     if (file.size > (kind === 'video' ? 50 : 10) * 1024 * 1024) {
       onNotice(`File-nya kegedean, maksimal ${kind === 'video' ? 50 : 10} MB.`);
       return;
     }
-    const url = URL.createObjectURL(file);
-    registerMedia(element.id, file, url);
-    onUpdateElement(element.id, { fileName: file.name, objectUrl: url, file } as Partial<SlideElement>);
-    onNotice(`${file.name} sudah kepasang.`);
+
+    const targetElementId = element.id;
+    const localUrl = URL.createObjectURL(file);
+    registerMedia(targetElementId, file, localUrl);
+    onUpdateElement(targetElementId, {
+      fileName: file.name,
+      objectUrl: localUrl,
+      file,
+    } as Partial<SlideElement>);
+
+    if (!isServerProjectId(projectId)) {
+      onNotice(`${file.name} sudah kepasang (draf lokal).`);
+      return;
+    }
+
+    setUploadingMedia(true);
+    onNotice(`Mengunggah ${file.name} ke server…`);
+    void uploadProjectMediaAsset(projectId, file)
+      .then((uploaded) => {
+        registerMedia(targetElementId, file, uploaded.assetUrl);
+        onUpdateElement(targetElementId, {
+          asset: uploaded.asset,
+          fileName: uploaded.fileName,
+          objectUrl: uploaded.assetUrl,
+          file,
+        } as Partial<SlideElement>);
+        onNotice(`${file.name} berhasil diunggah ke server.`);
+      })
+      .catch((err: unknown) => {
+        onNotice(
+          err instanceof Error
+            ? `Upload ke server gagal: ${err.message}`
+            : `${file.name} tersimpan sementara di browser.`,
+        );
+      })
+      .finally(() => {
+        setUploadingMedia(false);
+      });
   };
 
   if (!element) {
@@ -106,7 +146,8 @@ export function ElementContentFields({
             File gambar
             <input
               type="file"
-              accept=".png,.jpg,.jpeg,.gif,.svg"
+              accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+              disabled={uploadingMedia}
               onChange={(e) => pickMedia('image', e.target.files?.[0])}
             />
           </label>
@@ -147,7 +188,8 @@ export function ElementContentFields({
             File video
             <input
               type="file"
-              accept=".mp4,.webm,.ogv"
+              accept=".mp4,.m4v,.webm,.ogv"
+              disabled={uploadingMedia}
               onChange={(e) => pickMedia('video', e.target.files?.[0])}
             />
           </label>
@@ -171,10 +213,12 @@ export function ElementContentFields({
             File suara
             <input
               type="file"
-              accept=".mp3,.wav"
+              accept=".mp3,.wav,.ogg,.m4a"
+              disabled={uploadingMedia}
               onChange={(e) => pickMedia('audio', e.target.files?.[0])}
             />
           </label>
+          {uploadingMedia && <p className="field-hint">Mengunggah media ke server…</p>}
           {element.objectUrl && <audio className="media-preview" controls src={element.objectUrl}></audio>}
         </>
       )}
