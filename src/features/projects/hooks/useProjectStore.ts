@@ -4,10 +4,12 @@
  * aset biner perlu diunggah ulang setelah muat draf.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import { createProject, uid } from '../../studio/constants/h5pModel';
 import type { Project } from '../../studio/constants/h5pModel';
 import { registerSlideBg } from '../../studio/utils/mediaRegistry';
 import { apiFetch } from '../../../services/api';
+import { getProjectsStorageKey } from '../../../services/authService';
 
 export const PROJECTS_STORAGE_KEY = 'h5p-generator:projects:v1';
 
@@ -20,9 +22,10 @@ export interface StoredProjectMeta {
   snapshot: Project;
 }
 
-function loadAll(): StoredProjectMeta[] {
+function loadAllForUser(userId?: string | null): StoredProjectMeta[] {
+  if (!userId) return [];
   try {
-    const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    const raw = localStorage.getItem(getProjectsStorageKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw) as StoredProjectMeta[];
     return Array.isArray(parsed) ? parsed : [];
@@ -61,19 +64,28 @@ function snapshotProject(project: Project): Project {
 }
 
 export function useProjectStore() {
-  const [items, setItems] = useState<StoredProjectMeta[]>(() => loadAll());
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const [items, setItems] = useState<StoredProjectMeta[]>(() => loadAllForUser(userId));
 
-  // Simpan draf lokal ke localStorage saat items berubah
+  // Muat ulang daftar draf lokal milik user aktif ketika akun berganti / logout
   useEffect(() => {
+    setItems(loadAllForUser(userId));
+  }, [userId]);
+
+  // Simpan draf lokal ke localStorage ber-scope userId saat items berubah
+  useEffect(() => {
+    if (!userId) return;
     try {
-      localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(getProjectsStorageKey(userId), JSON.stringify(items));
     } catch {
       // penyimpanan penuh — abaikan agar editor tetap jalan
     }
-  }, [items]);
+  }, [items, userId]);
 
-  // Sinkronisasi otomatis daftar materi dari basis data server backend
+  // Sinkronisasi otomatis daftar materi dari basis data server backend untuk user aktif
   useEffect(() => {
+    if (!userId) return;
     let active = true;
     apiFetch<{
       data: Array<{
@@ -90,12 +102,16 @@ export function useProjectStore() {
         if (!active || !Array.isArray(res.data)) return;
         setItems((prev) => {
           const map = new Map<string, StoredProjectMeta>();
-          // 1. Masukkan proyek lokal yang sudah tersimpan
-          for (const item of prev) map.set(item.id, item);
+          // 1. Pertahankan hanya draf lokal offline (local- / temp-) milik akun ini
+          for (const item of prev) {
+            if (item.id.startsWith('local-') || item.id.startsWith('temp-')) {
+              map.set(item.id, item);
+            }
+          }
 
-          // 2. Satukan atau perbarui dengan data dari backend
+          // 2. Satukan atau perbarui dengan proyek resmi milik userId dari backend
           for (const srv of res.data) {
-            const existing = map.get(srv.id);
+            const existing = prev.find((p) => p.id === srv.id);
             if (existing) {
               map.set(srv.id, {
                 ...existing,
@@ -123,13 +139,13 @@ export function useProjectStore() {
         });
       })
       .catch(() => {
-        // Backend offline / gagal akses, tetap gunakan draf lokal
+        // Backend offline / gagal akses, tetap gunakan draf lokal user
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
   const save = useCallback((project: Project) => {
     const snapshot = snapshotProject(project);

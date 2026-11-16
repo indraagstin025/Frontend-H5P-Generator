@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../dashboard-canva.css';
 import { Toast } from '../components/UI/Toast';
+import { useAuth } from '../context/AuthContext';
 import { useStudio } from '../context/StudioContext';
 import { Dashboard } from '../features/projects/components/Dashboard';
 import { NewMaterialModal } from '../features/projects/components/NewMaterialModal';
@@ -19,16 +20,18 @@ const NOTICE_TIMEOUT_MS = 2600;
 export function HomePage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { store, openProject } = useStudio();
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
-  const [displayName] = useState(() => {
+  const [fallbackDisplayName] = useState(() => {
     try {
       return sessionStorage.getItem('h5p-generator:display-name') ?? '';
     } catch {
       return '';
     }
   });
+  const displayName = user?.name || fallbackDisplayName;
   const [showNew, setShowNew] = useState(false);
   const [newNonce, setNewNonce] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -63,11 +66,13 @@ export function HomePage() {
       <div className="db-shell">
         <HomeSidebar
           displayName={displayName}
+          userEmail={user?.email}
+          userRole={user?.role}
           activeNav={activeNav}
           itemCount={store.items.length}
           onNavigateDashboard={() => navigate('/dashboard')}
           onNavigateMateri={() => navigate('/materi')}
-          onLogout={() => navigate('/')}
+          onLogout={logout}
         />
 
         <div className="db-main">

@@ -2,19 +2,28 @@ import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from '
 import { Link, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
+import { useAuth } from '../context/AuthContext';
 import './LandingPage.css';
 import './LoginPage.css';
 import './PublicPageMotion.css';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
   const [enteringDashboard, setEnteringDashboard] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && !enteringDashboard && !submitting) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, enteringDashboard, submitting, navigate]);
 
   useEffect(() => {
     const ornaments = ornamentsRef.current?.querySelectorAll<HTMLElement>('.login-ornament');
@@ -75,40 +84,62 @@ export function LoginPage() {
     event.currentTarget.style.setProperty('--login-ornament-y', `${((event.clientY - bounds.top) / bounds.height - .5) * 30}px`);
   }
 
-  function validateEmail(input: HTMLInputElement) {
+  function validateEmail(input: HTMLInputElement): boolean {
     const error = !input.value
       ? 'Email wajib diisi.'
-      : input.validity.typeMismatch || !/^[^\s@]+@gmail\.com$/i.test(input.value)
+      : input.validity.typeMismatch || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(input.value.trim()) || input.value.includes('..')
         ? 'Email harus dalam format nama@gmail.com.'
         : '';
     input.setCustomValidity(error);
     setEmailError(error);
     setEmailTooltipOpen(Boolean(error));
+    return !error;
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (enteringDashboard) return;
-    const email = String(new FormData(event.currentTarget).get('email') ?? '').trim();
-    const accountName = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
-    const displayName = accountName.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase('id-ID'));
-    try {
-      sessionStorage.setItem('h5p-generator:display-name', displayName);
-    } catch {
-      // Navigation remains available when browser storage is disabled.
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      navigate('/dashboard');
+    if (enteringDashboard || submitting) return;
+
+    const form = event.currentTarget;
+    const emailInput = form.elements.namedItem('email') as HTMLInputElement | null;
+    if (emailInput && !validateEmail(emailInput)) {
+      emailInput.focus();
       return;
     }
-    if (!document.startViewTransition) {
-      navigate('/dashboard');
+
+    const formData = new FormData(form);
+    const email = String(formData.get('email') ?? '').trim();
+    const password = String(formData.get('password') ?? '');
+    if (!password) {
+      setMessage('Kata sandi wajib diisi.');
+      return;
+    }
+
+    setSubmitting(true);
+    setMessage('');
+
+    try {
+      const user = await login(email, password);
+      try {
+        sessionStorage.setItem('h5p-generator:display-name', user.name);
+      } catch {
+        // Navigation remains available when browser storage is disabled.
+      }
+    } catch (err) {
+      setSubmitting(false);
+      setMessage(err instanceof Error ? err.message : 'Gagal masuk ke sistem. Coba lagi.');
+      return;
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition) {
+      setSubmitting(false);
+      navigate('/dashboard', { replace: true });
       return;
     }
     flushSync(() => setEnteringDashboard(true));
     document.documentElement.classList.add('login-pull-transition');
     const transition = document.startViewTransition(() => {
-      flushSync(() => navigate('/dashboard'));
+      flushSync(() => navigate('/dashboard', { replace: true }));
     });
     void transition.ready.then(() => {
       const duration = 1600;
@@ -210,9 +241,13 @@ export function LoginPage() {
               <input id="login-password" name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Masukkan kata sandi" required />
               <button type="button" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}</button>
             </div>
-            {/* Temporary dashboard access until database authentication is connected. */}
-            <button className="edu-btn-primary login-submit" type="submit" disabled={enteringDashboard} aria-busy={enteringDashboard}>
-              {enteringDashboard ? 'Membuka dashboard…' : 'Login'}
+            <button
+              className="edu-btn-primary login-submit"
+              type="submit"
+              disabled={enteringDashboard || submitting}
+              aria-busy={enteringDashboard || submitting}
+            >
+              {enteringDashboard ? 'Membuka dashboard…' : submitting ? 'Memverifikasi akun…' : 'Login'}
             </button>
           </form>
           <div className="login-divider"><span>atau</span></div>

@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 
 interface HomeSidebarProps {
   displayName: string;
+  userEmail?: string;
+  userRole?: 'USER' | 'ADMIN';
   activeNav: 'dashboard' | 'materi';
   itemCount: number;
   onNavigateDashboard: () => void;
@@ -12,6 +14,8 @@ interface HomeSidebarProps {
 
 export function HomeSidebar({
   displayName,
+  userEmail,
+  userRole,
   activeNav,
   itemCount,
   onNavigateDashboard,
@@ -22,6 +26,7 @@ export function HomeSidebar({
   const profileRef = useRef<HTMLDivElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const name = displayName || 'Akun Anda';
+  const roleLabel = userRole === 'ADMIN' ? 'Administrator Sistem' : 'Instruktur LMS';
 
   useEffect(() => {
     if (!profileOpen) return;
@@ -94,14 +99,14 @@ export function HomeSidebar({
             </span>
             <span className="db-profile-name">
               <strong>{name}</strong>
-              <small>Instruktur LMS</small>
+              <small>{userEmail || roleLabel}</small>
             </span>
           </span>
         </button>
         <div id="db-profile-popup" className="db-profile-popup" hidden={!profileOpen}>
-          <p>Akun Anda</p>
+          <p>{userEmail ? `${name} (${roleLabel})` : 'Akun Anda'}</p>
           <button type="button" onClick={() => { setProfileOpen(false); onLogout(); }}>
-            <ExitIcon aria-hidden="true" /><span>Logout</span>
+            <ExitIcon aria-hidden="true" /><span>Keluar</span>
           </button>
         </div>
       </div>

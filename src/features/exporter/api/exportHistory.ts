@@ -3,6 +3,8 @@
  * Ringan: judul + format + ukuran + waktu, maksimal 20 entri.
  */
 
+import { getExportsStorageKey } from '../../../services/authService';
+
 export interface ExportRecord {
   id: string;
   title: string;
@@ -12,7 +14,6 @@ export interface ExportRecord {
   sourceFileName?: string | null;
 }
 
-const KEY = 'h5p-generator:exports:v1';
 const MAX = 20;
 
 function uid(): string {
@@ -22,7 +23,7 @@ function uid(): string {
 
 export function loadExportHistory(): ExportRecord[] {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(getExportsStorageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw) as ExportRecord[];
     return Array.isArray(parsed) ? parsed : [];
@@ -37,7 +38,7 @@ export function recordExport(entry: Omit<ExportRecord, 'id' | 'at'>): ExportReco
     MAX,
   );
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    localStorage.setItem(getExportsStorageKey(), JSON.stringify(next));
   } catch {
     // penyimpanan penuh — abaikan
   }

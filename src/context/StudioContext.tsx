@@ -5,15 +5,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import { useProject } from '../features/studio/hooks/useProject';
 import type { ProjectStore } from '../features/studio/hooks/useProject';
-import { PROJECTS_STORAGE_KEY, useProjectStore } from '../features/projects/hooks/useProjectStore';
-import type { Project } from '../features/studio/constants/h5pModel';
+import { useProjectStore } from '../features/projects/hooks/useProjectStore';
+import { createProject, type Project } from '../features/studio/constants/h5pModel';
 import { hydrateElementMedia, getSlideBg, registerSlideBg } from '../features/studio/utils/mediaRegistry';
 import { apiFetch } from '../services/api';
+import { getCurrentProjectSessionKey, getProjectsStorageKey } from '../services/authService';
 import { fetchServerProject } from '../features/ingest/api/serverIngest';
-
-const CURRENT_KEY = 'h5p-generator:current-project';
 
 function hydrateProject(p: Project): Project {
   return {
@@ -44,11 +44,12 @@ const StudioContext = createContext<StudioContextValue | null>(null);
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const store = useProjectStore();
   const { state, actions } = useProject(null);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [savedLabel, setSavedLabel] = useState('Belum disimpan');
-  const restored = useRef(false);
   // Referensi proyek terakhir yang benar-benar disimpan ke localStorage.
   const savedSnapshot = useRef<Project | null>(null);
 
@@ -58,13 +59,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
   }, [state.project]);
 
-  // Refresh browser tidak kehilangan proyek yang sedang dibuka
+  // Pulihkan proyek aktif sesuai userId yang sedang login; reset saat logout/ganti akun
   useEffect(() => {
-    if (restored.current) return;
-    restored.current = true;
+    if (!userId) {
+      actions.replaceProject(createProject('Materi Baru', '16:9', null));
+      savedSnapshot.current = null;
+      setCurrentId(null);
+      setSavedLabel('Belum disimpan');
+      return;
+    }
+
     try {
-      const id = sessionStorage.getItem(CURRENT_KEY);
-      const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+      const id = sessionStorage.getItem(getCurrentProjectSessionKey(userId));
+      const raw = localStorage.getItem(getProjectsStorageKey(userId));
       const items = raw ? (JSON.parse(raw) as Array<{ id: string; snapshot: Project }>) : [];
 
       if (id && items.length > 0) {
@@ -74,13 +81,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           savedSnapshot.current = found.snapshot;
           setCurrentId(found.id);
           setSavedLabel('Draf tersimpan');
+          return;
         }
       }
     } catch {
       // abaikan jika gagal akses storage
     }
+
+    actions.replaceProject(createProject('Materi Baru', '16:9', null));
+    savedSnapshot.current = null;
+    setCurrentId(null);
+    setSavedLabel('Belum disimpan');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
   const openProject = useCallback(
     (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => {
@@ -89,7 +102,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       setCurrentId(project.id);
       setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
       try {
-        sessionStorage.setItem(CURRENT_KEY, project.id);
+        sessionStorage.setItem(getCurrentProjectSessionKey(userId), project.id);
       } catch {
         // abaikan
       }
@@ -111,7 +124,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
       navigate('/studio', { state: { from, step: opts?.step } });
     },
-    [actions, navigate, store],
+    [actions, navigate, store, userId],
   );
 
   const saveDraft = useCallback(async () => {

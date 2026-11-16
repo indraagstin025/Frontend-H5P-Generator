@@ -1,5 +1,6 @@
-/** Upload FormData dengan progress (mirip WeSign services/apiUpload.js). */
+/** Upload FormData dengan progress dan injeksi otomatis token JWT. */
 import { API_BASE_URL } from '../config/env';
+import { getAuthToken, notifyUnauthorized } from './authService';
 
 export class ApiUploadError extends Error {
   status: number;
@@ -22,6 +23,11 @@ export function apiUpload<T>(endpoint: string, formData: FormData, options: Uplo
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_BASE_URL}${endpoint}`, true);
 
+    const token = getAuthToken();
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
     if (xhr.upload && options.onProgress) {
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) options.onProgress?.(Math.round((event.loaded / event.total) * 100));
@@ -36,6 +42,9 @@ export function apiUpload<T>(endpoint: string, formData: FormData, options: Uplo
           reject(new ApiUploadError(xhr.status, 'Respons upload tidak valid.'));
         }
       } else {
+        if (xhr.status === 401) {
+          notifyUnauthorized();
+        }
         let serverMessage = '';
         let errorData: unknown = undefined;
         try {
