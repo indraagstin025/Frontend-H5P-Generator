@@ -1,4 +1,4 @@
-import { DashboardIcon, LayersIcon, PlusIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, LayersIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 
 interface HomeMobileNavProps {
   activeNav: 'dashboard' | 'materi';
@@ -6,6 +6,7 @@ interface HomeMobileNavProps {
   onOpenNewModal: () => void;
   onNavigateDashboard: () => void;
   onNavigateMateri: () => void;
+  onNavigateAdmin?: () => void;
 }
 
 export function HomeMobileNav({
@@ -14,6 +15,7 @@ export function HomeMobileNav({
   onOpenNewModal,
   onNavigateDashboard,
   onNavigateMateri,
+  onNavigateAdmin,
 }: HomeMobileNavProps) {
   return (
     <nav className="db-mobile-nav" aria-label="Navigasi seluler">
@@ -39,6 +41,12 @@ export function HomeMobileNav({
         <PlusIcon />
         <span>Buat materi</span>
       </button>
+      {onNavigateAdmin && (
+        <button type="button" className="db-nav-btn" onClick={onNavigateAdmin}>
+          <PersonIcon />
+          <span>Admin</span>
+        </button>
+      )}
     </nav>
   );
 }

@@ -1,4 +1,4 @@
-import { DashboardIcon, ExitIcon, LayersIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, ExitIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
 import { useEffect, useRef, useState } from 'react';
 
 interface HomeSidebarProps {
@@ -9,6 +9,7 @@ interface HomeSidebarProps {
   itemCount: number;
   onNavigateDashboard: () => void;
   onNavigateMateri: () => void;
+  onNavigateAdmin?: () => void;
   onLogout: () => void;
 }
 
@@ -20,6 +21,7 @@ export function HomeSidebar({
   itemCount,
   onNavigateDashboard,
   onNavigateMateri,
+  onNavigateAdmin,
   onLogout,
 }: HomeSidebarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -84,6 +86,15 @@ export function HomeSidebar({
           </div>
           <span className="db-nav-badge">{itemCount}</span>
         </button>
+
+        {onNavigateAdmin && (
+          <button type="button" className="db-nav-btn" onClick={onNavigateAdmin}>
+            <div className="db-nav-btn-inner">
+              <PersonIcon />
+              <span>Kelola Pengguna</span>
+            </div>
+          </button>
+        )}
       </nav>
 
       {/* User profile footer di sidebar */}

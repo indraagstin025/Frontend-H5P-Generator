@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../services/api';
 import {
   clearAuthSession,
@@ -150,8 +150,14 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({
+  children,
+  adminOnly = false,
+}: {
+  children: ReactNode;
+  adminOnly?: boolean;
+}) {
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -164,6 +170,25 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (adminOnly && user?.role !== 'ADMIN') {
+    return (
+      <main className="auth-denied" role="alert">
+        <h1>Akses khusus administrator</h1>
+        <p>
+          Akun Anda memiliki peran Pengguna. Pengelolaan pengguna dan hak akses hanya tersedia untuk akun Administrator.
+        </p>
+        <div className="auth-denied-actions">
+          <Link to="/dashboard" className="primary-button">
+            Kembali ke dashboard
+          </Link>
+          <button type="button" className="secondary-button" onClick={logout}>
+            Keluar dari akun
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return <>{children}</>;

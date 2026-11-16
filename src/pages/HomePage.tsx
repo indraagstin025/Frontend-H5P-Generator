@@ -72,6 +72,7 @@ export function HomePage() {
           itemCount={store.items.length}
           onNavigateDashboard={() => navigate('/dashboard')}
           onNavigateMateri={() => navigate('/materi')}
+          onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
           onLogout={logout}
         />
 
@@ -87,6 +88,7 @@ export function HomePage() {
             onOpenNewModal={openNewModal}
             onNavigateDashboard={() => navigate('/dashboard')}
             onNavigateMateri={() => navigate('/materi')}
+            onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
           />
 
           <main className="db-content">

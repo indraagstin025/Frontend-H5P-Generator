@@ -7,11 +7,14 @@ import { StudioView } from './features/studio/pages/StudioView';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { LandingPage } from './pages/LandingPage';
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 
 function LandingRoute() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  return <LandingPage onEnter={() => navigate(isAuthenticated ? '/dashboard' : '/login')} />;
+  const { isAuthenticated, user } = useAuth();
+  const homePath = user?.role === 'ADMIN' ? '/admin/users' : '/dashboard';
+  return <LandingPage onEnter={() => navigate(isAuthenticated ? homePath : '/login')} />;
 }
 
 function App() {
@@ -23,6 +26,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingRoute />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<Navigate to="/login" replace />} />
             <Route
               path="/dashboard"
               element={
@@ -47,6 +51,18 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="users" replace />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="*" element={<Navigate to="/admin/users" replace />} />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </StudioProvider>

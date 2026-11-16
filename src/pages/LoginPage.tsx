@@ -9,7 +9,7 @@ import './PublicPageMotion.css';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const [enteringDashboard, setEnteringDashboard] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -21,9 +21,9 @@ export function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated && !enteringDashboard && !submitting) {
-      navigate('/dashboard', { replace: true });
+      navigate(user?.role === 'ADMIN' ? '/admin/users' : '/dashboard', { replace: true });
     }
-  }, [isAuthenticated, enteringDashboard, submitting, navigate]);
+  }, [isAuthenticated, user?.role, enteringDashboard, submitting, navigate]);
 
   useEffect(() => {
     const ornaments = ornamentsRef.current?.querySelectorAll<HTMLElement>('.login-ornament');
@@ -118,10 +118,12 @@ export function LoginPage() {
     setSubmitting(true);
     setMessage('');
 
+    let targetPath = '/dashboard';
     try {
-      const user = await login(email, password);
+      const loggedIn = await login(email, password);
+      targetPath = loggedIn.role === 'ADMIN' ? '/admin/users' : '/dashboard';
       try {
-        sessionStorage.setItem('h5p-generator:display-name', user.name);
+        sessionStorage.setItem('h5p-generator:display-name', loggedIn.name);
       } catch {
         // Navigation remains available when browser storage is disabled.
       }
@@ -133,13 +135,13 @@ export function LoginPage() {
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition) {
       setSubmitting(false);
-      navigate('/dashboard', { replace: true });
+      navigate(targetPath, { replace: true });
       return;
     }
     flushSync(() => setEnteringDashboard(true));
     document.documentElement.classList.add('login-pull-transition');
     const transition = document.startViewTransition(() => {
-      flushSync(() => navigate('/dashboard', { replace: true }));
+      flushSync(() => navigate(targetPath, { replace: true }));
     });
     void transition.ready.then(() => {
       const duration = 1600;
