@@ -1,5 +1,10 @@
 # Catatan UI akun dan admin
 
+> **Kolom terbaru:** Materi dan sel jumlah materi dihapus dari tabel pengguna,
+> termasuk label seluler. Kolom yang tersisa: Pengguna, Peran, Status, Bergabung,
+> Tindakan. Delivery Gate PASS: source header/sel sesuai, build berhasil, navigasi,
+> tindakan dan layout desktop/seluler lulus pengujian browser yang sama.
+
 > **Header terbaru:** baris Administrasi / Pengguna dan CSS-nya dihapus, termasuk
 > ruang header. Main langsung menjadi konten pertama pada area admin.
 > Delivery Gate PASS: header/ruang kosong tidak ada (diperiksa di browser), fungsi
