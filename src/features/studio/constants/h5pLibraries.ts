@@ -9,7 +9,13 @@ export const COURSE_PRESENTATION = { machineName: 'H5P.CoursePresentation', majo
 
 export const COURSE_PRESENTATION_MINORS = [22, 23, 24, 25, 26] as const;
 
-export const DEFAULT_CP_MINOR: (typeof COURSE_PRESENTATION_MINORS)[number] = 24;
+/**
+ * Versi default HARUS ada di `public/h5p-libraries/H5P.CoursePresentation-1.<minor>`.
+ * Saat ini hanya 1.26 yang dibundel, jadi default 1.24 membuat paket tanpa
+ * library utama dan ditolak pembaca lain (Lumi/LMS). Studio juga memprobe
+ * index library saat mount dan memakai versi tertinggi yang benar-benar ada.
+ */
+export const DEFAULT_CP_MINOR: (typeof COURSE_PRESENTATION_MINORS)[number] = 26;
 
 export interface LibVersion {
   machineName: string;

@@ -22,7 +22,7 @@ export const KIND_LABEL: Record<ElementKind, string> = {
   table: 'Table',
   interactiveVideo: 'Interactive Video',
   audioRecorder: 'Audio Recorder',
-  multimediaChoice: 'Multimedia Choice',
+  multimediaChoice: 'Multimedia Choice (teks)',
 };
 
 export type QuizTab = 'konten' | 'jawaban' | 'penilaian' | 'umpanbalik';

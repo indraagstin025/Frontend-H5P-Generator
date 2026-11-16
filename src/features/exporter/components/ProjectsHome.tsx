@@ -14,7 +14,7 @@ import {
   TrashIcon,
   UploadIcon,
 } from '@radix-ui/react-icons';
-import { createProject } from '../../studio/constants/h5pModel';
+import { createProject, isQuizElement } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project } from '../../studio/constants/h5pModel';
 import { parseH5p } from '../api/h5pPackager';
 import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
@@ -59,6 +59,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
+  const recent = [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3);
 
   const createNew = () => {
     onOpen(createProject(title || 'Modul baru', aspect, null));
@@ -104,7 +105,32 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
 
   return (
     <div className="projects-home">
-      <section className="new-project-card" aria-labelledby="new-project-heading">
+      <section className="materials-recent" aria-labelledby="materials-recent-title">
+        <div className="db-section-head">
+          <div>
+            <h2 id="materials-recent-title" className="db-section-title">Lanjutkan materi Anda</h2>
+            <p className="db-section-subtitle">Akses cepat ke materi yang terakhir diperbarui.</p>
+          </div>
+        </div>
+        {recent.length > 0 && <div className="materials-recent-grid">
+          {recent.map((item, index) => (
+            <article className={`materials-recent-card materials-recent-${index}`} key={item.id}>
+              <div className="materials-recent-visual">
+                <span className="db-badge db-badge-green">{sourceOf(item).label}</span>
+                <span className="materials-recent-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <h3>{item.title}</h3>
+              </div>
+              <div className="materials-recent-body">
+                <p>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</p>
+                <div><span>{timeAgo(item.updatedAt)}</span><button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>Buka di studio</button></div>
+              </div>
+            </article>
+          ))}
+        </div>}
+      </section>
+
+      <details className="new-project-card materials-create-options">
+        <summary>Buat materi kosong atau buka file .h5p</summary>
         <div className="new-project-head">
           <h2 id="new-project-heading">Mulai materi baru</h2>
           <p>Beri judul dan ukuran slide, atau buka berkas .h5p yang sudah pernah diunduh.</p>
@@ -137,33 +163,39 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
             <UploadIcon /> {importing ? 'Membuka file...' : 'Buka file .h5p'}
           </button>
         </div>
-      </section>
+      </details>
+
+      <div className="db-section-head">
+        <div>
+          <h2 className="db-section-title">Materi Saya</h2>
+          <p className="db-section-subtitle">Cari dan kelola seluruh materi pembelajaran Anda.</p>
+        </div>
+      </div>
 
       <div className="materials-toolbar">
-        <input
+        <label className="materials-filter-field">Cari materi<input
           className="materials-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Cari judul atau nama file..."
           aria-label="Cari materi"
-        />
-        <select value={filter} onChange={(e) => setFilter(e.target.value as SourceFilter)} aria-label="Saring sumber">
+        /></label>
+        <label className="materials-filter-field">Sumber materi<select value={filter} onChange={(e) => setFilter(e.target.value as SourceFilter)} aria-label="Saring sumber">
           <option value="all">Semua sumber</option>
           <option value="pptx">PPTX</option>
           <option value="pdf">PDF</option>
           <option value="h5p">File H5P</option>
           <option value="manual">Dari nol</option>
-        </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Urutkan">
+        </select></label>
+        <label className="materials-filter-field">Urutkan<select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Urutkan">
           <option value="updated">Terakhir diubah</option>
           <option value="title">Judul A-Z</option>
           <option value="slides">Slide paling banyak</option>
-        </select>
+        </select></label>
       </div>
 
       <div className="db-section-head">
         <div>
-          <h2 className="db-section-title">Daftar materi</h2>
           <p className="db-section-subtitle">
             {visible.length} dari {items.length} materi
           </p>
@@ -199,10 +231,13 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </div>
         </div>
       ) : (
-        <div className="project-grid">
+        <div className="db-card db-table-wrap materials-table">
+          <table className="db-table">
+            <thead><tr><th>Judul materi</th><th>Sumber</th><th>Komposisi</th><th>Terakhir diubah</th><th>Aksi</th></tr></thead>
+            <tbody>
           {visible.map((item) => (
-            <article className="project-card" key={item.id}>
-              <div>
+            <tr key={item.id}>
+              <td>
                 {editingId === item.id ? (
                   <div className="rename-row">
                     <input
@@ -223,16 +258,17 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                     </button>
                   </div>
                 ) : (
-                  <strong>{item.title}</strong>
+                  <strong className="db-table-title">{item.title}</strong>
                 )}
-                <small>
-                  {item.slideCount} slide · {sourceOf(item).label} · {item.sourceFileName ?? 'tanpa file'} ·{' '}
-                  {timeAgo(item.updatedAt)}
-                </small>
-              </div>
+                <span className="db-table-sub">{item.sourceFileName ?? 'Dibuat dari kanvas kosong'}</span>
+              </td>
+              <td><span className="db-badge db-badge-green">{sourceOf(item).label}</span></td>
+              <td>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</td>
+              <td>{timeAgo(item.updatedAt)}</td>
+              <td>
               <div className="project-card-actions">
                 <button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>
-                  <OpenInNewWindowIcon /> Buka
+                  <OpenInNewWindowIcon /> Buka di studio
                 </button>
                 <button
                   className="small-icon-button"
@@ -273,8 +309,11 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   <TrashIcon />
                 </button>
               </div>
-            </article>
+              </td>
+            </tr>
           ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

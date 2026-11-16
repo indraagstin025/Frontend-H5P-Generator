@@ -1,17 +1,16 @@
 /**
- * Dashboard & LMS Internal Styling (Root Index)
- * Tema: hijau hutan dan off-white, diselaraskan dengan landing page.
- * Semua kelas diawali dengan .db- agar terisolasi dengan rapi.
+ * Dashboard H5P Content Generator (Modular Entrypoint)
  *
  * Berkas ini menggabungkan sub-modul modular dari ./styles/dashboard/:
- * 1. variables.css  : Token tema, custom properties, dan .db-shell
- * 2. sidebar.css    : Navigasi sidebar, branding, user badge, widget
- * 3. topbar.css     : Area utama, topbar sticky, pencarian, dan kontainer konten
- * 4. hero.css       : Hero banner solid, CTA buttons, dan alur kartu fitur
- * 5. cards.css      : Kartu umum, grid statistik, dan aksi cepat
- * 6. tables.css     : Tabel data, badges (PPTX/PDF/H5P), checklist, empty state, footer
- * 7. projects.css   : Tampilan Materi Saya (/materi), modal materi baru, upload dock, toast
- * 8. responsive.css : Breakpoint mobile, tablet, dan prefers-reduced-motion
+ * 1. variables.css: Token warna, tipografi, radius, dan shadow.
+ * 2. sidebar.css: Sidebar navigasi, logo branding, kartu pengguna, dan tombol aksi.
+ * 3. topbar.css: Topbar header, search bar, dan struktur main container.
+ * 4. hero.css: Hero banner hijau solid dan kartu alur kerja interaktif.
+ * 5. cards.css: Kartu statistik KPI dan grid aksi cepat (quick actions).
+ * 6. tables.css: Tabel riwayat ekspor, badge status, dan empty state.
+ * 7. projects.css: Tampilan daftar materi saya (/materi) dan modal materi baru.
+ * 8. responsive.css: Media query breakpoints mobile & tablet.
+ * 9. refresh.css: Pembaruan tampilan dashboard, pagination, filter, & animasi.
  */
 
 @import './styles/dashboard/variables.css';
@@ -22,3 +21,4 @@
 @import './styles/dashboard/tables.css';
 @import './styles/dashboard/projects.css';
 @import './styles/dashboard/responsive.css';
+@import './styles/dashboard/refresh.css';

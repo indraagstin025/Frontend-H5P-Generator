@@ -45,6 +45,152 @@ export interface SlideBackgroundRef {
   mime: string;
 }
 
+export interface LibDep {
+  machineName: string;
+  majorVersion: number;
+  minorVersion: number;
+}
+
+export function decodeJson(raw: Uint8Array): unknown {
+  return JSON.parse(new TextDecoder().decode(raw));
+}
+
+/**
+ * Potongan semantics.json yang relevan untuk mengisi default.
+ *
+ * Kenapa perlu: library H5P membaca params seperti `params.UI.checkAnswerButton`
+ * atau `dropZone.tipsAndFeedback.tip` TANPA guard. Params yang tidak kita tulis
+ * dan tidak diisi default (karena paket tidak melewati editor H5P) membuat
+ * player meledak: "Cannot read properties of undefined". Dengan mengisi default
+ * dari semantics.json milik library itu sendiri, isi paket selalu lengkap dan
+ * mengikuti versi library yang ikut dibundel.
+ */
+export interface SemanticsField {
+  name: string;
+  type?: string;
+  default?: unknown;
+  optional?: boolean;
+  defaultNum?: number;
+  min?: number;
+  options?: Array<{ value?: unknown }>;
+  fields?: SemanticsField[];
+  field?: SemanticsField;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+function defaultFor(node: SemanticsField): unknown {
+  if (node.default !== undefined) return node.default;
+  const type = node.type ?? 'text';
+
+  if (type === 'library') return undefined;
+  if (type === 'file' || type === 'image' || type === 'video' || type === 'audio') return undefined;
+
+  if (type === 'group') {
+    const fields = node.fields ?? [];
+    const sameName = fields.find((f) => f.name === node.name && f.type === 'list');
+    if (sameName) {
+      const count = sameName.defaultNum ?? sameName.min ?? 0;
+      const out: unknown[] = [];
+      for (let i = 0; i < count; i++) out.push(defaultFor(sameName.field ?? sameName));
+      return out;
+    }
+    const out: Record<string, unknown> = {};
+    for (const f of fields) {
+      const v = defaultFor(f);
+      if (v !== undefined) out[f.name] = v;
+    }
+    return out;
+  }
+
+  if (type === 'list') {
+    const count = node.defaultNum ?? 0;
+    const out: unknown[] = [];
+    for (let i = 0; i < count; i++) out.push(defaultFor(node.field ?? node));
+    return out;
+  }
+
+  if (type === 'number') return node.min ?? 0;
+  if (type === 'boolean') return false;
+  if (type === 'select') {
+    const first = node.options?.find((o) => o.value !== undefined)?.value;
+    return first ?? '';
+  }
+  return '';
+}
+
+export function fillSemanticsDefaults(
+  semantics: SemanticsField[],
+  params: Record<string, unknown>,
+): Record<string, unknown> {
+  for (const node of semantics) {
+    const value = params[node.name];
+    if (value === undefined) {
+      const d = defaultFor(node);
+      if (d !== undefined) params[node.name] = d;
+      continue;
+    }
+    if (node.type === 'group' && isPlainObject(value)) {
+      if (node.fields) fillSemanticsDefaults(node.fields, value);
+      continue;
+    }
+    if (node.type === 'list' && Array.isArray(value) && node.field?.type === 'group' && node.field.fields) {
+      for (const item of value) {
+        if (isPlainObject(item)) fillSemanticsDefaults(node.field.fields, item);
+      }
+    }
+  }
+  return params;
+}
+
+export async function loadLibrarySemantics(
+  deps: LibDep[],
+  readFile: (relPath: string) => Promise<Uint8Array>,
+): Promise<Record<string, SemanticsField[]>> {
+  const out: Record<string, SemanticsField[]> = {};
+  await Promise.all(
+    deps.map(async (dep) => {
+      try {
+        const dir = `${dep.machineName}-${dep.majorVersion}.${dep.minorVersion}`;
+        const parsed = decodeJson(await readFile(`${dir}/semantics.json`)) as SemanticsField[];
+        if (Array.isArray(parsed) && parsed.length > 0) out[dep.machineName] = parsed;
+      } catch {
+        // library tanpa semantics.json — biarkan tanpa default tambahan
+      }
+    }),
+  );
+  return out;
+}
+
+export function applySemanticsDefaults(
+  content: Record<string, unknown>,
+  semantics: Record<string, SemanticsField[]> | undefined,
+): void {
+  if (!semantics) return;
+  const cpSemantics = semantics[COURSE_PRESENTATION.machineName];
+  if (cpSemantics) {
+    fillSemanticsDefaults(
+      cpSemantics.filter((f) => f.name !== 'presentation'),
+      content,
+    );
+  }
+
+  const presentation = content.presentation as
+    | { slides?: Array<{ elements?: Array<Record<string, unknown>> }> }
+    | undefined;
+  for (const slide of presentation?.slides ?? []) {
+    for (const el of slide.elements ?? []) {
+      const action = el.action as { library?: string; params?: Record<string, unknown> } | undefined;
+      if (!action?.library || !isPlainObject(action.params)) continue;
+      const machineName = action.library.split(' ')[0];
+      const libSemantics = semantics[machineName];
+      if (libSemantics) fillSemanticsDefaults(libSemantics, action.params);
+    }
+  }
+}
+
 export function behaviourOf(
   el: { enableRetry: boolean; showSolution: boolean },
   extra: Record<string, unknown> = {},
@@ -106,11 +252,25 @@ export function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/** Plain text fields exported into H5P HTML must decode once on re-import. */
+export function plainH5pText(value: string): string {
+  return value.replace(/<[^>]*>/g, '').replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code: string) => {
+    const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+    if (!code.startsWith('#')) return named[code.toLowerCase()] ?? entity;
+    const point = code[1].toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return point >= 0 && point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+  });
+}
+
 export function tableHtml(el: { rows: number; cols: number }): string {
   const rows = Math.max(1, Math.min(20, Math.round(el.rows)));
   const cols = Math.max(1, Math.min(20, Math.round(el.cols)));
   const body = Array.from({ length: rows }, () => `<tr>${'<td>&nbsp;</td>'.repeat(cols)}</tr>`).join('');
   return `<figure class="table"><table class="h5p-table">${body}</table></figure>`;
+}
+
+export function overallFeedbackOf(el: { feedbackCorrect: string; feedbackWrong: string }) {
+  return [{ from: 0, to: 99, feedback: el.feedbackWrong }, { from: 100, to: 100, feedback: el.feedbackCorrect }];
 }
 
 export function toAction(
@@ -183,6 +343,7 @@ export function toAction(
           sources: source ? [source] : [],
           visuals: { fit: true, controls: true },
           playback: { autoplay: false, loop: false },
+          a11y: [],
         },
       };
     }
@@ -236,6 +397,7 @@ export function toAction(
             },
           })),
           behaviour: behaviourOf(m, {
+            singlePoint: true,
             // MultimediaChoice mengikuti jumlah jawaban benar (auto);
             // MultiChoice tetap mengikuti sakelar singleAnswer.
             type:
@@ -282,20 +444,37 @@ export function toAction(
       const items = dd.items.length > 0 ? dd.items : [{ id: 'item-1', text: 'Item 1', zoneId: zones[0].id }];
       const zoneIndex = new Map(zones.map((z, i) => [z.id, i]));
       const taskWidth = 640;
-      const taskHeight = 420;
+      const columns = Math.min(3, Math.max(items.length, zones.length));
+      const gap = 16;
+      const cellWidth = (taskWidth - gap * (columns + 1)) / columns;
+      const itemWidth = cellWidth - 20;
+      const itemHeight = Math.max(
+        46,
+        ...items.map(
+          (item) =>
+            Math.ceil(Math.max(1, item.text.length) / Math.max(1, Math.floor((itemWidth - 16) / 9))) * 24 + 16,
+        ),
+      );
+      const targetFor = (item: typeof items[number]) => zoneIndex.get(item.zoneId) ?? -1;
+      const capacity = dd.allowMultipleItemsPerZone === true ? items.length : 1;
+      const zoneHeight = 40 + capacity * (itemHeight + 10);
+      const zoneTop = gap + Math.ceil(items.length / columns) * (itemHeight + gap) + 32;
+      const taskHeight = Math.max(420, zoneTop + Math.ceil(zones.length / columns) * (zoneHeight + gap));
+      const xPct = (px: number) => (px / taskWidth) * 100;
+      const yPct = (px: number) => (px / taskHeight) * 100;
       const dropZones = zones.map((zone, i) => ({
-        label: zone.label,
+        label: escapeHtml(zone.label),
         showLabel: true,
-        x: 16 + (i % 3) * 205,
-        y: 290 + Math.floor(i / 3) * 70,
-        width: 190,
-        height: 58,
+        x: xPct(gap + (i % columns) * (cellWidth + gap)),
+        y: yPct(zoneTop + Math.floor(i / columns) * (zoneHeight + gap)),
+        width: cellWidth / 16,
+        height: zoneHeight / 16,
         correctElements: items
-          .map((it, itemIndex) => (it.zoneId === zone.id ? String(itemIndex) : null))
+          .map((it, itemIndex) => (targetFor(it) === i ? String(itemIndex) : null))
           .filter((v): v is string => v !== null),
         backgroundOpacity: 100,
-        single: true,
-        autoAlign: false,
+        single: dd.allowMultipleItemsPerZone !== true,
+        autoAlign: true,
       }));
       const elements = items.map((item, i) => ({
         type: {
@@ -303,11 +482,11 @@ export function toAction(
           params: { text: `<p>${escapeHtml(item.text)}</p>` },
           subContentId: item.id,
         },
-        x: 16 + (i % 3) * 205,
-        y: 16 + Math.floor(i / 3) * 56,
-        width: 190,
-        height: 46,
-        dropZones: [String(zoneIndex.get(item.zoneId) ?? 0)],
+        x: xPct(gap + (i % columns) * (cellWidth + gap) + 10),
+        y: yPct(gap + Math.floor(i / columns) * (itemHeight + gap)),
+        width: itemWidth / 16,
+        height: itemHeight / 16,
+        dropZones: zones.map((_, index) => String(index)),
         backgroundOpacity: 100,
         multiple: false,
       }));
@@ -318,8 +497,12 @@ export function toAction(
           submit: 'Periksa',
           tryAgain: 'Coba lagi',
           scoreExplanation: 'Penjelasan nilai',
+          overallFeedback: overallFeedbackOf(dd),
           question: {
-            settings: { size: { width: taskWidth, height: taskHeight } },
+            settings: {
+              questionTitle: escapeHtml(dd.question || dd.title || 'Seret item ke zona yang sesuai.'),
+              size: { width: taskWidth, height: taskHeight },
+            },
             task: { elements, dropZones },
           },
           behaviour: {
@@ -331,7 +514,7 @@ export function toAction(
             autoAlignSpacing: 10,
             enableFullScreen: false,
             showScorePoints: true,
-            showTitle: false,
+            showTitle: true,
           },
         },
       };
@@ -345,8 +528,8 @@ export function toAction(
           intro: sm.intro,
           summaries: [
             {
-              summary: ordered.map((s) => ({ text: s.text })),
-              tip: { tip: sm.feedbackCorrect },
+              summary: ordered.map((s) => s.text),
+              tip: sm.feedbackCorrect,
             },
           ],
         },
@@ -359,6 +542,7 @@ export function toAction(
         params: {
           taskDescription: dw.title || 'Lengkapi kalimat berikut',
           textField: dw.text,
+          overallFeedback: overallFeedbackOf(dw),
           behaviour: behaviourOf(dw, { enableCheckButton: true }),
         },
       };
@@ -419,6 +603,7 @@ export function toAction(
           sources: source ? [source] : [],
           visuals: { fit: true, controls: true },
           playback: { autoplay: false, loop: false },
+          a11y: [],
         },
       };
     }
@@ -451,6 +636,11 @@ export function toCpElement(
     displayAsButton: el.displayAsButton,
     buttonLabel: el.buttonLabel || undefined,
     buttonSize: 'big',
+    rotation: ((el.rotation ?? 0) % 360 + 360) % 360,
+    popupButtonInvisible: el.displayAsButton && el.popupButtonInvisible === true,
+    popupButtonOpacity: clampPct(el.popupButtonOpacity ?? 100),
+    popupButtonAutoHide: el.displayAsButton && el.popupButtonAutoHide === true,
+    popupButtonVisibleSeconds: Math.min(300, Math.max(0.5, el.popupButtonVisibleSeconds ?? 3)),
   };
   if (el.kind === 'goToSlide') {
     return {
@@ -473,6 +663,7 @@ export function toContentJson(
   cpMinor: number,
   backgrounds?: SlideBackgroundRef[],
   media: Map<string, ResolvedMedia> = new Map(),
+  semantics?: Record<string, SemanticsField[]>,
 ): Record<string, unknown> {
   const n = project.slides.length;
   const slides = project.slides.map((s, idx) => ({
@@ -490,7 +681,7 @@ export function toContentJson(
       ),
     },
   }));
-  return {
+  const content: Record<string, unknown> = {
     presentation: {
       slides,
       keywordListEnabled: project.settings.keywordListEnabled,
@@ -509,11 +700,23 @@ export function toContentJson(
     },
     l10n: {},
   };
+  applySemanticsDefaults(content, semantics);
+  return content;
 }
 
-export function toManifest(project: Project, cpMinor: number) {
-  const deps = new Map<string, { machineName: string; majorVersion: number; minorVersion: number }>();
-  deps.set(COURSE_PRESENTATION.machineName, {
+export function toManifest(project: Project, cpMinor: number, extraDeps: LibDep[] = []) {
+  const deps = new Map<string, LibDep>();
+  const add = (dep: LibDep) => {
+    const prev = deps.get(dep.machineName);
+    if (
+      !prev ||
+      dep.majorVersion > prev.majorVersion ||
+      (dep.majorVersion === prev.majorVersion && dep.minorVersion > prev.minorVersion)
+    ) {
+      deps.set(dep.machineName, dep);
+    }
+  };
+  add({
     machineName: COURSE_PRESENTATION.machineName,
     majorVersion: COURSE_PRESENTATION.majorVersion,
     minorVersion: cpMinor,
@@ -521,14 +724,10 @@ export function toManifest(project: Project, cpMinor: number) {
   for (const slide of project.slides) {
     for (const el of slide.elements) {
       if (el.kind === 'goToSlide') continue;
-      const lib = libraryForElement(el, cpMinor);
-      deps.set(lib.machineName, {
-        machineName: lib.machineName,
-        majorVersion: lib.majorVersion,
-        minorVersion: lib.minorVersion,
-      });
+      add(libraryForElement(el, cpMinor));
     }
   }
+  for (const dep of extraDeps) add(dep);
   return {
     title: project.title,
     language: project.settings.language,

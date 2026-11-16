@@ -15,12 +15,13 @@ import {
   createProject,
   createSlide,
   type Project,
+  type ShapeElement,
   type Slide,
   type SlideElement,
   uid,
 } from '../../../studio/constants/h5pModel';
-import { mcAnswerText } from './elementMapper';
-import { AUDIO_MIME, IMAGE_MIME, VIDEO_MIME } from './mediaResolver';
+import { mcAnswerText, plainH5pText } from './elementMapper';
+import { AUDIO_MIME, clampPct, IMAGE_MIME, VIDEO_MIME } from './mediaResolver';
 
 export function bytesToUrl(bytes: Uint8Array, mime: string): string {
   return URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: mime }));
@@ -65,11 +66,19 @@ export function parseElement(
     width: num(e.width, 40),
     height: num(e.height, 30),
   };
+  const rotation = ((num(e.rotation, 0) % 360) + 360) % 360;
   const displayAsButton = bool(e.displayAsButton, false);
+  const popupButtonInvisible = bool(e.popupButtonInvisible, false);
+  const popupButtonOpacity = clampPct(num(e.popupButtonOpacity, 100));
+  const popupButtonAutoHide = bool(e.popupButtonAutoHide, false);
+  const popupButtonVisibleSeconds = Math.min(300, Math.max(0.5, num(e.popupButtonVisibleSeconds, 3)));
   const buttonLabel = str(e.buttonLabel);
   const title = str(e.title);
 
-  if (typeof e.goToSlideType === 'string') {
+  // Elemen ber-`action` adalah konten; `goToSlideType` hanya penanda elemen
+  // navigasi (yang tidak punya action). Cek action lebih dulu supaya paket
+  // lama yang (pernah) mengisi goToSlideType di semua elemen tetap terbaca.
+  if (!e.action && typeof e.goToSlideType === 'string') {
     const targetType = (
       e.goToSlideType === 'next' || e.goToSlideType === 'previous'
         ? e.goToSlideType
@@ -79,7 +88,12 @@ export function parseElement(
     return {
       ...g,
       position,
+      rotation,
       displayAsButton,
+      popupButtonInvisible,
+      popupButtonOpacity,
+      popupButtonAutoHide,
+      popupButtonVisibleSeconds,
       buttonLabel,
       title,
       label: title || 'Pilihan',
@@ -96,9 +110,81 @@ export function parseElement(
   const machine = str(action.library).split(' ')[0];
   const params = (action.params ?? {}) as Record<string, unknown>;
 
+  const common = {
+    position,
+    rotation,
+    displayAsButton,
+    popupButtonInvisible,
+    popupButtonOpacity,
+    popupButtonAutoHide,
+    popupButtonVisibleSeconds,
+    buttonLabel,
+    title,
+  };
+  const behaviour = (params.behaviour ?? {}) as Record<string, unknown>;
+  const feedback = Array.isArray(params.overallFeedback)
+    ? (params.overallFeedback as Array<{ from?: number; to?: number; feedback?: string }>)
+    : [];
+  const quizSettings = {
+    enableRetry: bool(behaviour.enableRetry, true),
+    showSolution: bool(behaviour.enableSolutionsButton, true),
+    feedbackCorrect: str(
+      behaviour.feedbackOnCorrect,
+      str(feedback.find((f) => f.to === 100)?.feedback, 'Benar!'),
+    ),
+    feedbackWrong: str(
+      behaviour.feedbackOnWrong,
+      str(feedback.find((f) => f.from === 0)?.feedback, 'Coba lagi.'),
+    ),
+  };
+
+  if (machine === 'H5P.Link') {
+    const link = (params.linkWidget ?? {}) as { protocol?: string; url?: string };
+    return {
+      ...createElement('link', slideCount),
+      ...common,
+      linkText: str(params.title),
+      url: (link.protocol === 'other' ? '' : str(link.protocol)) + str(link.url),
+    };
+  }
+  if (machine === 'H5P.Shape') {
+    const shape = (params.shape ?? {}) as { fillColor?: string };
+    const line = (params.line ?? {}) as { borderColor?: string };
+    const shapeType = ['circle', 'rectangle', 'vertical-line', 'horizontal-line'].includes(str(params.type))
+      ? (str(params.type) as ShapeElement['shapeType'])
+      : 'rectangle';
+    return {
+      ...createElement('shape', slideCount),
+      ...common,
+      shapeType,
+      color: str(shape.fillColor, str(line.borderColor, '#4CAF50')),
+    };
+  }
+  if (machine === 'H5P.DragText') {
+    return {
+      ...createElement('dragWords', slideCount),
+      ...common,
+      ...quizSettings,
+      text: str(params.textField),
+    };
+  }
+  if (machine === 'H5P.Summary') {
+    const groups = (params.summaries ?? []) as Array<{ summary?: string[]; tip?: string }>;
+    return {
+      ...createElement('summary', slideCount),
+      ...common,
+      ...quizSettings,
+      intro: str(params.intro),
+      statements: (groups[0]?.summary ?? []).map((text, index) => ({
+        id: uid(),
+        text,
+        correct: index === 0,
+      })),
+    };
+  }
   if (machine === 'H5P.AdvancedText') {
     const t = createElement('advancedText', slideCount);
-    return { ...t, position, displayAsButton, buttonLabel, title, text: str(params.text, '') };
+    return { ...t, ...common, text: str(params.text, '') };
   }
   if (machine === 'H5P.Image') {
     const img = createElement('image', slideCount);
@@ -107,9 +193,7 @@ export function parseElement(
     const imgBytes = path ? resolveContentEntry(entries, path) : undefined;
     return {
       ...img,
-      position,
-      displayAsButton,
-      buttonLabel,
+      ...common,
       title: str(params.title, title),
       alt: str(params.alt),
       fileName: path.split('/').pop() ?? '',
@@ -124,10 +208,7 @@ export function parseElement(
     const audioBytes = path ? resolveContentEntry(entries, path) : undefined;
     return {
       ...au,
-      position,
-      displayAsButton,
-      buttonLabel,
-      title,
+      ...common,
       fileName: path.split('/').pop() ?? '',
       objectUrl: path && audioBytes ? bytesToUrl(audioBytes, mimeForPath(path)) : null,
       file: null,
@@ -141,10 +222,7 @@ export function parseElement(
     const videoBytes = !isRemote && path ? resolveContentEntry(entries, path) : undefined;
     return {
       ...vd,
-      position,
-      displayAsButton,
-      buttonLabel,
-      title,
+      ...common,
       videoUrl: isRemote ? path : '',
       fileName: !isRemote ? (path.split('/').pop() ?? '') : '',
       objectUrl: !isRemote && path && videoBytes ? bytesToUrl(videoBytes, mimeForPath(path)) : null,
@@ -154,15 +232,15 @@ export function parseElement(
   if (machine === 'H5P.MultiChoice') {
     const m = createElement('multiChoice', slideCount);
     const answers = (params.answers ?? []) as Array<{ text?: unknown; correct?: boolean }>;
-    const behaviour = (params.behaviour ?? {}) as { singleAnswer?: boolean };
+    const choiceBehaviour = (params.behaviour ?? {}) as { singleAnswer?: boolean; type?: string };
     return {
       ...m,
-      position,
-      displayAsButton,
-      buttonLabel,
-      title,
+      ...quizSettings,
+      ...common,
       question: str(params.question, 'Pertanyaan'),
-      singleAnswer: bool(behaviour.singleAnswer, true),
+      singleAnswer: choiceBehaviour.type
+        ? choiceBehaviour.type === 'single'
+        : bool(choiceBehaviour.singleAnswer, false),
       options: answers.map((a) => ({
         id: uid(),
         text: mcAnswerText(a.text),
@@ -175,10 +253,8 @@ export function parseElement(
     const correct = params.correct;
     return {
       ...t,
-      position,
-      displayAsButton,
-      buttonLabel,
-      title,
+      ...quizSettings,
+      ...common,
       question: str(params.question, 'Pernyataan'),
       correctAnswer: correct === true || correct === 'true' || correct === 'True',
     };
@@ -197,15 +273,38 @@ export function parseElement(
         .join('\n') || str(params.text, '');
     return {
       ...b,
-      position,
-      displayAsButton,
-      buttonLabel,
-      title,
+      ...common,
       text,
     };
   }
+  if (machine === 'H5P.DragQuestion') {
+    const dd = createElement('dragDrop', slideCount);
+    const question = (params.question ?? {}) as {
+      settings?: { questionTitle?: string };
+      task?: {
+        dropZones?: Array<{ label?: string; single?: boolean; correctElements?: string[] }>;
+        elements?: Array<{ type?: { params?: { text?: string } } }>;
+      };
+    };
+    const rawZones = question.task?.dropZones ?? [];
+    const zones = rawZones.map((zone) => ({ id: uid(), label: plainH5pText(str(zone.label)) }));
+    const items = (question.task?.elements ?? []).map((item, index) => ({
+      id: uid(),
+      text: plainH5pText(str(item.type?.params?.text)),
+      zoneId: zones[rawZones.findIndex((zone) => zone.correctElements?.includes(String(index)))]?.id ?? '',
+    }));
+    return {
+      ...dd,
+      ...quizSettings,
+      ...common,
+      question: plainH5pText(str(question.settings?.questionTitle, dd.question)),
+      zones,
+      items,
+      allowMultipleItemsPerZone: rawZones.some((zone) => zone.single === false),
+    };
+  }
   const t = createElement('advancedText', slideCount);
-  return { ...t, position, displayAsButton, buttonLabel, title, text: '' };
+  return { ...t, ...common, text: '' };
 }
 
 /** Impor ulang .h5p menjadi proyek yang bisa diedit (FR-12). */
@@ -255,6 +354,14 @@ export async function parseH5p(file: File): Promise<Project> {
   const ret = content.override?.retryButton;
   project.settings.retryButton = ret === undefined ? true : ret === 'on' || ret === true;
 
+  let editorMetadata: { version?: number; slides?: Array<Array<Record<string, unknown>>> } = {};
+  try {
+    if (entries['content/studio-metadata.json']) {
+      editorMetadata = JSON.parse(strFromU8(entries['content/studio-metadata.json']));
+    }
+  } catch {
+    /* Optional metadata; standard H5P content remains usable. */
+  }
   const cpSlides = content.presentation?.slides ?? [];
   const aspect: AspectRatio = '16:9';
   project.slides = cpSlides.map((cs, idx): Slide => {
@@ -268,7 +375,20 @@ export async function parseH5p(file: File): Promise<Project> {
     const bgPath = cs.slideBackgroundSelector?.imageSlideBackground?.path;
     const bgBytes = bgPath ? resolveContentEntry(entries, bgPath) : undefined;
     if (bgPath && bgBytes) slide.backgroundUrl = bytesToUrl(bgBytes, mimeForPath(bgPath));
-    slide.elements = (cs.elements ?? []).map((e) => parseElement(e, cpSlides.length, entries));
+    slide.elements = (cs.elements ?? []).map((e, elementIndex) => {
+      let parsed = parseElement(e, cpSlides.length, entries);
+      const metadata = editorMetadata?.version === 1 ? editorMetadata.slides?.[idx]?.[elementIndex] : undefined;
+      if (metadata && parsed.kind === 'multiChoice' && metadata.kind === 'multimediaChoice') {
+        parsed = { ...parsed, kind: 'multimediaChoice' };
+      }
+      if (metadata && 'enableRetry' in parsed) {
+        if (typeof metadata.enableRetry === 'boolean') parsed.enableRetry = metadata.enableRetry;
+        if (typeof metadata.showSolution === 'boolean') parsed.showSolution = metadata.showSolution;
+        if (typeof metadata.feedbackCorrect === 'string') parsed.feedbackCorrect = metadata.feedbackCorrect;
+        if (typeof metadata.feedbackWrong === 'string') parsed.feedbackWrong = metadata.feedbackWrong;
+      }
+      return parsed;
+    });
     return slide;
   });
   return project;

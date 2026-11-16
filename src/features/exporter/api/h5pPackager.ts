@@ -5,7 +5,7 @@
  * untuk seluruh sub-modul packager modular yang berada di subfolder ./packager:
  *
  * 1. packager/mediaResolver.ts: Sniffing magic bytes biner, pemetaan MIME, dan fetch media.
- * 2. packager/elementMapper.ts: Serialisasi elemen, pembuatan manifest dan content.json.
+ * 2. packager/elementMapper.ts: Serialisasi elemen, semantics defaults, manifest, dan content.json.
  * 3. packager/h5pParser.ts: Parsing & ekstraksi arsip .h5p lama ke model studio.
  * 4. packager/zipBundler.ts: Bundling dependensi library transitif, canvas render latar, dan build arsip .h5p.
  */
@@ -45,12 +45,20 @@ export {
 // 2. Ekspor modul pemetaan semantik & serializer elemen
 export {
   type SlideBackgroundRef,
+  type LibDep,
+  type SemanticsField,
+  decodeJson,
+  fillSemanticsDefaults,
+  loadLibrarySemantics,
+  applySemanticsDefaults,
   behaviourOf,
   mcAnswerText,
   splitLinkUrl,
   videoSource,
   escapeHtml,
+  plainH5pText,
   tableHtml,
+  overallFeedbackOf,
   toAction,
   toCpElement,
   toContentJson,
@@ -79,9 +87,9 @@ export {
   resolveSlideBackground,
   type H5pBuildResult,
   type H5pBuildOptions,
+  MissingLibrariesError,
+  detectAvailableCpMinor,
   fetchLibraryFile,
-  decodeJson,
-  type LibDep,
   type LibraryFileReader,
   type LibraryBundle,
   bundleLibraryFiles,

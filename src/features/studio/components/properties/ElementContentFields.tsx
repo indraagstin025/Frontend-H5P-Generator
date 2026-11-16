@@ -338,6 +338,59 @@ export function ElementContentFields({
             <span>Jadi tombol kecil (diklik baru kebuka)</span>
           </label>
           {element.displayAsButton && (
+            <label className="check-row compact">
+              <input
+                type="checkbox"
+                checked={element.popupButtonInvisible === true}
+                onChange={(e) => patch({ popupButtonInvisible: e.target.checked })}
+              />
+              <span>Tombol transparan (tetap bisa diklik)</span>
+            </label>
+          )}
+          {element.displayAsButton && (
+            <>
+              <label className="field-label">
+                Opacity tombol: {element.popupButtonOpacity ?? 100}%
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  disabled={element.popupButtonInvisible === true}
+                  value={element.popupButtonOpacity ?? 100}
+                  onChange={(e) => patch({ popupButtonOpacity: Number(e.target.value) })}
+                />
+              </label>
+              <label className="check-row compact">
+                <input
+                  type="checkbox"
+                  checked={element.popupButtonAutoHide === true}
+                  disabled={element.popupButtonInvisible === true}
+                  onChange={(e) => patch({ popupButtonAutoHide: e.target.checked })}
+                />
+                <span>Sembunyikan otomatis</span>
+              </label>
+              {element.popupButtonAutoHide && !element.popupButtonInvisible && (
+                <label className="field-label">
+                  Durasi tampil (detik)
+                  <input
+                    type="number"
+                    min="0.5"
+                    max="300"
+                    step="0.5"
+                    value={element.popupButtonVisibleSeconds ?? 3}
+                    onChange={(e) =>
+                      patch({
+                        popupButtonVisibleSeconds: Math.min(300, Math.max(0.5, Number(e.target.value) || 3)),
+                      })
+                    }
+                  />
+                  <span className="field-hint">Dihitung ulang saat slide dibuka. Area klik tetap aktif.</span>
+                </label>
+              )}
+            </>
+          )}
+          {element.displayAsButton && (
             <label className="field-label">
               Tulisan di tombolnya
               <input

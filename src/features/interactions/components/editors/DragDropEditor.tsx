@@ -20,6 +20,17 @@ export function DragDropEditor({
           placeholder="Drag item ke tempat yang sesuai…"
         />
       </label>
+      <label className="check-row compact">
+        <input
+          type="checkbox"
+          checked={dd.allowMultipleItemsPerZone === true}
+          onChange={(e) => onPatch({ allowMultipleItemsPerZone: e.target.checked })}
+        />
+        <span>Izinkan beberapa item dalam satu zona</span>
+      </label>
+      <p className="muted">
+        Jika aktif, zona menerima beberapa item, termasuk jawaban salah. Penilaian tetap mengikuti zona benar setiap item.
+      </p>
       <span className="section-kicker">Zona tujuan</span>
       <div className="option-list">
         {dd.zones.map((zone) => (
@@ -81,6 +92,7 @@ export function DragDropEditor({
                 })
               }
             >
+              <option value="">No Zone</option>
               {dd.zones.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.label}

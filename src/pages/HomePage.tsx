@@ -22,6 +22,13 @@ export function HomePage() {
   const { store, openProject } = useStudio();
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
+  const [displayName] = useState(() => {
+    try {
+      return sessionStorage.getItem('h5p-generator:display-name') ?? '';
+    } catch {
+      return '';
+    }
+  });
   const [showNew, setShowNew] = useState(false);
   const [newNonce, setNewNonce] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -52,12 +59,12 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="db-scope">
+    <div className="db-scope db-scope--reference">
       <div className="db-shell">
         <HomeSidebar
+          displayName={displayName}
           activeNav={activeNav}
           itemCount={store.items.length}
-          onOpenNewModal={openNewModal}
           onNavigateDashboard={() => navigate('/dashboard')}
           onNavigateMateri={() => navigate('/materi')}
           onLogout={() => navigate('/')}
@@ -65,11 +72,8 @@ export function HomePage() {
 
         <div className="db-main">
           <HomeTopbar
+            displayName={displayName}
             tab={tab}
-            query={query}
-            onQueryChange={setQuery}
-            searchInputRef={searchInputRef}
-            onOpenNewModal={openNewModal}
           />
 
           <HomeMobileNav
@@ -88,6 +92,8 @@ export function HomePage() {
                 onGoMaterials={() => navigate('/materi')}
                 onCreate={openNewModal}
                 query={query}
+                onQueryChange={setQuery}
+                searchInputRef={searchInputRef}
               />
             ) : (
               <ProjectsHome

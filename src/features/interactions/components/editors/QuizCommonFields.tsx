@@ -8,6 +8,13 @@ export function QuizBehaviourFields({
   element: QuizElement;
   onPatch: (patch: Partial<SlideElement>) => void;
 }) {
+  if (element.kind === 'summary') {
+    return (
+      <p className="muted">
+        Summary memakai perilaku bawaan H5P. Pengaturan coba lagi dan kunci jawaban per elemen tidak tersedia.
+      </p>
+    );
+  }
   return (
     <div className="field-row">
       <label className="check-row compact">
@@ -22,9 +29,10 @@ export function QuizBehaviourFields({
         <input
           type="checkbox"
           checked={element.showSolution}
+          disabled={element.kind === 'dragDrop'}
           onChange={(e) => onPatch({ showSolution: e.target.checked })}
         />
-        <span>Tampilkan kunci jawaban</span>
+        <span>{element.kind === 'dragDrop' ? 'Kunci jawaban mengikuti H5P Drag and Drop' : 'Tampilkan kunci jawaban'}</span>
       </label>
     </div>
   );
@@ -37,6 +45,13 @@ export function QuizFeedbackFields({
   element: QuizElement;
   onPatch: (patch: Partial<SlideElement>) => void;
 }) {
+  if (element.kind === 'summary') {
+    return (
+      <p className="muted">
+        Feedback Summary mengikuti pesan bawaan H5P. Pesan benar/salah khusus belum tersedia untuk elemen ini.
+      </p>
+    );
+  }
   return (
     <>
       <label className="field-label">
