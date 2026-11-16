@@ -23,6 +23,7 @@ import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
 import { exportH5pPackage } from '../../exporter/api/exportService';
 import { detectAvailableCpMinor } from '../../exporter/api/h5pPackager';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
@@ -118,6 +119,10 @@ export function StudioView() {
       showNotice('Belum ada slide untuk diekspor.');
       return;
     }
+    if (isBrowserOffline()) {
+      showNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk mengekspor file H5P.');
+      return;
+    }
     setExporting(true);
     showNotice('Menyinkronkan & mengemas file .h5p…');
     try {
@@ -128,7 +133,7 @@ export function StudioView() {
       });
       showNotice(exported.notice);
     } catch (err) {
-      showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
+      showNotice(formatNetworkError(err, 'Gagal mengekspor file H5P.'));
     } finally {
       setExporting(false);
     }
@@ -146,7 +151,11 @@ export function StudioView() {
         onHome={goBack}
         onSave={() => {
           void saveDraft().then((synced) => {
-            showNotice(synced ? 'Sudah tersimpan ke server.' : 'Disimpan ke draf lokal (server gagal dijangkau).');
+            showNotice(
+              synced
+                ? 'Sudah tersimpan ke server.'
+                : 'Koneksi internet terputus — gagal menyimpan ke server. Perubahan masih ada di layar; hubungkan internet lalu klik Simpan lagi.',
+            );
           });
         }}
         onPreview={() => setStep(3)}

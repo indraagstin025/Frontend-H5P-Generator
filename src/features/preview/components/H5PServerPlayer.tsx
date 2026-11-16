@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../../config/env';
 import { apiFetch } from '../../../services/api';
 import { apiUpload } from '../../../services/apiUpload';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 import { fetchProjectAttempts, isServerProjectId } from '../../ingest/api/serverIngest';
 import { DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
@@ -40,6 +41,13 @@ export function H5PServerPlayer({
   const timer = useRef<number | null>(null);
 
   const start = async () => {
+    if (isBrowserOffline()) {
+      const msg = 'Koneksi internet terputus. Pratinjau server membutuhkan koneksi internet.';
+      setStatus('error');
+      setError(msg);
+      onNotice(msg);
+      return;
+    }
     setStatus('uploading');
     setError('');
     try {
@@ -65,19 +73,16 @@ export function H5PServerPlayer({
       setStatus('ready');
     } catch (err) {
       setStatus('error');
-      const detail = err instanceof Error ? err.message : '';
-      setError(
-        detail
-          ? `Gagal menyiapkan pratinjau: ${detail}`
-          : 'Backend tidak terjangkau. Nyalakan backend lalu coba lagi, atau pakai mode lain.',
-      );
-      onNotice(detail || 'Backend tidak terjangkau.');
+      const detail = formatNetworkError(err, 'Backend tidak dapat dijangkau. Periksa koneksi internet Anda lalu coba lagi.');
+      setError(`Gagal menyiapkan pratinjau: ${detail}`);
+      onNotice(detail);
     }
   };
 
   useEffect(() => {
     if (status !== 'ready' || !sessionId) return;
     const poll = async () => {
+      if (isBrowserOffline()) return;
       try {
         if (isServerProjectId(project.id)) {
           const list = await fetchProjectAttempts(project.id);

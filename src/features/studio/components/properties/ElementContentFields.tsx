@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PlusIcon, TrashIcon } from '@radix-ui/react-icons';
 import { isServerProjectId, uploadProjectMediaAsset } from '../../../ingest/api/serverIngest';
+import { formatNetworkError, isBrowserOffline } from '../../../../services/network';
 import type { Slide, SlideElement } from '../../constants/h5pModel';
 import { uid } from '../../constants/h5pModel';
 import { registerMedia } from '../../utils/mediaRegistry';
@@ -53,7 +54,13 @@ export function ElementContentFields({
       return;
     }
 
+    if (isServerProjectId(projectId) && isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda sebelum mengunggah media.');
+      return;
+    }
+
     const targetElementId = element.id;
+    const prevSnapshot = element;
     const localUrl = URL.createObjectURL(file);
     registerMedia(targetElementId, file, localUrl);
     onUpdateElement(targetElementId, {
@@ -81,10 +88,15 @@ export function ElementContentFields({
         onNotice(`${file.name} berhasil diunggah ke server.`);
       })
       .catch((err: unknown) => {
+        URL.revokeObjectURL(localUrl);
+        onUpdateElement(targetElementId, {
+          asset: 'asset' in prevSnapshot ? prevSnapshot.asset : undefined,
+          fileName: 'fileName' in prevSnapshot ? prevSnapshot.fileName : undefined,
+          objectUrl: 'objectUrl' in prevSnapshot ? prevSnapshot.objectUrl : null,
+          file: 'file' in prevSnapshot ? prevSnapshot.file : null,
+        } as Partial<SlideElement>);
         onNotice(
-          err instanceof Error
-            ? `Upload ke server gagal: ${err.message}`
-            : `${file.name} tersimpan sementara di browser.`,
+          `Upload ke server gagal: ${formatNetworkError(err, 'Periksa koneksi internet Anda lalu coba unggah ulang.')}`,
         );
       })
       .finally(() => {

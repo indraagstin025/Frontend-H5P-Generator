@@ -5,6 +5,7 @@ import { getProjectIssues } from '../../studio/api/studioChecks';
 import { useEffect, useMemo, useState } from 'react';
 import { CheckIcon, Cross2Icon, DownloadIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { apiUpload } from '../../../services/apiUpload';
+import { formatNetworkError, isBrowserOffline, subscribeOnlineRecovery } from '../../../services/network';
 import { fetchProjectExportReport, isServerProjectId } from '../../ingest/api/serverIngest';
 import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import { isQuizElement } from '../../studio/constants/h5pModel';
@@ -34,26 +35,33 @@ export function ExportStep({
   const [libLocal, setLibLocal] = useState<boolean | null>(null);
   const isServerProject = isServerProjectId(project.id);
 
-  // Tandai apakah library versi terpilih tersedia lokal (ikut dibundel).
+  // Tandai apakah library versi terpilih tersedia (saat online; ulangi probe bila pulih dari offline).
   useEffect(() => {
     let stop = false;
-    fetch(`/h5p-libraries/H5P.CoursePresentation-1.${cpMinor}/library.json`, { cache: 'no-store' })
-      .then(async (r) => {
-        let ok = false;
-        if (r.ok) {
-          try {
-            ok = ((await r.json()) as { machineName?: string }).machineName === 'H5P.CoursePresentation';
-          } catch {
-            ok = false;
+    const probeLibrary = () => {
+      if (isBrowserOffline()) return;
+      fetch(`/h5p-libraries/H5P.CoursePresentation-1.${cpMinor}/library.json`, { cache: 'no-store' })
+        .then(async (r) => {
+          let ok = false;
+          if (r.ok) {
+            try {
+              ok = ((await r.json()) as { machineName?: string }).machineName === 'H5P.CoursePresentation';
+            } catch {
+              ok = false;
+            }
           }
-        }
-        if (!stop) setLibLocal(ok);
-      })
-      .catch(() => {
-        if (!stop) setLibLocal(false);
-      });
+          if (!stop) setLibLocal(ok);
+        })
+        .catch(() => {
+          if (!stop && !isBrowserOffline()) setLibLocal(false);
+        });
+    };
+
+    probeLibrary();
+    const unsubscribe = subscribeOnlineRecovery(probeLibrary);
     return () => {
       stop = true;
+      unsubscribe();
     };
   }, [cpMinor]);
 
@@ -83,11 +91,21 @@ export function ExportStep({
 
   const doServerCheck = async () => {
     if (issues.length > 0 || checking) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk memvalidasi paket di server.');
+      return;
+    }
     setChecking(true);
     setServerCheck(null);
     try {
       if (isServerProject) {
-        if (onBeforeExport) await onBeforeExport();
+        if (onBeforeExport) {
+          const synced = await onBeforeExport();
+          if (!synced) {
+            onNotice('Gagal menyinkronkan perubahan ke server. Periksa koneksi internet Anda lalu coba lagi.');
+            return;
+          }
+        }
         const report = await fetchProjectExportReport(project.id);
         setServerCheck({
           ok: report.ok,
@@ -107,7 +125,7 @@ export function ExportStep({
       if (err instanceof MissingLibrariesError) {
         onNotice(err.message);
       } else {
-        onNotice(err instanceof Error ? err.message : 'Backend tidak terjangkau. Download lokal tetap tersedia untuk draf offline.');
+        onNotice(formatNetworkError(err, 'Gagal menghubungi server validasi. Periksa koneksi internet Anda.'));
       }
     } finally {
       setChecking(false);
@@ -116,6 +134,10 @@ export function ExportStep({
 
   const doExport = async () => {
     if (issues.length > 0 || loading) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk mengekspor file .h5p.');
+      return;
+    }
     setLoading(true);
     try {
       const exported = await exportH5pPackage({
@@ -126,7 +148,7 @@ export function ExportStep({
       setResult({ name: exported.name, sizeKb: exported.sizeKb });
       onNotice(exported.notice);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'Gagal membuat file .h5p.');
+      onNotice(formatNetworkError(err, 'Gagal membuat file .h5p.'));
     } finally {
       setLoading(false);
     }

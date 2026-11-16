@@ -51,6 +51,7 @@
 .login-submit:active:not(:disabled) { background: #145323; }
 .login-story .edu-brand:focus-visible { outline-color: #fff; }
 .login-message { background: #fff8e8; border: 1px solid #efdcac; color: #725213; font-size: 13px; line-height: 1.7; padding: 12px; border-radius: 8px; margin-top: 18px; }
+.login-message--offline { background: #fef2f2; border-color: #fecaca; color: #991b1b; margin-top: 14px; font-weight: 600; }
 .login-card .login-help { text-align: center; font-size: 12px; margin: 24px 0 0; }
 @media (max-width: 850px) { .login-page { grid-template-columns: 1fr; } .login-story { min-height: auto; padding: 28px; gap: 32px; } .login-story-copy { display: none; } .login-caption { display: none; } .login-form-panel { position: relative; z-index: 1; padding: 24px; } .login-card { padding-block: 40px; } }
 

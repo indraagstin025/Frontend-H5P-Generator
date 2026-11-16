@@ -12,8 +12,38 @@ import { useProjectStore } from '../features/projects/hooks/useProjectStore';
 import { createProject, type Project } from '../features/studio/constants/h5pModel';
 import { hydrateElementMedia, getSlideBg, registerSlideBg } from '../features/studio/utils/mediaRegistry';
 import { apiFetch } from '../services/api';
-import { getCurrentProjectSessionKey, getProjectsStorageKey } from '../services/authService';
-import { fetchServerProject } from '../features/ingest/api/serverIngest';
+import {
+  addPendingSyncId,
+  getCurrentProjectSessionKey,
+  getProjectsStorageKey,
+  loadPendingSyncIds,
+  removePendingSyncId,
+} from '../services/authService';
+import { isBrowserOffline, isNetworkFailure, subscribeOnlineRecovery } from '../services/network';
+import { fetchServerProject, isServerProjectId } from '../features/ingest/api/serverIngest';
+
+async function pushProjectToServer(project: Project): Promise<void> {
+  await Promise.all([
+    apiFetch(`/projects/${project.id}/slides`, {
+      method: 'PUT',
+      body: { slides: project.slides },
+    }),
+    apiFetch(`/projects/${project.id}`, {
+      method: 'PATCH',
+      body: {
+        title: project.title,
+        settings: {
+          language: project.settings.language,
+          keywordListEnabled: project.settings.keywordListEnabled,
+          activeSurface: project.settings.activeSurface,
+          hideSummarySlide: project.settings.hideSummarySlide,
+          showSolutionButton: project.settings.showSolutionButton,
+          retryButton: project.settings.retryButton,
+        },
+      },
+    }),
+  ]);
+}
 
 function hydrateProject(p: Project): Project {
   return {
@@ -132,10 +162,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
       // Jika proyek berasal dari sinkronisasi server dan slide-nya belum dimuat di lokal
       if (
+        !isBrowserOffline() &&
         project.slides.length === 0 &&
-        project.id &&
-        !project.id.startsWith('temp-') &&
-        !project.id.startsWith('local-')
+        isServerProjectId(project.id)
       ) {
         fetchServerProject(project.id)
           .then((full) => {
@@ -151,6 +180,49 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     [actions, navigate, store, userId],
   );
 
+  const projectRef = useRef(state.project);
+  useEffect(() => {
+    projectRef.current = state.project;
+  }, [state.project]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const syncPending = async () => {
+      if (isBrowserOffline()) return;
+      const pendingIds = loadPendingSyncIds(userId);
+      if (pendingIds.size === 0) return;
+
+      try {
+        const raw = localStorage.getItem(getProjectsStorageKey(userId));
+        const items = raw ? (JSON.parse(raw) as Array<{ id: string; snapshot: Project }>) : [];
+        for (const id of pendingIds) {
+          if (!isServerProjectId(id)) {
+            removePendingSyncId(userId, id);
+            continue;
+          }
+          const activeProject = projectRef.current.id === id ? projectRef.current : null;
+          const target = activeProject ?? items.find((item) => item.id === id)?.snapshot;
+          if (!target) {
+            removePendingSyncId(userId, id);
+            continue;
+          }
+          await pushProjectToServer(target);
+          removePendingSyncId(userId, id);
+          if (projectRef.current.id === id) {
+            const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            setSavedLabel(`Tersimpan di server ${time}`);
+          }
+        }
+      } catch {
+        // Akan dicoba ulang otomatis pada pemulihan koneksi berikutnya
+      }
+    };
+
+    return subscribeOnlineRecovery(() => {
+      void syncPending();
+    });
+  }, [userId]);
+
   const saveDraft = useCallback(async (): Promise<boolean> => {
     store.save(state.project);
     savedSnapshot.current = state.project;
@@ -158,40 +230,31 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     const id = state.project.id;
 
-    if (id && !id.startsWith('temp-') && !id.startsWith('local-')) {
+    if (isServerProjectId(id)) {
+      if (isBrowserOffline()) {
+        addPendingSyncId(userId, id);
+        setSavedLabel('Gagal simpan ke server (offline)');
+        return false;
+      }
       try {
-        await Promise.all([
-          apiFetch(`/projects/${id}/slides`, {
-            method: 'PUT',
-            body: { slides: state.project.slides },
-          }),
-          apiFetch(`/projects/${id}`, {
-            method: 'PATCH',
-            body: {
-              title: state.project.title,
-              settings: {
-                language: state.project.settings.language,
-                keywordListEnabled: state.project.settings.keywordListEnabled,
-                activeSurface: state.project.settings.activeSurface,
-                hideSummarySlide: state.project.settings.hideSummarySlide,
-                showSolutionButton: state.project.settings.showSolutionButton,
-                retryButton: state.project.settings.retryButton,
-              },
-            },
-          }),
-        ]);
+        await pushProjectToServer(state.project);
+        removePendingSyncId(userId, id);
         setSavedLabel(`Tersimpan di server ${time}`);
         return true;
       } catch (err) {
-        console.warn('Gagal sinkronisasi slide & pengaturan ke backend, tersimpan di lokal:', err);
-        setSavedLabel(`Tersimpan lokal ${time}`);
+        if (isNetworkFailure(err)) {
+          addPendingSyncId(userId, id);
+          setSavedLabel('Gagal simpan ke server (jaringan terputus)');
+        } else {
+          setSavedLabel(`Gagal simpan ke server ${time}`);
+        }
         return false;
       }
     }
 
     setSavedLabel(`Tersimpan ${time}`);
     return true;
-  }, [store, state.project]);
+  }, [store, state.project, userId]);
 
   const value = useMemo(
     () => ({ store, state, actions, currentId, savedLabel, openProject, adoptProject, saveDraft }),

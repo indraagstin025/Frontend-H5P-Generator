@@ -11,6 +11,7 @@ import { setPendingFile } from '../../ingest/api/pendingUpload';
 import { createServerProject } from '../../ingest/api/serverIngest';
 import { createProject } from '../../studio/constants/h5pModel';
 import type { AspectRatio } from '../../studio/constants/h5pModel';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 function baseName(name: string): string {
   const base = name.replace(/\.[^/.]+$/, '').trim();
@@ -48,6 +49,13 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
 
   const start = async () => {
     if (creating) return;
+    if (isBrowserOffline()) {
+      const msg = 'Koneksi internet terputus. Web ini memerlukan koneksi internet — hubungkan jaringan Anda lalu coba lagi.';
+      setError(msg);
+      onNotice(msg);
+      return;
+    }
+
     const finalTitle = title.trim() || (file ? baseName(file.name) : 'Modul baru');
     if (file) {
       setPendingFile(file);
@@ -57,6 +65,7 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
     }
 
     setCreating(true);
+    setError('');
     const localDraft = createProject(finalTitle, aspect, null);
     try {
       const serverProject = await createServerProject({
@@ -66,12 +75,13 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
       });
       openProject(serverProject, pathname, { step: 2, saved: true });
       onNotice(`Materi "${serverProject.title}" tersimpan di server.`);
-    } catch {
-      openProject(localDraft, pathname, { step: 2 });
-      onNotice('Server tidak terjangkau — materi dibuka dalam mode draf lokal.');
+      onClose();
+    } catch (err) {
+      const msg = formatNetworkError(err, 'Gagal menghubungi server untuk membuat materi baru.');
+      setError(msg);
+      onNotice(msg);
     } finally {
       setCreating(false);
-      onClose();
     }
   };
 

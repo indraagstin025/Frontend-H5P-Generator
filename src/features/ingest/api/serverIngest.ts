@@ -5,6 +5,7 @@
 import { API_BASE_URL } from '../../../config/env';
 import { apiDownload, apiFetch } from '../../../services/api';
 import { apiUpload, ApiUploadError } from '../../../services/apiUpload';
+import { isNetworkFailure } from '../../../services/network';
 import { createProject } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project, ProjectSettings, Slide, SlideElement } from '../../studio/constants/h5pModel';
 
@@ -169,17 +170,29 @@ export async function convertViaServer(
   const { project: srvProject, job } = up.data;
   const projectId = srvProject.id;
 
-  // Polling job sampai done/error (maks ~5 menit, ikut ONLYOFFICE_TIMEOUT_MS server)
+  // Polling job sampai done/error (maks ~5 menit, toleransi 3 kali gangguan jaringan singkat)
   const started = Date.now();
   const TIMEOUT_MS = 5 * 60 * 1000;
+  let consecutiveNetworkFailures = 0;
   for (;;) {
     if (opts.signal?.aborted) throw new Error('Dibatalkan.');
-    const res = await apiFetch<ServerJob>(`/ingest-jobs/${job.id}`, { timeout: 15000 });
-    const j = res.data;
-    const pct = 20 + Math.round(((j.progress ?? 0) / 100) * 75);
-    opts.onProgress?.(Math.min(95, pct), j.message || 'Server memproses…');
-    if (j.status === 'done') break;
-    if (j.status === 'error') throw new Error(j.message || 'Server gagal mengubah file.');
+    try {
+      const res = await apiFetch<ServerJob>(`/ingest-jobs/${job.id}`, { timeout: 15000 });
+      consecutiveNetworkFailures = 0;
+      const j = res.data;
+      const pct = 20 + Math.round(((j.progress ?? 0) / 100) * 75);
+      opts.onProgress?.(Math.min(95, pct), j.message || 'Server memproses…');
+      if (j.status === 'done') break;
+      if (j.status === 'error') throw new Error(j.message || 'Server gagal mengubah file.');
+    } catch (err) {
+      if (isNetworkFailure(err) && consecutiveNetworkFailures < 3) {
+        consecutiveNetworkFailures += 1;
+        opts.onProgress?.(25, `Koneksi terganggu, mencoba menyambungkan ulang (${consecutiveNetworkFailures}/3)…`);
+        await new Promise((r) => setTimeout(r, 2500));
+        continue;
+      }
+      throw err;
+    }
     if (Date.now() - started > TIMEOUT_MS) throw new Error('Server kelamaan, coba lagi atau kecilkan file.');
     await new Promise((r) => setTimeout(r, 1500));
   }

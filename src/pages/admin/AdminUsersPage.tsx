@@ -10,6 +10,12 @@ import {
 } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
 import {
+  formatNetworkError,
+  isBrowserOffline,
+  isNetworkFailure,
+  subscribeOnlineRecovery,
+} from '../../services/network';
+import {
   deleteAdminUser,
   fetchAdminUsers,
   formatAdminDate,
@@ -60,6 +66,7 @@ export function AdminUsersPage() {
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const hadNetworkLoadErrorRef = useRef(false);
 
   useEffect(() => {
     const previous = document.title;
@@ -91,6 +98,7 @@ export function AdminUsersPage() {
       })
         .then((res) => {
           if (controller.signal.aborted) return;
+          hadNetworkLoadErrorRef.current = false;
           setUsers(res.data ?? []);
           setTotalFiltered(res.pagination?.total ?? 0);
           setTotalPages(Math.max(1, res.pagination?.totalPages ?? 1));
@@ -104,7 +112,8 @@ export function AdminUsersPage() {
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
-          setLoadError(err instanceof Error ? err.message : 'Gagal memuat daftar pengguna.');
+          hadNetworkLoadErrorRef.current = isNetworkFailure(err);
+          setLoadError(formatNetworkError(err, 'Gagal memuat daftar pengguna.'));
         })
         .finally(() => {
           if (!controller.signal.aborted) {
@@ -118,6 +127,14 @@ export function AdminUsersPage() {
       controller.abort();
     };
   }, [debouncedQuery, role, status, page, reloadNonce]);
+
+  useEffect(() => {
+    return subscribeOnlineRecovery(() => {
+      if (hadNetworkLoadErrorRef.current) {
+        setReloadNonce((n) => n + 1);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (modal && !dialogRef.current?.open) {
@@ -146,6 +163,11 @@ export function AdminUsersPage() {
     if (targetUser.id === currentUser?.id) return;
     if (kind === 'delete' && deleteEmail.trim().toLowerCase() !== targetUser.email.toLowerCase()) return;
 
+    if (isBrowserOffline()) {
+      setModalError('Koneksi internet terputus. Tindakan administrator memerlukan koneksi internet.');
+      return;
+    }
+
     setSubmitting(true);
     setModalError('');
     try {
@@ -168,7 +190,7 @@ export function AdminUsersPage() {
       closeModal();
       setReloadNonce((n) => n + 1);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Tindakan gagal dijalankan.');
+      setModalError(formatNetworkError(err, 'Tindakan gagal dijalankan.'));
     } finally {
       setSubmitting(false);
     }

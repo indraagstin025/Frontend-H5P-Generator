@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import './App.css';
+import { NetworkBanner } from './components/UI/NetworkBanner';
 import { PageTransition } from './components/UI/PageTransition';
 import { AuthProvider, ProtectedRoute, useAuth } from './context/AuthContext';
 import { StudioProvider } from './context/StudioContext';
@@ -23,6 +24,7 @@ function App() {
       <PageTransition />
       <AuthProvider>
         <StudioProvider>
+          <NetworkBanner />
           <Routes>
             <Route path="/" element={<LandingRoute />} />
             <Route path="/login" element={<LoginPage />} />

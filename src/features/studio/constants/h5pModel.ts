@@ -516,7 +516,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
 export function createProject(title: string, aspect: AspectRatio, sourceFileName: string | null): Project {
   const now = new Date().toISOString();
   return {
-    id: uid(),
+    id: `local-${uid()}`,
     title: title.trim() || 'Modul tanpa judul',
     sourceFileName,
     settings: {

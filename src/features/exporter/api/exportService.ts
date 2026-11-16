@@ -3,6 +3,7 @@
  * fallback perakit lokal hanya untuk draf offline atau ketika backend mati).
  */
 import { ApiError } from '../../../services/api';
+import { formatNetworkError, isBrowserOffline, isNetworkFailure, NetworkError } from '../../../services/network';
 import { exportProjectFromServer, isServerProjectId } from '../../ingest/api/serverIngest';
 import type { Project } from '../../studio/constants/h5pModel';
 import { recordExport } from './exportHistory';
@@ -22,11 +23,15 @@ export async function exportH5pPackage(opts: {
 }): Promise<UnifiedExportResult> {
   const { project, cpMinor, onBeforeExport } = opts;
 
+  if (isBrowserOffline()) {
+    throw new NetworkError('offline');
+  }
+
   if (isServerProjectId(project.id)) {
     if (onBeforeExport) {
       const synced = await onBeforeExport();
       if (!synced) {
-        throw new Error('Gagal menyinkronkan perubahan ke server sebelum mengekspor.');
+        throw new Error('Gagal menyinkronkan perubahan ke server sebelum mengekspor. Periksa koneksi internet Anda.');
       }
     }
 
@@ -48,11 +53,17 @@ export async function exportH5pPackage(opts: {
         notice: `${name} berhasil diekspor dari server Lumi (${sizeKb} KB).`,
       };
     } catch (err) {
+      if (isNetworkFailure(err)) {
+        throw new NetworkError(
+          isBrowserOffline() ? 'offline' : 'unreachable',
+          formatNetworkError(err, 'Gagal mengekspor karena koneksi ke server terputus.'),
+        );
+      }
       if (err instanceof ApiError) {
         const detail = err.issues?.length ? err.issues[0] : err.message;
         throw new Error(detail);
       }
-      // Fallback ke perakit lokal hanya jika koneksi server terputus / offline
+      // Fallback perakit lokal jika Lumi server engine tidak aktif meski koneksi normal
     }
   }
 
@@ -85,6 +96,6 @@ export async function exportH5pPackage(opts: {
     if (err instanceof MissingLibrariesError) {
       throw new Error(err.message);
     }
-    throw err instanceof Error ? err : new Error('Gagal membuat file .h5p.');
+    throw new Error(formatNetworkError(err, 'Gagal membuat file .h5p.'));
   }
 }

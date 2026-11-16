@@ -3,6 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
+import {
+  formatNetworkError,
+  isBrowserOffline,
+  subscribeOnlineRecovery,
+  useNetworkStatus,
+} from '../services/network';
 import './LandingPage.css';
 import './LoginPage.css';
 import './PublicPageMotion.css';
@@ -10,6 +16,7 @@ import './PublicPageMotion.css';
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
+  const { isOnline } = useNetworkStatus();
   const [enteringDashboard, setEnteringDashboard] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -18,6 +25,12 @@ export function LoginPage() {
   const [message, setMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
+
+  useEffect(() => {
+    return subscribeOnlineRecovery(() => {
+      setMessage((prev) => (prev.toLowerCase().includes('koneksi') ? '' : prev));
+    });
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && !enteringDashboard && !submitting) {
@@ -115,6 +128,11 @@ export function LoginPage() {
       return;
     }
 
+    if (isBrowserOffline()) {
+      setMessage('Koneksi internet terputus. Web ini memerlukan koneksi internet — periksa jaringan Anda lalu coba login ulang.');
+      return;
+    }
+
     setSubmitting(true);
     setMessage('');
 
@@ -129,7 +147,7 @@ export function LoginPage() {
       }
     } catch (err) {
       setSubmitting(false);
-      setMessage(err instanceof Error ? err.message : 'Gagal masuk ke sistem. Coba lagi.');
+      setMessage(formatNetworkError(err, 'Gagal masuk ke sistem. Coba lagi.'));
       return;
     }
 
@@ -200,6 +218,11 @@ export function LoginPage() {
         <Link to="/" className="login-back"><ArrowLeftIcon /> Kembali ke beranda</Link>
         <div className="login-card">
           <h2 id="login-title">Login ke akun Anda</h2>
+          {!isOnline && (
+            <div className="login-message login-message--offline" role="alert">
+              Koneksi internet sedang terputus. Hubungkan kembali jaringan Anda untuk masuk ke sistem.
+            </div>
+          )}
           <form noValidate onSubmit={handleSubmit} onChange={() => setMessage('')}>
             <label htmlFor="login-email">Email</label>
             <div className="login-email-field">

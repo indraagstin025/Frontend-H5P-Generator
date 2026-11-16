@@ -4,6 +4,12 @@
  */
 import { API_BASE_URL } from '../config/env';
 import { getAuthToken, notifyUnauthorized } from './authService';
+import {
+  isBrowserOffline,
+  isNetworkFailure,
+  NetworkError,
+  reportServerReachable,
+} from './network';
 
 const DEFAULT_TIMEOUT = 30_000;
 
@@ -33,7 +39,28 @@ function isPublicAuthEndpoint(endpoint: string): boolean {
   return endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/register');
 }
 
+function assertOnlineBeforeRequest(): void {
+  if (isBrowserOffline()) {
+    reportServerReachable(false);
+    throw new NetworkError('offline');
+  }
+}
+
+function rethrowTransportError(err: unknown, callerAborted: boolean): never {
+  if (err instanceof Error && err.name === 'AbortError' && !callerAborted) {
+    reportServerReachable(false);
+    throw new NetworkError('timeout');
+  }
+  if (isNetworkFailure(err)) {
+    reportServerReachable(false);
+    throw new NetworkError(isBrowserOffline() ? 'offline' : 'unreachable');
+  }
+  throw err;
+}
+
 export async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+  assertOnlineBeforeRequest();
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeout ?? DEFAULT_TIMEOUT);
 
@@ -60,6 +87,7 @@ export async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): P
       cache: 'no-store',
     });
     clearTimeout(timeoutId);
+    reportServerReachable(true);
 
     if (response.status === 204) {
       return undefined as T;
@@ -90,10 +118,7 @@ export async function apiFetch<T>(endpoint: string, options: ApiOptions = {}): P
     return parsed as T;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === 'AbortError' && !options.signal?.aborted) {
-      throw new Error('Permintaan timeout. Coba lagi.');
-    }
-    throw err;
+    rethrowTransportError(err, Boolean(options.signal?.aborted));
   }
 }
 
@@ -104,6 +129,8 @@ export async function apiDownload(
   endpoint: string,
   options: ApiOptions = {},
 ): Promise<{ blob: Blob; filename: string | null }> {
+  assertOnlineBeforeRequest();
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), options.timeout ?? 60_000);
 
@@ -129,6 +156,7 @@ export async function apiDownload(
       cache: 'no-store',
     });
     clearTimeout(timeoutId);
+    reportServerReachable(true);
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -156,9 +184,6 @@ export async function apiDownload(
     return { blob, filename };
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err instanceof Error && err.name === 'AbortError' && !options.signal?.aborted) {
-      throw new Error('Waktu unduhan habis. Coba lagi.');
-    }
-    throw err;
+    rethrowTransportError(err, Boolean(options.signal?.aborted));
   }
 }

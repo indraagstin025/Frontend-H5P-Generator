@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../services/api';
+import { subscribeOnlineRecovery } from '../services/network';
 import {
   clearAuthSession,
   fetchCurrentUser,
@@ -92,14 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       navigate('/login', { replace: true });
     };
+    const unsubscribeRecovery = subscribeOnlineRecovery(() => {
+      if (getAuthToken()) {
+        void refreshUser();
+      }
+    });
 
     window.addEventListener('h5p:auth-changed', onAuthChanged);
     window.addEventListener('h5p:auth-unauthorized', onUnauthorized);
     return () => {
+      unsubscribeRecovery();
       window.removeEventListener('h5p:auth-changed', onAuthChanged);
       window.removeEventListener('h5p:auth-unauthorized', onUnauthorized);
     };
-  }, [navigate, syncFromStorage]);
+  }, [navigate, refreshUser, syncFromStorage]);
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     const data = await loginWithEmail(email, password);

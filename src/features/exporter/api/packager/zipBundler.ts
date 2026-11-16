@@ -9,6 +9,7 @@
  */
 
 import { strFromU8, strToU8, zipSync } from 'fflate';
+import { isBrowserOffline, isNetworkFailure, NetworkError, reportServerReachable } from '../../../../services/network';
 import { COURSE_PRESENTATION_MINORS } from '../../../studio/constants/h5pLibraries';
 import type { Project, Slide } from '../../../studio/constants/h5pModel';
 import {
@@ -180,9 +181,24 @@ export async function detectAvailableCpMinor(): Promise<number | null> {
 }
 
 export async function fetchLibraryFile(relPath: string): Promise<Uint8Array> {
-  const res = await fetch(`/h5p-libraries/${relPath}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status} untuk ${relPath}`);
-  return new Uint8Array(await res.arrayBuffer());
+  if (isBrowserOffline()) {
+    reportServerReachable(false);
+    throw new NetworkError('offline', `Tidak ada koneksi internet untuk memuat komponen H5P (${relPath}).`);
+  }
+  try {
+    const res = await fetch(`/h5p-libraries/${relPath}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} untuk ${relPath}`);
+    return new Uint8Array(await res.arrayBuffer());
+  } catch (err) {
+    if (isNetworkFailure(err)) {
+      reportServerReachable(false);
+      throw new NetworkError(
+        isBrowserOffline() ? 'offline' : 'unreachable',
+        `Gagal memuat komponen H5P (${relPath}) karena jaringan terputus.`,
+      );
+    }
+    throw err;
+  }
 }
 
 export type LibraryFileReader = (relPath: string) => Promise<Uint8Array>;

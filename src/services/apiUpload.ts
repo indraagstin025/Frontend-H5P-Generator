@@ -1,6 +1,9 @@
 /** Upload FormData dengan progress dan injeksi otomatis token JWT. */
 import { API_BASE_URL } from '../config/env';
 import { getAuthToken, notifyUnauthorized } from './authService';
+import { isBrowserOffline, NetworkError, reportServerReachable } from './network';
+
+const DEFAULT_UPLOAD_TIMEOUT_MS = 120_000;
 
 export class ApiUploadError extends Error {
   status: number;
@@ -16,12 +19,19 @@ export class ApiUploadError extends Error {
 
 type UploadOptions = {
   onProgress?: (percent: number) => void;
+  timeout?: number;
 };
 
 export function apiUpload<T>(endpoint: string, formData: FormData, options: UploadOptions = {}): Promise<T> {
+  if (isBrowserOffline()) {
+    reportServerReachable(false);
+    return Promise.reject(new NetworkError('offline'));
+  }
+
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_BASE_URL}${endpoint}`, true);
+    xhr.timeout = options.timeout ?? DEFAULT_UPLOAD_TIMEOUT_MS;
 
     const token = getAuthToken();
     if (token) {
@@ -35,6 +45,7 @@ export function apiUpload<T>(endpoint: string, formData: FormData, options: Uplo
     }
 
     xhr.onload = () => {
+      reportServerReachable(true);
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           resolve(JSON.parse(xhr.responseText) as T);
@@ -60,8 +71,14 @@ export function apiUpload<T>(endpoint: string, formData: FormData, options: Uplo
       }
     };
 
-    xhr.onerror = () => reject(new ApiUploadError(0, 'Koneksi terputus saat mengunggah.'));
-    xhr.ontimeout = () => reject(new ApiUploadError(0, 'Upload timeout.'));
+    xhr.onerror = () => {
+      reportServerReachable(false);
+      reject(new NetworkError(isBrowserOffline() ? 'offline' : 'unreachable'));
+    };
+    xhr.ontimeout = () => {
+      reportServerReachable(false);
+      reject(new NetworkError('timeout'));
+    };
     xhr.send(formData);
   });
 }

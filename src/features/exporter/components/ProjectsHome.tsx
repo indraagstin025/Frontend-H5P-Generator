@@ -18,14 +18,15 @@ import { createProject, isQuizElement } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project } from '../../studio/constants/h5pModel';
 import { createServerProject, persistImportedH5pProject } from '../../ingest/api/serverIngest';
 import { parseH5p } from '../api/h5pPackager';
-import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
+import type { ProjectActionResult, StoredProjectMeta } from '../../projects/hooks/useProjectStore';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
   onOpen: (project: Project, opts?: { saved?: boolean }) => void;
-  onDelete: (id: string) => void;
-  onRename: (id: string, title: string) => void;
-  onDuplicate: (id: string) => void | Promise<boolean>;
+  onDelete: (id: string) => Promise<ProjectActionResult>;
+  onRename: (id: string, title: string) => Promise<ProjectActionResult>;
+  onDuplicate: (id: string) => Promise<ProjectActionResult>;
   onNotice: (message: string) => void;
 };
 
@@ -65,6 +66,10 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
 
   const createNew = async () => {
     if (creating) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk membuat materi baru.');
+      return;
+    }
     setCreating(true);
     const finalTitle = title.trim() || 'Modul baru';
     const localDraft = createProject(finalTitle, aspect, null);
@@ -75,9 +80,8 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
         initialSlides: localDraft.slides,
       });
       onOpen(serverProject, { saved: true });
-    } catch {
-      onOpen(localDraft);
-      onNotice('Server tidak terjangkau — membuka draf lokal.');
+    } catch (err) {
+      onNotice(formatNetworkError(err, 'Gagal membuat materi di server. Periksa koneksi Anda lalu coba lagi.'));
     } finally {
       setCreating(false);
     }
@@ -85,19 +89,18 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
 
   const importFile = async (file: File | undefined) => {
     if (!file) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk mengunggah berkas .h5p.');
+      return;
+    }
     setImporting(true);
     try {
       const parsed = await parseH5p(file);
-      try {
-        const persisted = await persistImportedH5pProject(parsed);
-        onOpen(persisted, { saved: true });
-        onNotice(`${persisted.title} berhasil diunggah & tersimpan di server.`);
-      } catch {
-        onOpen(parsed);
-        onNotice(`${parsed.title} dibuka sebagai draf lokal (server gagal dihubungi).`);
-      }
+      const persisted = await persistImportedH5pProject(parsed);
+      onOpen(persisted, { saved: true });
+      onNotice(`${persisted.title} berhasil diunggah & tersimpan di server.`);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'Berkas gagal dibuka.');
+      onNotice(formatNetworkError(err, 'Berkas gagal dibuka atau diunggah ke server.'));
     } finally {
       setImporting(false);
     }
@@ -119,12 +122,14 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
     });
   }, [items, query, filter, sort]);
 
-  const saveRename = (id: string) => {
-    if (draftTitle.trim()) {
-      onRename(id, draftTitle);
-      onNotice('Judul sudah diganti.');
+  const saveRename = async (id: string) => {
+    if (!draftTitle.trim()) {
+      setEditingId(null);
+      return;
     }
-    setEditingId(null);
+    const res = await onRename(id, draftTitle);
+    onNotice(res.ok ? 'Judul sudah diganti.' : res.error || 'Gagal mengganti judul materi.');
+    if (res.ok) setEditingId(null);
   };
 
   return (
@@ -269,12 +274,12 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                       autoFocus
                       onChange={(e) => setDraftTitle(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveRename(item.id);
+                        if (e.key === 'Enter') void saveRename(item.id);
                         if (e.key === 'Escape') setEditingId(null);
                       }}
                       aria-label="Judul baru"
                     />
-                    <button className="small-icon-button" type="button" aria-label="Simpan" onClick={() => saveRename(item.id)}>
+                    <button className="small-icon-button" type="button" aria-label="Simpan" onClick={() => void saveRename(item.id)}>
                       <CheckIcon />
                     </button>
                     <button className="small-icon-button" type="button" aria-label="Batal" onClick={() => setEditingId(null)}>
@@ -312,8 +317,8 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   title="Gandakan"
                   aria-label="Gandakan materi"
                   onClick={() => {
-                    void Promise.resolve(onDuplicate(item.id)).then((ok) => {
-                      onNotice(ok === false ? 'Gagal menggandakan materi.' : 'Materi sudah digandakan.');
+                    void onDuplicate(item.id).then((res) => {
+                      onNotice(res.ok ? 'Materi sudah digandakan.' : res.error || 'Gagal menggandakan materi.');
                     });
                   }}
                 >
@@ -326,8 +331,9 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   aria-label="Hapus materi"
                   onClick={() => {
                     if (window.confirm(`Hapus "${item.title}"? Tindakan ini tidak bisa dibatalkan.`)) {
-                      onDelete(item.id);
-                      onNotice('Materi sudah dihapus.');
+                      void onDelete(item.id).then((res) => {
+                        onNotice(res.ok ? 'Materi sudah dihapus.' : res.error || 'Gagal menghapus materi.');
+                      });
                     }
                   }}
                 >

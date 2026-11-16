@@ -83,6 +83,44 @@ export function getCurrentProjectSessionKey(userId?: string | null): string {
   return resolvedId ? `${LEGACY_CURRENT_PROJECT_KEY}:${resolvedId}` : `${LEGACY_CURRENT_PROJECT_KEY}:guest`;
 }
 
+function getPendingSyncStorageKey(userId?: string | null): string {
+  const resolvedId = userId ?? getStoredUser()?.id ?? null;
+  return resolvedId ? `h5p-generator:pending-sync:${resolvedId}` : 'h5p-generator:pending-sync:guest';
+}
+
+export function loadPendingSyncIds(userId?: string | null): Set<string> {
+  if (!userId) return new Set();
+  try {
+    const raw = localStorage.getItem(getPendingSyncStorageKey(userId));
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function addPendingSyncId(userId: string | null | undefined, projectId: string): void {
+  if (!userId || !projectId) return;
+  const set = loadPendingSyncIds(userId);
+  set.add(projectId);
+  try {
+    localStorage.setItem(getPendingSyncStorageKey(userId), JSON.stringify([...set]));
+  } catch {
+    // Abaikan jika penyimpanan penuh
+  }
+}
+
+export function removePendingSyncId(userId: string | null | undefined, projectId: string): void {
+  if (!userId || !projectId) return;
+  const set = loadPendingSyncIds(userId);
+  if (!set.delete(projectId)) return;
+  try {
+    localStorage.setItem(getPendingSyncStorageKey(userId), JSON.stringify([...set]));
+  } catch {
+    // Abaikan jika penyimpanan dibatasi
+  }
+}
+
 export function setAuthSession(token: string, user: AuthUser): void {
   try {
     localStorage.setItem(AUTH_TOKEN_KEY, token);
