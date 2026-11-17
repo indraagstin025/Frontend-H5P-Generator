@@ -1,0 +1,358 @@
+/**
+ * Hero Section & Interactive Mockup Canvas (styles/landing/hero.css)
+ * Berisi hero section (.edu-hero), kicker pill, judul display gradasi,
+ * deskripsi, CTA buttons, trust items, dan frame mockup interaktif (.edu-mockup-window).
+ */
+
+/* ── Hero Section ── */
+.edu-hero {
+  position: relative;
+  z-index: 1;
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 56px 0 64px;
+}
+
+.edu-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1.15fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.edu-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edu-tag-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  width: fit-content;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, rgba(140, 214, 41, 0.18) 0%, rgba(12, 62, 37, 0.08) 100%);
+  border: 1px solid rgba(140, 214, 41, 0.45);
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.edu-tag-kicker svg {
+  width: 14px;
+  height: 14px;
+  color: var(--green-mid);
+}
+
+.edu-hero-title {
+  margin: 0;
+  font-size: clamp(34px, 3.6vw, 48px);
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+/* Signature Title Gradient: Light lime to deep forest */
+.edu-title-gradient {
+  background: linear-gradient(115deg, #74c414 0%, #2e8b39 45%, #0c3e25 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.edu-hero-desc {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--muted);
+  max-width: 530px;
+}
+
+.edu-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.edu-trust-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+}
+
+.edu-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+}
+
+.edu-trust-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--soft);
+  color: var(--green-mid);
+  border: 1px solid rgba(140, 214, 41, 0.4);
+  flex-shrink: 0;
+}
+
+.edu-trust-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── Interactive Hero Mockup Canvas ── */
+.edu-mockup-wrapper {
+  position: relative;
+}
+
+.edu-mockup-window {
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 50px rgba(12, 62, 37, 0.12), 0 0 24px rgba(140, 214, 41, 0.15);
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.edu-window-header {
+  padding: 12px 18px;
+  background: #f4f8f3;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edu-window-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edu-window-controls span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d4e0d6;
+}
+
+.edu-window-controls span:nth-child(1) { background: #fca5a5; }
+.edu-window-controls span:nth-child(2) { background: #fde047; }
+.edu-window-controls span:nth-child(3) { background: var(--green-lime); }
+
+.edu-window-tabs {
+  display: flex;
+  gap: 4px;
+  background: #e5eee4;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.edu-mockup-tab-btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+
+.edu-mockup-tab-btn.active {
+  background: var(--surface);
+  color: var(--green-deep);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.edu-window-stage {
+  padding: 18px;
+  background: #ebf3ea;
+}
+
+/* Slide frame with deep pine gradient */
+.edu-slide-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #184c31 0%, #0d3822 55%, #062314 100%);
+  color: #ffffff;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 12px 30px rgba(6, 35, 20, 0.35);
+  border: 1.5px solid rgba(140, 214, 41, 0.3);
+  overflow: hidden;
+}
+
+.edu-slide-grid-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.07;
+  background-image: linear-gradient(rgba(140, 214, 41, 0.8) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(140, 214, 41, 0.8) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.edu-slide-top-bar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edu-slide-module-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--green-lime);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edu-slide-num-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(140, 214, 41, 0.3);
+  color: #e3fae8;
+}
+
+.edu-slide-main-content {
+  position: relative;
+  z-index: 2;
+  max-width: 88%;
+}
+
+.edu-scenario-title {
+  margin: 0 0 8px;
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.edu-scenario-prompt {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #d1ead7;
+}
+
+.edu-hotspot-choices {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.edu-hotspot-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--green-deep);
+  border: 1.5px solid var(--green-lime);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 10px rgba(140, 214, 41, 0.25);
+}
+
+.edu-hotspot-btn:hover {
+  background: #f7fee7;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25), 0 0 16px rgba(140, 214, 41, 0.4);
+}
+
+.edu-hotspot-btn.ghost-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(6px);
+  box-shadow: none;
+}
+
+.edu-hotspot-btn.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: var(--green-lime);
+}
+
+.edu-slide-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 11px;
+  color: #a7dfb8;
+}
+
+.edu-interactive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(140, 214, 41, 0.2);
+  border: 1px solid rgba(140, 214, 41, 0.45);
+  color: #bef264;
+  font-weight: 800;
+  font-size: 10px;
+}
+
+.edu-window-subbar {
+  padding: 10px 18px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.edu-sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--green-deep);
+  font-weight: 700;
+}
+
+.edu-sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green-lime);
+  box-shadow: 0 0 0 3px rgba(140, 214, 41, 0.3);
+}

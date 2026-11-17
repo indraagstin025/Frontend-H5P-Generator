@@ -1,0 +1,196 @@
+/**
+ * Header & Navigasi Akademik Landing Page (styles/landing/header.css)
+ * Berisi container shell (.edu-landing), ambient glow, sticky navigation (.edu-nav),
+ * identitas brand, link navigasi, dan tombol aksi (primer & sekunder).
+ */
+
+.edu-landing {
+  min-height: 100vh;
+  background-color: var(--bg-canvas);
+  color: var(--ink);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Ambient glow with subtle lime & deep forest gradient */
+.edu-landing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1440px;
+  height: 680px;
+  background: 
+    radial-gradient(ellipse 70% 55% at 50% -10%, rgba(140, 214, 41, 0.16), transparent 70%),
+    radial-gradient(ellipse 45% 45% at 85% 15%, rgba(12, 62, 37, 0.08), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Sticky Academic Header ── */
+.edu-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background: rgba(248, 250, 246, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+  transition: all 0.2s ease;
+}
+
+.edu-nav-inner {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  min-height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.edu-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.edu-brand-logo-img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(12, 62, 37, 0.12));
+}
+
+.edu-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.edu-brand-title {
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+  color: var(--green-deep);
+  line-height: 1.2;
+}
+
+.edu-brand-sub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edu-brand-sub .tagline-dot {
+  color: var(--green-lime);
+  font-size: 14px;
+  line-height: 0;
+}
+
+.edu-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.edu-nav-link {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+  cursor: pointer;
+}
+
+.edu-nav-link:hover {
+  color: var(--green-deep);
+}
+
+.edu-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.edu-badge-academic {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: var(--soft);
+  border: 1px solid rgba(140, 214, 41, 0.4);
+  color: var(--green-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.edu-badge-academic svg {
+  color: var(--green-light);
+}
+
+/* ── Primary Button with Signature Gradient ── */
+.edu-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--grad-button);
+  color: #ffffff;
+  border: 1px solid rgba(12, 62, 37, 0.4);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  box-shadow: 0 4px 14px rgba(12, 62, 37, 0.22), 0 0 14px rgba(140, 214, 41, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.edu-btn-primary:hover {
+  background: var(--grad-button-hover);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(12, 62, 37, 0.28), 0 0 22px rgba(140, 214, 41, 0.38);
+}
+
+.edu-btn-primary:active {
+  transform: translateY(0);
+}
+
+.edu-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: var(--surface);
+  color: var(--green-deep);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.18s ease;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.edu-btn-secondary:hover {
+  background: var(--soft);
+  border-color: var(--green-light);
+  color: var(--green-darkest);
+  transform: translateY(-1px);
+}

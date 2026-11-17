@@ -2,15 +2,17 @@
  * Dashboard ruang kerja pemateri
  * Ringkasan materi, akses cepat, dan status LMS internal.
  */
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import {
   ArrowRightIcon,
-  CheckCircledIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   ClockIcon,
   FileTextIcon,
   LayersIcon,
   PlusIcon,
   ReaderIcon,
+  MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
 import { loadExportHistory } from '../../exporter/api/exportHistory';
 import { isQuizElement } from '../../studio/constants/h5pModel';
@@ -23,6 +25,8 @@ type DashboardProps = {
   onGoMaterials: () => void;
   onCreate?: () => void;
   query?: string;
+  onQueryChange: (query: string) => void;
+  searchInputRef: RefObject<HTMLInputElement | null>;
 };
 
 function timeAgo(iso: string): string {
@@ -38,7 +42,10 @@ function quizCountOf(item: StoredProjectMeta): number {
   return item.snapshot.slides.flatMap((s) => s.elements).filter(isQuizElement).length;
 }
 
-function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | 'h5p'; label: string; badgeClass: string } {
+type SourceFilter = 'all' | 'manual' | 'pptx' | 'pdf' | 'h5p';
+const sourceOptions = [{ value: 'all', label: 'Semua sumber' }, { value: 'pptx', label: 'PPTX' }, { value: 'pdf', label: 'PDF' }, { value: 'h5p', label: 'H5P' }, { value: 'manual', label: 'Dari nol' }] as const;
+
+function sourceOf(item: { sourceFileName?: string | null }): { key: 'manual' | 'pptx' | 'pdf' | 'h5p'; label: string; badgeClass: string } {
   const fn = item.sourceFileName?.toLowerCase() ?? '';
   if (!fn) return { key: 'manual', label: 'Dari nol', badgeClass: 'db-badge-manual' };
   if (fn.endsWith('.h5p')) return { key: 'h5p', label: 'File H5P', badgeClass: 'db-badge-h5p' };
@@ -47,8 +54,21 @@ function sourceOf(item: StoredProjectMeta): { key: 'manual' | 'pptx' | 'pdf' | '
   return { key: 'manual', label: 'Dari nol', badgeClass: 'db-badge-manual' };
 }
 
-export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }: DashboardProps) {
+export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', onQueryChange, searchInputRef }: DashboardProps) {
   const [exports] = useState(loadExportHistory);
+  const [exportPage, setExportPage] = useState(1);
+  const [exportQuery, setExportQuery] = useState('');
+  const [materialSource, setMaterialSource] = useState<SourceFilter>('all');
+  const [exportSource, setExportSource] = useState<SourceFilter>('all');
+  const filteredExports = exports.filter((entry) => {
+    if (!`${entry.title} ${entry.format}`.toLowerCase().includes(exportQuery.trim().toLowerCase())) return false;
+    if (exportSource === 'all') return true;
+    if (entry.sourceFileName !== undefined) return sourceOf(entry).key === exportSource;
+    const matches = items.filter((item) => item.title === entry.title);
+    return matches.length === 1 && sourceOf(matches[0]).key === exportSource;
+  });
+  const exportPageCount = Math.max(1, Math.ceil(filteredExports.length / 5));
+  const visibleExports = filteredExports.slice((exportPage - 1) * 5, exportPage * 5);
   const create = onCreate ?? onGoMaterials;
   const recent = [...items].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   const q = query.trim().toLowerCase();
@@ -57,32 +77,43 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
         (p) =>
           p.title.toLowerCase().includes(q) || (p.sourceFileName ?? '').toLowerCase().includes(q),
       )
-    : recent.slice(0, 6);
+    : recent;
+  const sourceFiltered = filtered.filter((item) => materialSource === 'all' || sourceOf(item).key === materialSource);
+  const [materialPagination, setMaterialPagination] = useState({ query: q, page: 1 });
+  const materialPageCount = Math.max(1, Math.ceil(sourceFiltered.length / 5));
+  const materialPage = materialPagination.query === q
+    ? Math.min(materialPagination.page, materialPageCount)
+    : 1;
+  const visibleMaterials = sourceFiltered.slice((materialPage - 1) * 5, materialPage * 5);
 
   const guideRef = useRef<HTMLDialogElement>(null);
+  const totalSlides = items.reduce((total, item) => total + item.slideCount, 0);
 
   return (
     <>
-      {/* Hero Welcome Banner: Solid Light Green, Tidak Transparan */}
       <section className="db-hero" aria-label="Selamat datang di ruang kerja">
+        <div className="db-banner-ornaments" aria-hidden="true">
+          <span className="db-banner-shape db-banner-square" />
+          <span className="db-banner-shape db-banner-circle" />
+          <span className="db-banner-shape db-banner-triangle" />
+          <span className="db-banner-shape db-banner-ring" />
+          <span className="db-banner-shape db-banner-small-square" />
+          <span className="db-banner-shape db-banner-small-circle" />
+        </div>
         <div className="db-hero-left">
           <div className="db-pill">
             <span className="db-pulse-dot" />
-            <span>RUANG KERJA PEMATERI · LMS INTERNAL READY</span>
+            <span>H5P Content Generator</span>
           </div>
-          <h2>Selamat datang di H5P Content Generator</h2>
+          <h2>Mulai materi<br /><span>pembelajaran Anda.</span></h2>
           <p>
-            Kelola, susun interaksi kuis, pratinjau langsung, dan unduh materi pembelajaran interaktif berstandar
-            H5P Course Presentation untuk platform LMS internal Anda.
+            Unggah PPTX atau PDF, atau mulai dari slide kosong. Tambahkan kuis di Studio,
+            lalu unduh paket H5P untuk LMS Anda.
           </p>
           <div className="db-hero-actions">
             <button className="db-btn-primary" type="button" onClick={create}>
               <PlusIcon />
               <span>Buat materi baru</span>
-            </button>
-            <button className="db-btn-secondary" type="button" onClick={onGoMaterials}>
-              <LayersIcon />
-              <span>Buka materi saya</span>
             </button>
             <button className="db-btn-secondary" type="button" onClick={() => guideRef.current?.showModal()}>
               <ReaderIcon />
@@ -90,44 +121,34 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
             </button>
           </div>
         </div>
+        <aside className="db-workspace-preview" aria-label="Kreasi pembelajaran interaktif">
+          <div className="db-idea-card">
+            <span className="db-idea-kicker">Ruang kreasi pembelajaran</span>
+            <h3>Satu ide.<br />Banyak cara<br />belajar.</h3>
+            <div className="db-idea-footer">
+              <span>H5P / Course Presentation</span>
+              <LayersIcon aria-hidden="true" />
+            </div>
+          </div>
+        </aside>
+      </section>
 
-        {/* Hero Summary Flow Card: Menggantikan doodle kertas miring dengan ringkasan alur kerja profesional */}
-        <div className="db-hero-flow-card" aria-label="Alur produksi modul">
-          <div className="db-hfc-header">
-            <div className="db-hfc-header-left">
-              <span className="db-pulse-dot" />
-              <strong>Alur produksi H5P</strong>
-            </div>
-            <span className="db-badge db-badge-green">Standar v1.26</span>
-          </div>
-          <div className="db-hfc-steps">
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">1</span>
-              <div className="db-hfc-step-text">
-                <strong>Unggah dokumen atau mulai baru</strong>
-                <span>Konversi instan slide PPTX / PDF atau buat materi interaktif dari nol.</span>
-              </div>
-            </div>
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">2</span>
-              <div className="db-hfc-step-text">
-                <strong>Perkaya slide dan evaluasi kuis</strong>
-                <span>Sisipkan pilihan ganda, benar/salah, teks interaktif, dan multimedia.</span>
-              </div>
-            </div>
-            <div className="db-hfc-step">
-              <span className="db-hfc-step-num">3</span>
-              <div className="db-hfc-step-text">
-                <strong>Ekspor paket .h5p</strong>
-                <span>Unduh paket Course Presentation siap pakai untuk Moodle atau Canvas.</span>
-              </div>
-            </div>
-          </div>
-          <div className="db-hfc-footer">
-            <CheckCircledIcon />
-            <span>Penyimpanan lokal aman dan instan di peramban</span>
-          </div>
-        </div>
+      <section className="db-overview" aria-label="Ringkasan ruang kerja">
+        <article className="db-overview-item">
+          <span>Total materi <LayersIcon aria-hidden="true" /></span>
+          <strong>{items.length}</strong>
+          <small>Tersimpan di ruang kerja Anda</small>
+        </article>
+        <article className="db-overview-item">
+          <span>Total slide <FileTextIcon aria-hidden="true" /></span>
+          <strong>{totalSlides}</strong>
+          <small>Dari seluruh materi pembelajaran</small>
+        </article>
+        <article className="db-overview-item">
+          <span>Riwayat ekspor <ClockIcon aria-hidden="true" /></span>
+          <strong>{exports.length}</strong>
+          <small>Paket tercatat di peramban ini</small>
+        </article>
       </section>
 
       {/* Materi Terbaru */}
@@ -159,6 +180,19 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
               <ArrowRightIcon />
             </button>
           </div>
+          <div className="db-section-search">
+            <label htmlFor="db-material-search">Cari materi</label>
+            <div className="db-search">
+              <MagnifyingGlassIcon aria-hidden="true" />
+              <input id="db-material-search" ref={searchInputRef} type="search" placeholder="Cari judul materi atau berkas…" value={query} onChange={(event) => onQueryChange(event.target.value)} />
+            </div>
+          </div>
+          <div className="db-source-filters">
+            <select aria-label="Sumber materi" value={materialSource} onChange={(event) => { setMaterialSource(event.target.value as SourceFilter); setMaterialPagination({ query: q, page: 1 }); }}>
+              {sourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <button type="button" onClick={() => { setMaterialSource('all'); onQueryChange(''); setMaterialPagination({ query: '', page: 1 }); }}>Reset filter</button>
+          </div>
           <div className="db-card db-table-wrap">
             <table className="db-table">
               <thead>
@@ -171,15 +205,20 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
+                {visibleMaterials.map((p) => {
                   const src = sourceOf(p);
                   return (
                     <tr key={p.id}>
                       <td>
-                        <span className="db-table-title">{p.title}</span>
-                        {p.sourceFileName && (
-                          <span className="db-table-sub">Berkas: {p.sourceFileName}</span>
-                        )}
+                        <div className="db-material-title-cell">
+                          <span className="db-material-file-icon" aria-hidden="true"><FileTextIcon /></span>
+                          <div>
+                            <span className="db-table-title">{p.title}</span>
+                            {p.sourceFileName && (
+                              <span className="db-table-sub">Berkas: {p.sourceFileName}</span>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td>
                         <span className={`db-badge ${src.badgeClass}`}>
@@ -212,11 +251,37 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 })}
               </tbody>
             </table>
-            {filtered.length === 0 && (
+            {sourceFiltered.length === 0 && (
               <p className="muted" style={{ textAlign: 'center', padding: '24px 16px', fontSize: 12 }}>
                 Tidak ada materi yang cocok dengan pencarian "{query}". Coba kata kunci lain.
               </p>
             )}
+          </div>
+          <div className="db-pagination-row">
+            <span className="db-pagination-summary">
+              {sourceFiltered.length === 0 ? '0 materi' : `${(materialPage - 1) * 5 + 1}–${Math.min(materialPage * 5, sourceFiltered.length)} dari ${sourceFiltered.length} materi`}
+            </span>
+          {materialPageCount > 1 && (
+            <nav className="db-export-pagination" aria-label="Halaman materi terbaru">
+              <button
+                type="button"
+                aria-label="Halaman materi sebelumnya"
+                disabled={materialPage === 1}
+                onClick={() => setMaterialPagination({ query: q, page: materialPage - 1 })}
+              >
+                <ChevronLeftIcon />
+              </button>
+              <span aria-live="polite" aria-atomic="true">{materialPage} / {materialPageCount}</span>
+              <button
+                type="button"
+                aria-label="Halaman materi berikutnya"
+                disabled={materialPage === materialPageCount}
+                onClick={() => setMaterialPagination({ query: q, page: materialPage + 1 })}
+              >
+                <ChevronRightIcon />
+              </button>
+            </nav>
+          )}
           </div>
         </section>
       )}
@@ -231,6 +296,19 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
               <p className="db-section-subtitle">Daftar paket Course Presentation yang telah diunduh</p>
             </div>
           </div>
+          <div className="db-section-search">
+            <label htmlFor="db-export-search">Cari riwayat ekspor</label>
+            <div className="db-search">
+              <MagnifyingGlassIcon aria-hidden="true" />
+              <input id="db-export-search" type="search" placeholder="Cari nama modul atau format paket…" value={exportQuery} onChange={(event) => { setExportQuery(event.target.value); setExportPage(1); }} />
+            </div>
+          </div>
+          <div className="db-source-filters">
+            <select aria-label="Sumber riwayat ekspor" value={exportSource} onChange={(event) => { setExportSource(event.target.value as SourceFilter); setExportPage(1); }}>
+              {sourceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <button type="button" onClick={() => { setExportSource('all'); setExportQuery(''); setExportPage(1); }}>Reset filter</button>
+          </div>
           <div className="db-card db-table-wrap">
             <table className="db-table">
               <thead>
@@ -241,7 +319,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 </tr>
               </thead>
               <tbody>
-                {exports.slice(0, 5).map((e) => (
+                {visibleExports.map((e) => (
                   <tr key={e.id}>
                     <td>
                       <span className="db-table-title">{e.title}</span>
@@ -261,11 +339,37 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '' }
                 ))}
               </tbody>
             </table>
-            {exports.length === 0 && (
+            {filteredExports.length === 0 && (
               <p className="muted" style={{ textAlign: 'center', padding: '24px 16px', fontSize: 12 }}>
-                Belum ada unduhan paket. Berkas H5P yang diekspor dari Studio akan tercatat di sini.
+                {exports.length === 0 ? 'Belum ada unduhan paket. Berkas H5P yang diekspor dari Studio akan tercatat di sini.' : 'Tidak ada riwayat ekspor yang cocok dengan pencarian.'}
               </p>
             )}
+          </div>
+          <div className="db-pagination-row">
+            <span className="db-pagination-summary">
+              {filteredExports.length === 0 ? '0 ekspor' : `${(exportPage - 1) * 5 + 1}–${Math.min(exportPage * 5, filteredExports.length)} dari ${filteredExports.length} ekspor`}
+            </span>
+          {exportPageCount > 1 && (
+            <nav className="db-export-pagination" aria-label="Halaman riwayat ekspor">
+              <button
+                type="button"
+                aria-label="Halaman riwayat sebelumnya"
+                disabled={exportPage === 1}
+                onClick={() => setExportPage((page) => Math.max(1, page - 1))}
+              >
+                <ChevronLeftIcon />
+              </button>
+              <span aria-live="polite" aria-atomic="true">{exportPage} / {exportPageCount}</span>
+              <button
+                type="button"
+                aria-label="Halaman riwayat berikutnya"
+                disabled={exportPage === exportPageCount}
+                onClick={() => setExportPage((page) => Math.min(exportPageCount, page + 1))}
+              >
+                <ChevronRightIcon />
+              </button>
+            </nav>
+          )}
           </div>
         </section>
 

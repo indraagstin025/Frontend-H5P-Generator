@@ -191,6 +191,47 @@
                     "importance": "low",
                     "description": "Default cursor, no title and no tab index. Warning: Users with disabilities or keyboard only users will have trouble using this element.",
                     "default": false
+                  },
+                  {
+                    "name": "popupButtonInvisible",
+                    "type": "boolean",
+                    "label": "Transparent popup button",
+                    "optional": true,
+                    "default": false
+                  },
+                  {
+                    "name": "popupButtonOpacity",
+                    "type": "number",
+                    "label": "Button opacity",
+                    "min": 0,
+                    "max": 100,
+                    "default": 100,
+                    "optional": true
+                  },
+                  {
+                    "name": "popupButtonAutoHide",
+                    "type": "boolean",
+                    "label": "Auto-hide button",
+                    "default": false,
+                    "optional": true
+                  },
+                  {
+                    "name": "popupButtonVisibleSeconds",
+                    "type": "number",
+                    "label": "Visible seconds",
+                    "min": 0.5,
+                    "max": 300,
+                    "default": 3,
+                    "optional": true
+                  },
+                  {
+                    "name": "rotation",
+                    "type": "number",
+                    "label": "Element rotation",
+                    "min": 0,
+                    "max": 360,
+                    "default": 0,
+                    "optional": true
                   }
                 ]
               }

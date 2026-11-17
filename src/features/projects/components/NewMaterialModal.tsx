@@ -8,8 +8,10 @@ import { Cross2Icon, FileTextIcon } from '@radix-ui/react-icons';
 import { useStudio } from '../../../context/StudioContext';
 import { UploadDock } from '../../ingest/components/UploadDock';
 import { setPendingFile } from '../../ingest/api/pendingUpload';
+import { createServerProject } from '../../ingest/api/serverIngest';
 import { createProject } from '../../studio/constants/h5pModel';
 import type { AspectRatio } from '../../studio/constants/h5pModel';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 function baseName(name: string): string {
   const base = name.replace(/\.[^/.]+$/, '').trim();
@@ -22,12 +24,13 @@ type NewMaterialModalProps = {
 };
 
 export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
-  const { openProject } = useStudio();
+  const { openProject, store } = useStudio();
   const { pathname } = useLocation();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [error, setError] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -44,15 +47,42 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
     };
   }, [onClose]);
 
-  const start = () => {
+  const start = async () => {
+    if (creating) return;
+    if (isBrowserOffline()) {
+      const msg = 'Koneksi internet terputus. Web ini memerlukan koneksi internet — hubungkan jaringan Anda lalu coba lagi.';
+      setError(msg);
+      onNotice(msg);
+      return;
+    }
+
     const finalTitle = title.trim() || (file ? baseName(file.name) : 'Modul baru');
     if (file) {
       setPendingFile(file);
       openProject(createProject(finalTitle, '16:9', file.name), pathname, { step: 1 });
-    } else {
-      openProject(createProject(finalTitle, aspect, null), pathname, { step: 2 });
+      onClose();
+      return;
     }
-    onClose();
+
+    setCreating(true);
+    setError('');
+    const localDraft = createProject(finalTitle, aspect, null);
+    try {
+      const serverProject = await createServerProject({
+        title: finalTitle,
+        aspect,
+        initialSlides: localDraft.slides,
+      });
+      openProject(serverProject, pathname, { step: 2, saved: true });
+      onNotice(`Materi "${serverProject.title}" tersimpan di server.`);
+      onClose();
+    } catch (err) {
+      const msg = formatNetworkError(err, 'Gagal menghubungi server untuk membuat materi baru.');
+      setError(msg);
+      onNotice(msg);
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -107,6 +137,13 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
             </p>
             <UploadDock
               onAccepted={(f) => {
+                const existingProj = store.items.find((p) => p.sourceFileName === f.name);
+                if (existingProj) {
+                  const msg = `Berkas "${f.name}" sudah pernah digunakan pada materi "${existingProj.title}". Silakan gunakan nama berkas lain atau lanjutkan materi yang ada.`;
+                  setError(msg);
+                  onNotice(msg);
+                  return;
+                }
                 setFile(f);
                 setError('');
                 setTitle((prev) => prev || baseName(f.name));
@@ -141,8 +178,8 @@ export function NewMaterialModal({ onClose, onNotice }: NewMaterialModalProps) {
             <button className="db-btn-secondary" type="button" onClick={onClose}>
               Batal
             </button>
-            <button className="db-btn-primary" type="button" onClick={start}>
-              {file ? 'Unggah dan mulai' : 'Buat materi kosong'}
+            <button className="db-btn-primary" type="button" disabled={creating} onClick={() => void start()}>
+              {creating ? 'Menyiapkan…' : file ? 'Unggah dan mulai' : 'Buat materi kosong'}
             </button>
           </div>
         </footer>

@@ -1,0 +1,290 @@
+/**
+ * Tabel Data, Badges, & Layout Dua Kolom Dashboard (styles/dashboard/tables.css)
+ * Berisi komponen tabel data, badge tipe materi (PPTX, PDF, H5P), kartu integrasi LMS, empty state, dan footer.
+ */
+
+.db-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--db-border);
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.db-table th {
+  background-color: #f7f9f5;
+  color: var(--db-muted-light);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--db-border);
+}
+
+.db-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--db-border);
+  font-size: 12px;
+  color: var(--db-muted);
+  vertical-align: middle;
+}
+
+.db-table tbody tr:hover td {
+  background-color: var(--db-green-lightest);
+}
+
+.db-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.db-table-title {
+  color: var(--db-ink);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+
+.db-table-sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--db-muted-light);
+  margin-top: 3px;
+}
+
+.db-table-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+
+.db-table-time svg {
+  width: 13px;
+  height: 13px;
+  color: var(--db-muted-light);
+}
+
+.db-table-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 12px;
+  background-color: var(--db-surface);
+  border: 1px solid var(--db-green-border);
+  border-radius: 8px;
+  color: var(--db-green-deep);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.db-table-action-btn:hover {
+  background-color: var(--db-green-light);
+  color: var(--db-green-darkest);
+  border-color: var(--db-green-primary);
+}
+
+/* Badges (Solid, Bukan Transparan) */
+.db-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.db-badge-green {
+  background-color: var(--db-green-light);
+  color: var(--db-green-darkest);
+  border: 1px solid var(--db-green-border);
+}
+
+.db-badge-pptx {
+  background-color: #fff2d6;
+  color: #875108;
+  border: 1px solid #f5deae;
+}
+
+.db-badge-pdf {
+  background-color: #fde8e4;
+  color: #9e2b1e;
+  border: 1px solid #f7c8c1;
+}
+
+.db-badge-h5p {
+  background-color: #e1f4ee;
+  color: #0c614a;
+  border: 1px solid #bde6d7;
+}
+
+.db-badge-manual {
+  background-color: var(--db-green-lightest);
+  color: var(--db-green-deep);
+  border: 1px solid var(--db-green-border-subtle);
+}
+
+/* ==========================================================================
+   Two Column Layout (Exports & LMS Integration)
+   ========================================================================== */
+.db-cols {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.db-panel {
+  padding: 24px;
+}
+
+.db-panel.lms {
+  background-color: var(--db-green-lightest);
+  border: 1px solid var(--db-border);
+}
+
+.db-panel.steps {
+  background-color: var(--db-surface);
+  border: 1px solid var(--db-border);
+}
+
+.db-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.db-panel h2 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--db-green-darkest);
+  margin: 0;
+}
+
+.db-panel p {
+  font-size: 12px;
+  color: var(--db-muted);
+  line-height: 1.65;
+  margin: 8px 0 0;
+}
+
+.db-panel.steps p {
+  color: var(--db-muted);
+}
+
+.db-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.db-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--db-green-darkest);
+}
+
+.db-checklist-item svg {
+  width: 15px;
+  height: 15px;
+  color: var(--db-green-primary);
+  flex: none;
+}
+
+.db-flow-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.db-flow-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  background-color: var(--db-green-lightest);
+  border: 1px solid var(--db-green-border-subtle);
+  border-radius: var(--db-radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--db-green-deep);
+}
+
+.db-flow-arrow {
+  color: var(--db-muted-light);
+  font-size: 10px;
+}
+
+/* ==========================================================================
+   Empty State
+   ========================================================================== */
+.db-empty {
+  border: 1px dashed var(--db-green-border);
+  border-radius: var(--db-radius-lg);
+  background-color: var(--db-green-lightest);
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.db-empty h3 {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--db-green-darkest);
+  margin: 14px 0 0;
+}
+
+.db-empty p {
+  max-width: 460px;
+  margin: 6px auto 20px;
+  font-size: 12px;
+  color: var(--db-muted);
+  line-height: 1.6;
+}
+
+.db-empty-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.db-footer {
+  margin-top: 12px;
+  border-top: 1px solid var(--db-border);
+  padding-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--db-muted);
+}
+
+/* ==========================================================================
+   Accessibility & Focus
+   ========================================================================== */
+.db-scope button:focus-visible,
+.db-scope input:focus-visible,
+.db-scope a:focus-visible {
+  outline: 2px solid var(--db-green-primary);
+  outline-offset: 2px;
+}

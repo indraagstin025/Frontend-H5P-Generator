@@ -51,7 +51,13 @@ interface BaseElement {
   /** FR-09: tampil inline vs ikon tombol pop-up */
   displayAsButton: boolean;
   buttonLabel: string;
+  /** Custom Course Presentation runtime: transparent but clickable pop-up trigger. */
+  popupButtonInvisible?: boolean;
+  popupButtonOpacity?: number;
+  popupButtonAutoHide?: boolean;
+  popupButtonVisibleSeconds?: number;
   title: string;
+  rotation?: number;
 }
 
 export interface AdvancedTextElement extends BaseElement {
@@ -68,6 +74,7 @@ export interface LinkElement extends BaseElement {
 export interface ImageElement extends BaseElement {
   kind: 'image';
   alt: string;
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;
@@ -82,6 +89,7 @@ export interface ShapeElement extends BaseElement {
 export interface VideoElement extends BaseElement {
   kind: 'video';
   videoUrl: string;
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;
@@ -89,6 +97,7 @@ export interface VideoElement extends BaseElement {
 
 export interface AudioElement extends BaseElement {
   kind: 'audio';
+  asset?: string;
   fileName: string;
   objectUrl: string | null;
   file: File | null;
@@ -139,7 +148,7 @@ export interface TrueFalseElement extends BaseElement, QuizBehaviour {
 export interface DragDropItem {
   id: string;
   text: string;
-  /** id zona jawaban yang benar */
+  /** id zona jawaban yang benar; string kosong untuk item pengecoh. */
   zoneId: string;
 }
 
@@ -153,6 +162,7 @@ export interface DragDropElement extends BaseElement, QuizBehaviour {
   question: string;
   items: DragDropItem[];
   zones: DragDropZone[];
+  allowMultipleItemsPerZone?: boolean;
 }
 
 export interface SummaryStatement {
@@ -444,6 +454,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
         ...base,
         kind,
         question: 'Drag item ke tempat yang sesuai',
+        allowMultipleItemsPerZone: false,
         zones: [zoneA, zoneB],
         items: [
           { id: uid(), text: 'Item 1', zoneId: zoneA.id },
@@ -505,7 +516,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
 export function createProject(title: string, aspect: AspectRatio, sourceFileName: string | null): Project {
   const now = new Date().toISOString();
   return {
-    id: uid(),
+    id: `local-${uid()}`,
     title: title.trim() || 'Modul tanpa judul',
     sourceFileName,
     settings: {
@@ -528,7 +539,7 @@ export function createProject(title: string, aspect: AspectRatio, sourceFileName
 export function maxScoreOf(el: SlideElement): number {
   if (el.kind === 'blanks') return countBlanks(el.text);
   if (el.kind === 'dragWords') return countBlanks(el.text);
-  if (el.kind === 'dragDrop') return el.items.length;
+  if (el.kind === 'dragDrop') return el.items.filter((item) => el.zones.some((zone) => zone.id === item.zoneId)).length;
   if (el.kind === 'markWords') return 1;
   if (el.kind === 'summary') return 1;
   if (

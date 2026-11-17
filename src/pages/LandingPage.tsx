@@ -1,5 +1,6 @@
 import { useEffect, useRef, type PointerEvent } from 'react';
 import './LandingPage.css';
+import './PublicPageMotion.css';
 import { FeatureIllustration } from './FeatureIllustration';
 import { LearningIllustration } from './LearningIllustration';
 

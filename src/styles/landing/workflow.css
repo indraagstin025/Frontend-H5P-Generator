@@ -1,0 +1,139 @@
+/**
+ * Alur Kerja 5-Langkah & Banner Keamanan Landing Page (styles/landing/workflow.css)
+ * Berisi tombol tab skenario mata pelajaran (.edu-subject-tab-btn),
+ * alur linier 5 langkah konversi (.edu-steps-timeline, .edu-step-card),
+ * dan banner kepatuhan privasi/zero-storage NFR-03 (.edu-security-banner).
+ */
+
+/* ── Subject Scenarios Tab Showcase ── */
+.edu-subject-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink);
+}
+
+/* ── 5-Step Workflow Section ── */
+.edu-steps-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  position: relative;
+}
+
+.edu-step-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.edu-step-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(140, 214, 41, 0.6);
+  box-shadow: 0 4px 16px rgba(12, 62, 37, 0.08);
+}
+
+.edu-step-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edu-step-num-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--grad-lime-deep);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 8px rgba(12, 62, 37, 0.25);
+}
+
+.edu-step-time-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.edu-step-card h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.edu-step-card p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* ── Security & Privacy Banner (NFR-03) ── */
+.edu-security-banner {
+  background: #ffffff;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+  padding: 32px 36px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 28px;
+  align-items: center;
+  box-shadow: var(--shadow);
+  margin-top: 24px;
+}
+
+.edu-security-icon-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(140, 214, 41, 0.22) 0%, rgba(12, 62, 37, 0.08) 100%);
+  border: 1.5px solid rgba(140, 214, 41, 0.5);
+  color: var(--green-deep);
+  display: grid;
+  place-items: center;
+}
+
+.edu-security-icon-circle svg {
+  width: 26px;
+  height: 26px;
+}
+
+.edu-security-text h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.edu-security-text p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 680px;
+}
+
+.edu-security-tag {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--soft);
+  border: 1px solid rgba(140, 214, 41, 0.45);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--green-deep);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}

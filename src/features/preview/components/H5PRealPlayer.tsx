@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { unzipSync } from 'fflate';
 import type { H5PPlayerClass } from 'h5p-standalone';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 import { createLogger } from '../../../utils/logger';
 import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
@@ -108,6 +109,14 @@ export function H5PRealPlayer({ project }: { project: Project }) {
     const host = hostRef.current;
 
     void (async () => {
+      if (isBrowserOffline()) {
+        if (!cancelled) {
+          setStatus('error');
+          setError('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk memuat Pratinjau.');
+        }
+        return;
+      }
+
       // 1. Cari versi CoursePresentation yang tersedia (baru → lama).
       // Seed backend dari Hub memberi 1.26, sedangkan default ekspor (24)
       // mengikuti LMS — player pratinjau pakai yang ada saja.
@@ -234,7 +243,7 @@ export function H5PRealPlayer({ project }: { project: Project }) {
         log.error('Gagal menyiapkan player asli', err);
         if (!cancelled) {
           setStatus('error');
-          setError(err instanceof Error ? err.message : 'Player gagal dimuat.');
+          setError(formatNetworkError(err, 'Player gagal dimuat.'));
         }
       }
     })();

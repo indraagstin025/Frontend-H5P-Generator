@@ -9,7 +9,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { UploadDock } from '../../ingest/components/UploadDock';
 import { useIngest } from '../../ingest/hooks/useIngest';
 import type { ConvertInfo } from '../../ingest/hooks/useIngest';
-import { convertViaServer } from '../../ingest/api/serverIngest';
+import { convertViaServer, isUploadValidationError } from '../../ingest/api/serverIngest';
+import { formatNetworkError, isBrowserOffline, isNetworkFailure } from '../../../services/network';
 import { createProject } from '../constants/h5pModel';
 import type { Project, Slide } from '../constants/h5pModel';
 
@@ -30,6 +31,7 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
   const [serverProgress, setServerProgress] = useState(0);
   const [serverStatus, setServerStatus] = useState('');
   const [serverActive, setServerActive] = useState(false);
+  const [serverError, setServerError] = useState('');
   const startedRef = useRef(false);
   const lastFileRef = useRef<File | null>(null);
 
@@ -50,6 +52,17 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
     (file: File) => {
       lastFileRef.current = file;
       setLastFile(file.name);
+      setServerError('');
+
+      if (isBrowserOffline()) {
+        const msg = 'Koneksi internet terputus. Hubungkan kembali jaringan Anda lalu klik Coba lagi untuk mengunggah dokumen.';
+        setServerActive(false);
+        setServerProgress(0);
+        setServerError(msg);
+        onNotice(msg);
+        return;
+      }
+
       setServerActive(true);
       setServerProgress(2);
       setServerStatus('Mengunggah ke server…');
@@ -61,6 +74,7 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
       })
         .then(({ project, backgroundReady, jobMessage }) => {
           setServerActive(false);
+          setServerError('');
           onComplete(project);
           onNotice(
             backgroundReady
@@ -68,10 +82,24 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
               : `${project.slides.length} slide dari ${file.name} sudah jadi, tinggal rapikan.${jobMessage ? ` ${jobMessage}` : ''}`,
           );
         })
-        .catch(() => {
-          // Backend mati / render gagal → fallback lokal (tanpa latar presisi)
+        .catch((err: unknown) => {
           setServerActive(false);
-          onNotice('Server tidak terjangkau, pakai ubah lokal dulu (tanpa gambar latar asli).');
+          if (isUploadValidationError(err)) {
+            const msg = err instanceof Error ? err.message : 'Berkas ditolak oleh validasi server.';
+            setServerProgress(0);
+            setServerError(msg);
+            onNotice(msg);
+            return;
+          }
+          if (isNetworkFailure(err)) {
+            const msg = formatNetworkError(err, 'Koneksi internet terputus saat mengunggah atau memproses dokumen.');
+            setServerProgress(0);
+            setServerError(msg);
+            onNotice(msg);
+            return;
+          }
+          // Server render non-jaringan gagal (misal converter unavailable sementara) -> fallback lokal
+          onNotice('Server gagal merender dokumen, memakai pengubah lokal sebagai cadangan.');
           void ingest.actions.convert(file);
         });
     },
@@ -87,14 +115,16 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
   }, [initialFile, handleFile]);
 
   const localActive = ingest.state.phase !== 'idle';
-  const isActive = serverActive || localActive;
-  const isError = !serverActive && ingest.state.phase === 'error';
+  const isActive = serverActive || localActive || Boolean(serverError);
+  const isError = Boolean(serverError) || (!serverActive && ingest.state.phase === 'error');
   const progress = serverActive ? serverProgress : ingest.state.progress;
-  const status = serverActive
-    ? serverStatus || 'Menyiapkan konversi…'
-    : isError
-      ? ingest.state.error
-      : ingest.state.status || 'Menyiapkan konversi…';
+  const status = serverError
+    ? serverError
+    : serverActive
+      ? serverStatus || 'Menyiapkan konversi…'
+      : isError
+        ? ingest.state.error
+        : ingest.state.status || 'Menyiapkan konversi…';
 
   const retry = () => {
     const file = lastFileRef.current;
@@ -113,6 +143,9 @@ export function IngestStep({ onComplete, onNotice, initialFile = null }: IngestS
         <p className="hs-ingest-lede">
           Unggah presentasi (<code>.pptx</code>) atau dokumen (<code>.pdf</code>), maksimal 50 MB dan 60 slide.
           Tautan antar-slide otomatis jadi tombol, catatan pembicara jadi cerita, dan judul diambil dari nama file.
+        </p>
+        <p className="field-hint" style={{ marginTop: '6px', color: '#52796f' }}>
+          💡 <strong>Tips:</strong> Pada dokumen PDF, slide umumnya tersusun sebagai gambar flat. Jika Anda ingin teks slide dapat diedit sepenuhnya per baris atau kata, disarankan mengunggah berkas asli <code>.pptx</code>.
         </p>
       </header>
 

@@ -1,0 +1,211 @@
+/**
+ * Panel Properti & Pemilih Elemen Studio (styles/studio/propertyPanel.css)
+ * Berisi container panel kanan, grid tombol elemen dasar (teks, link, gambar, bentuk, video, audio, goto),
+ * daftar elemen kuis dan interaksi, serta wrapper form inspektor properti elemen yang terpilih.
+ */
+
+/* ===================== PANEL KANAN ===================== */
+.hs-right-panel-container {
+  background: #ffffff;
+  border-left: 1px solid var(--hs-line);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hs-green-border) transparent;
+}
+
+/* ===================== ELEMENT PANEL ===================== */
+.hs-element-panel {
+  padding: 16px;
+}
+
+.hs-ep-header {
+  margin-bottom: 14px;
+}
+
+.hs-ep-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--hs-ink);
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+
+.hs-ep-subtitle {
+  font-size: 11px;
+  color: var(--hs-ink-muted);
+  margin: 0;
+}
+
+.hs-ep-section-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hs-ink-muted);
+  margin-bottom: 8px;
+}
+
+/* Grid 2 kolom untuk elemen dasar */
+.hs-ep-basic-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.hs-ep-basic-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+  background: #fff;
+  border: 1.5px solid var(--hs-line);
+  border-radius: var(--hs-radius-sm);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hs-ink);
+  transition: all 0.15s;
+  text-align: center;
+  min-height: 62px;
+}
+
+.hs-ep-basic-btn:hover {
+  background: var(--hs-green-softer);
+  border-color: var(--hs-green-border);
+  color: var(--hs-green);
+}
+
+/* Audio btn (span full width) */
+.hs-ep-basic-btn--audio {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+.hs-ep-basic-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.hs-icon-text { color: var(--hs-green); background: var(--hs-green-soft); font-family: serif; }
+.hs-icon-link { color: var(--hs-green); background: var(--hs-green-soft); }
+.hs-icon-image { color: var(--hs-green); background: var(--hs-green-soft); }
+.hs-icon-shape { color: var(--hs-green); background: var(--hs-green-soft); }
+.hs-icon-video { color: var(--hs-green); background: var(--hs-green-soft); }
+.hs-icon-goto { color: var(--hs-green); background: var(--hs-green-soft); }
+.hs-icon-audio { color: var(--hs-green); background: var(--hs-green-soft); }
+
+/* Daftar interaksi & kuis */
+.hs-ep-interaction-list,
+.hs-ep-dropdown-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-ep-interaction-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 2px;
+  border: none;
+  border-bottom: 1px solid var(--hs-line);
+  background: none;
+  cursor: pointer;
+  transition: background 0.1s;
+  text-align: left;
+}
+
+.hs-ep-interaction-item:last-child {
+  border-bottom: none;
+}
+
+.hs-ep-interaction-item:hover {
+  background: var(--hs-green-softer);
+  border-radius: var(--hs-radius-sm);
+  border-bottom-color: transparent;
+}
+
+.hs-ep-interaction-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--hs-ink);
+}
+
+.hs-ep-interaction-item:hover .hs-ep-interaction-label {
+  color: var(--hs-green);
+}
+
+.hs-ep-interaction-plus {
+  font-size: 16px;
+  color: var(--hs-ink-muted);
+  line-height: 1;
+  font-weight: 400;
+  flex: none;
+}
+
+.hs-ep-interaction-item:hover .hs-ep-interaction-plus {
+  color: var(--hs-green);
+}
+
+/* ===================== PROPERTIES WRAPPER ===================== */
+.hs-properties-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.hs-panel-switch {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hs-line);
+  flex: none;
+}
+
+.hs-panel-switch-btn {
+  background: none;
+  border: none;
+  color: var(--hs-green);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.hs-panel-switch-btn:hover {
+  opacity: 0.75;
+}
+
+.dialog-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.dialog-card-row input {
+  min-width: 0;
+}
+
+/* ===================== PROPERTY PANEL (tetap pakai) ===================== */
+.st-panel.st-right {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px;
+  height: 100%;
+  overflow-y: auto;
+  min-width: 0;
+  background: transparent;
+}

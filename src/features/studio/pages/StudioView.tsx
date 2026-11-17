@@ -21,13 +21,14 @@ import { StudioLeftPanel } from '../components/StudioLeftPanel';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
-import { buildH5p, detectAvailableCpMinor, downloadBlob, safeFileName } from '../../exporter/api/h5pPackager';
-import { recordExport } from '../../exporter/api/exportHistory';
+import { exportH5pPackage } from '../../exporter/api/exportService';
+import { detectAvailableCpMinor } from '../../exporter/api/h5pPackager';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
 export function StudioView() {
-  const { state, actions, currentId, savedLabel, saveDraft } = useStudio();
+  const { state, actions, currentId, savedLabel, adoptProject, saveDraft } = useStudio();
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(() => {
@@ -118,20 +119,21 @@ export function StudioView() {
       showNotice('Belum ada slide untuk diekspor.');
       return;
     }
+    if (isBrowserOffline()) {
+      showNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk mengekspor file H5P.');
+      return;
+    }
     setExporting(true);
-    showNotice(`Mengemas file .h5p (v1.${cpMinor})...`);
+    showNotice('Menyinkronkan & mengemas file .h5p…');
     try {
-      const { blob, bundled, media } = await buildH5p(project, cpMinor);
-      const name = safeFileName(project.title);
-      downloadBlob(blob, name);
-      recordExport({ title: project.title, format: 'H5P', sizeKb: Math.round(blob.size / 1024) });
-      const mediaNote =
-        media.failed.length > 0
-          ? ` ${media.failed.length} media gagal diambil (${media.failed[0]}).`
-          : '';
-      showNotice(`Berhasil! ${name} terunduh (v1.${cpMinor}, ${bundled.length} pustaka H5P).${mediaNote}`);
+      const exported = await exportH5pPackage({
+        project,
+        cpMinor,
+        onBeforeExport: saveDraft,
+      });
+      showNotice(exported.notice);
     } catch (err) {
-      showNotice(err instanceof Error ? err.message : 'Gagal mengekspor file H5P.');
+      showNotice(formatNetworkError(err, 'Gagal mengekspor file H5P.'));
     } finally {
       setExporting(false);
     }
@@ -148,8 +150,13 @@ export function StudioView() {
         isExporting={exporting}
         onHome={goBack}
         onSave={() => {
-          saveDraft();
-          showNotice('Sudah kesimpan.');
+          void saveDraft().then((synced) => {
+            showNotice(
+              synced
+                ? 'Sudah tersimpan ke server.'
+                : 'Koneksi internet terputus — gagal menyimpan ke server. Perubahan masih ada di layar; hubungkan internet lalu klik Simpan lagi.',
+            );
+          });
         }}
         onPreview={() => setStep(3)}
         onRenameTitle={(title) => {
@@ -163,7 +170,7 @@ export function StudioView() {
           <IngestStep
             initialFile={initialFile}
             onComplete={(next) => {
-              actions.replaceProject(next);
+              adoptProject(next, { saved: true });
               setStep(2);
             }}
             onNotice={showNotice}
@@ -205,6 +212,7 @@ export function StudioView() {
 
             {state.activeSlide ? (
               <CanvasPanel
+                project={project}
                 slide={state.activeSlide}
                 total={state.slides.length}
                 selectedElementId={state.selectedElementId}
@@ -222,6 +230,8 @@ export function StudioView() {
                   const el = state.activeSlide?.elements.find((e) => e.id === id);
                   if (el) actions.updateElement(id, { position: { ...el.position, x, y } });
                 }}
+                onResizeElement={(id, position) => actions.updateElement(id, { position })}
+                onRotateElement={(id, rotation) => actions.updateElement(id, { rotation })}
                 onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
                 onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
               />
@@ -353,6 +363,7 @@ export function StudioView() {
             project={project}
             cpMinor={cpMinor}
             onCpMinorChange={handleCpMinorChange}
+            onBeforeExport={saveDraft}
             onNotice={showNotice}
           />
         </section>

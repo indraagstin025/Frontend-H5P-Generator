@@ -14,17 +14,19 @@ import {
   TrashIcon,
   UploadIcon,
 } from '@radix-ui/react-icons';
-import { createProject } from '../../studio/constants/h5pModel';
+import { createProject, isQuizElement } from '../../studio/constants/h5pModel';
 import type { AspectRatio, Project } from '../../studio/constants/h5pModel';
+import { createServerProject, persistImportedH5pProject } from '../../ingest/api/serverIngest';
 import { parseH5p } from '../api/h5pPackager';
-import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
+import type { ProjectActionResult, StoredProjectMeta } from '../../projects/hooks/useProjectStore';
+import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
-  onOpen: (project: Project) => void;
-  onDelete: (id: string) => void;
-  onRename: (id: string, title: string) => void;
-  onDuplicate: (id: string) => void;
+  onOpen: (project: Project, opts?: { saved?: boolean }) => void;
+  onDelete: (id: string) => Promise<ProjectActionResult>;
+  onRename: (id: string, title: string) => Promise<ProjectActionResult>;
+  onDuplicate: (id: string) => Promise<ProjectActionResult>;
   onNotice: (message: string) => void;
 };
 
@@ -52,6 +54,7 @@ function sourceOf(item: StoredProjectMeta): { key: Exclude<SourceFilter, 'all'>;
 export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
+  const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<SourceFilter>('all');
@@ -59,20 +62,45 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
+  const recent = [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3);
 
-  const createNew = () => {
-    onOpen(createProject(title || 'Modul baru', aspect, null));
+  const createNew = async () => {
+    if (creating) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk membuat materi baru.');
+      return;
+    }
+    setCreating(true);
+    const finalTitle = title.trim() || 'Modul baru';
+    const localDraft = createProject(finalTitle, aspect, null);
+    try {
+      const serverProject = await createServerProject({
+        title: finalTitle,
+        aspect,
+        initialSlides: localDraft.slides,
+      });
+      onOpen(serverProject, { saved: true });
+    } catch (err) {
+      onNotice(formatNetworkError(err, 'Gagal membuat materi di server. Periksa koneksi Anda lalu coba lagi.'));
+    } finally {
+      setCreating(false);
+    }
   };
 
   const importFile = async (file: File | undefined) => {
     if (!file) return;
+    if (isBrowserOffline()) {
+      onNotice('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk mengunggah berkas .h5p.');
+      return;
+    }
     setImporting(true);
     try {
-      const project = await parseH5p(file);
-      onOpen(project);
-      onNotice(`${project.title} berhasil dibuka. Silakan lanjutkan pengeditan.`);
+      const parsed = await parseH5p(file);
+      const persisted = await persistImportedH5pProject(parsed);
+      onOpen(persisted, { saved: true });
+      onNotice(`${persisted.title} berhasil diunggah & tersimpan di server.`);
     } catch (err) {
-      onNotice(err instanceof Error ? err.message : 'Berkas gagal dibuka.');
+      onNotice(formatNetworkError(err, 'Berkas gagal dibuka atau diunggah ke server.'));
     } finally {
       setImporting(false);
     }
@@ -94,17 +122,44 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
     });
   }, [items, query, filter, sort]);
 
-  const saveRename = (id: string) => {
-    if (draftTitle.trim()) {
-      onRename(id, draftTitle);
-      onNotice('Judul sudah diganti.');
+  const saveRename = async (id: string) => {
+    if (!draftTitle.trim()) {
+      setEditingId(null);
+      return;
     }
-    setEditingId(null);
+    const res = await onRename(id, draftTitle);
+    onNotice(res.ok ? 'Judul sudah diganti.' : res.error || 'Gagal mengganti judul materi.');
+    if (res.ok) setEditingId(null);
   };
 
   return (
     <div className="projects-home">
-      <section className="new-project-card" aria-labelledby="new-project-heading">
+      <section className="materials-recent" aria-labelledby="materials-recent-title">
+        <div className="db-section-head">
+          <div>
+            <h2 id="materials-recent-title" className="db-section-title">Lanjutkan materi Anda</h2>
+            <p className="db-section-subtitle">Akses cepat ke materi yang terakhir diperbarui.</p>
+          </div>
+        </div>
+        {recent.length > 0 && <div className="materials-recent-grid">
+          {recent.map((item, index) => (
+            <article className={`materials-recent-card materials-recent-${index}`} key={item.id}>
+              <div className="materials-recent-visual">
+                <span className="db-badge db-badge-green">{sourceOf(item).label}</span>
+                <span className="materials-recent-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <h3>{item.title}</h3>
+              </div>
+              <div className="materials-recent-body">
+                <p>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</p>
+                <div><span>{timeAgo(item.updatedAt)}</span><button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>Buka di studio</button></div>
+              </div>
+            </article>
+          ))}
+        </div>}
+      </section>
+
+      <details className="new-project-card materials-create-options">
+        <summary>Buat materi kosong atau buka file .h5p</summary>
         <div className="new-project-head">
           <h2 id="new-project-heading">Mulai materi baru</h2>
           <p>Beri judul dan ukuran slide, atau buka berkas .h5p yang sudah pernah diunduh.</p>
@@ -123,8 +178,8 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </label>
         </div>
         <div className="new-project-actions">
-          <button className="primary-button" type="button" onClick={createNew}>
-            <FilePlusIcon /> Buat materi baru
+          <button className="primary-button" type="button" disabled={creating} onClick={() => void createNew()}>
+            <FilePlusIcon /> {creating ? 'Menyiapkan...' : 'Buat materi baru'}
           </button>
           <input
             ref={importRef}
@@ -137,33 +192,39 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
             <UploadIcon /> {importing ? 'Membuka file...' : 'Buka file .h5p'}
           </button>
         </div>
-      </section>
+      </details>
+
+      <div className="db-section-head">
+        <div>
+          <h2 className="db-section-title">Materi Saya</h2>
+          <p className="db-section-subtitle">Cari dan kelola seluruh materi pembelajaran Anda.</p>
+        </div>
+      </div>
 
       <div className="materials-toolbar">
-        <input
+        <label className="materials-filter-field">Cari materi<input
           className="materials-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Cari judul atau nama file..."
           aria-label="Cari materi"
-        />
-        <select value={filter} onChange={(e) => setFilter(e.target.value as SourceFilter)} aria-label="Saring sumber">
+        /></label>
+        <label className="materials-filter-field">Sumber materi<select value={filter} onChange={(e) => setFilter(e.target.value as SourceFilter)} aria-label="Saring sumber">
           <option value="all">Semua sumber</option>
           <option value="pptx">PPTX</option>
           <option value="pdf">PDF</option>
           <option value="h5p">File H5P</option>
           <option value="manual">Dari nol</option>
-        </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Urutkan">
+        </select></label>
+        <label className="materials-filter-field">Urutkan<select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Urutkan">
           <option value="updated">Terakhir diubah</option>
           <option value="title">Judul A-Z</option>
           <option value="slides">Slide paling banyak</option>
-        </select>
+        </select></label>
       </div>
 
       <div className="db-section-head">
         <div>
-          <h2 className="db-section-title">Daftar materi</h2>
           <p className="db-section-subtitle">
             {visible.length} dari {items.length} materi
           </p>
@@ -181,7 +242,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </p>
           <div className="db-empty-actions">
             {items.length === 0 ? (
-              <button className="primary-button" type="button" onClick={createNew}>
+              <button className="primary-button" type="button" disabled={creating} onClick={() => void createNew()}>
                 <FilePlusIcon /> Buat materi kosong
               </button>
             ) : (
@@ -199,10 +260,13 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
           </div>
         </div>
       ) : (
-        <div className="project-grid">
+        <div className="db-card db-table-wrap materials-table">
+          <table className="db-table">
+            <thead><tr><th>Judul materi</th><th>Sumber</th><th>Komposisi</th><th>Terakhir diubah</th><th>Aksi</th></tr></thead>
+            <tbody>
           {visible.map((item) => (
-            <article className="project-card" key={item.id}>
-              <div>
+            <tr key={item.id}>
+              <td>
                 {editingId === item.id ? (
                   <div className="rename-row">
                     <input
@@ -210,12 +274,12 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                       autoFocus
                       onChange={(e) => setDraftTitle(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveRename(item.id);
+                        if (e.key === 'Enter') void saveRename(item.id);
                         if (e.key === 'Escape') setEditingId(null);
                       }}
                       aria-label="Judul baru"
                     />
-                    <button className="small-icon-button" type="button" aria-label="Simpan" onClick={() => saveRename(item.id)}>
+                    <button className="small-icon-button" type="button" aria-label="Simpan" onClick={() => void saveRename(item.id)}>
                       <CheckIcon />
                     </button>
                     <button className="small-icon-button" type="button" aria-label="Batal" onClick={() => setEditingId(null)}>
@@ -223,16 +287,17 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                     </button>
                   </div>
                 ) : (
-                  <strong>{item.title}</strong>
+                  <strong className="db-table-title">{item.title}</strong>
                 )}
-                <small>
-                  {item.slideCount} slide · {sourceOf(item).label} · {item.sourceFileName ?? 'tanpa file'} ·{' '}
-                  {timeAgo(item.updatedAt)}
-                </small>
-              </div>
+                <span className="db-table-sub">{item.sourceFileName ?? 'Dibuat dari kanvas kosong'}</span>
+              </td>
+              <td><span className="db-badge db-badge-green">{sourceOf(item).label}</span></td>
+              <td>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</td>
+              <td>{timeAgo(item.updatedAt)}</td>
+              <td>
               <div className="project-card-actions">
                 <button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>
-                  <OpenInNewWindowIcon /> Buka
+                  <OpenInNewWindowIcon /> Buka di studio
                 </button>
                 <button
                   className="small-icon-button"
@@ -252,8 +317,9 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   title="Gandakan"
                   aria-label="Gandakan materi"
                   onClick={() => {
-                    onDuplicate(item.id);
-                    onNotice('Materi sudah digandakan.');
+                    void onDuplicate(item.id).then((res) => {
+                      onNotice(res.ok ? 'Materi sudah digandakan.' : res.error || 'Gagal menggandakan materi.');
+                    });
                   }}
                 >
                   <CopyIcon />
@@ -265,16 +331,20 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
                   aria-label="Hapus materi"
                   onClick={() => {
                     if (window.confirm(`Hapus "${item.title}"? Tindakan ini tidak bisa dibatalkan.`)) {
-                      onDelete(item.id);
-                      onNotice('Materi sudah dihapus.');
+                      void onDelete(item.id).then((res) => {
+                        onNotice(res.ok ? 'Materi sudah dihapus.' : res.error || 'Gagal menghapus materi.');
+                      });
                     }
                   }}
                 >
                   <TrashIcon />
                 </button>
               </div>
-            </article>
+              </td>
+            </tr>
           ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

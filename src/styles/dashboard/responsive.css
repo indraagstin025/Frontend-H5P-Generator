@@ -1,0 +1,210 @@
+/**
+ * Media Query Breakpoints & Responsivitas Dashboard (styles/dashboard/responsive.css)
+ * Menangani penyesuaian tata letak untuk tablet, layar kecil, dan mobile, serta prefers-reduced-motion.
+ */
+
+@media (max-width: 1360px) {
+  .db-search input {
+    width: 200px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .db-topbar-title p {
+    display: none;
+  }
+
+  .db-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .db-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .db-sidebar {
+    display: none;
+  }
+
+  .db-mobile-nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 10px 16px;
+    background-color: var(--db-surface);
+    border-bottom: 1px solid var(--db-border);
+    position: sticky;
+    top: 88px;
+    z-index: 4;
+  }
+
+  .db-mobile-nav .db-nav-btn {
+    width: auto;
+    white-space: nowrap;
+    padding: 7px 12px;
+    min-height: 38px;
+    font-size: 11.5px;
+  }
+
+  .db-mobile-nav .db-nav-btn.active::before {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+  }
+
+  .db-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .db-quick {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-home .new-project-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .projects-home .materials-toolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .db-topbar {
+    padding: 14px 18px;
+    min-height: 72px;
+  }
+
+  .db-tools {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .db-search {
+    flex: 1;
+  }
+
+  .db-search input {
+    width: 100%;
+  }
+
+  .db-content {
+    padding: 20px 18px 40px;
+    gap: 24px;
+  }
+
+  .db-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .db-hero {
+    padding: 22px;
+    gap: 22px;
+  }
+
+  .db-hfc-step {
+    padding: 9px 10px;
+  }
+
+  .db-modal {
+    padding: 16px;
+  }
+
+  .db-modal-head {
+    padding: 20px 22px 16px;
+  }
+
+  .db-modal-body {
+    padding: 18px 22px 22px;
+  }
+
+  .db-modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .db-modal-hint {
+    max-width: none;
+  }
+
+  .db-modal-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 560px) {
+  .db-modal {
+    padding: 12px;
+  }
+
+  .db-modal-dialog {
+    max-height: calc(100vh - 24px);
+  }
+
+  .db-modal-head {
+    padding: 20px 20px 16px;
+  }
+
+  .db-modal-head h2 {
+    font-size: 19px;
+  }
+
+  .db-modal-body {
+    padding: 18px 20px 20px;
+  }
+
+  .db-modal .upload-dock {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .db-modal .upload-dock .upload-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .db-modal-foot {
+    padding: 16px 20px 20px;
+  }
+
+  .db-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .db-modal-actions .db-btn-primary,
+  .db-modal-actions .db-btn-secondary {
+    width: 100%;
+    padding: 0 12px;
+  }
+
+  .projects-home .new-project-card {
+    padding: 20px;
+  }
+
+  .projects-home .new-project-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .projects-home .new-project-actions .primary-button,
+  .projects-home .new-project-actions .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .db-scope *,
+  .db-scope *::before,
+  .db-scope *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

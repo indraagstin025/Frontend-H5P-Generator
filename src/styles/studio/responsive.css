@@ -1,0 +1,332 @@
+/**
+ * Kompatibilitas Legacy & Breakpoints Responsif Studio (styles/studio/responsive.css)
+ * Berisi styling kompatibilitas .st-scope (tab, checklist inspektor, divider, small-icon-button),
+ * penyesuaian tata letak untuk tablet, mobile drawer panel kanan, dan prefers-reduced-motion.
+ */
+
+/* ===================== LEGACY OVERRIDES ===================== */
+.st-scope {
+  --st-ink: var(--hs-ink);
+  --st-muted: var(--hs-ink-muted);
+  --st-line: var(--hs-line);
+  --st-page: var(--hs-bg);
+  --st-green: #a9e7ad;
+  --st-green-soft: var(--hs-green-soft);
+  --st-green-ink: var(--hs-green);
+  --st-green-deep: var(--hs-green);
+  --st-tool-active-bg: var(--hs-green-soft);
+  --st-tool-active-border: var(--hs-green-border);
+  --st-focus: var(--hs-green-mid);
+}
+
+/* Tabs */
+.st-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--hs-line);
+  margin: 14px -14px 16px;
+  padding: 0 14px;
+}
+
+.st-tab {
+  white-space: nowrap;
+  padding: 10px 8px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--hs-ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.st-tab[aria-selected='true'] {
+  border-bottom-color: var(--hs-green);
+  color: var(--hs-green);
+}
+
+.st-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.st-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--hs-ink);
+  margin: 0;
+  flex: 1;
+}
+
+.st-badge {
+  border-radius: 999px;
+  background: var(--hs-green-soft);
+  color: var(--hs-green);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.st-divider {
+  height: 1px;
+  background: var(--hs-line);
+  margin: 12px 0;
+  border: none;
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.st-settings-toggle {
+  width: 100%;
+  border: 1px solid var(--hs-line);
+  background: var(--hs-green-softer);
+  border-radius: var(--hs-radius-sm);
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--hs-green);
+  text-align: left;
+  cursor: pointer;
+}
+
+.st-settings-body {
+  padding-top: 10px;
+}
+
+.st-checks-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.st-checks-head h3 {
+  color: var(--hs-ink);
+  font-size: 13px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.st-checks-summary {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hs-green);
+}
+
+.st-checks {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.st-checks .check-row.st-bad {
+  background: #fff0ef;
+}
+
+.small-icon-button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--hs-line);
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.small-icon-button.danger:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* Input judul di topbar */
+.st-title-input {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -6px;
+  max-width: 300px;
+  width: 100%;
+}
+
+.st-title-input:focus {
+  background: var(--hs-green-softer);
+  border-color: var(--hs-green-mid);
+  outline: none;
+}
+
+/* ===================== RESPONSIVE ===================== */
+@media (max-width: 1100px) {
+  .hs-studio-workspace {
+    grid-template-columns: 140px 1fr 250px;
+  }
+  .hs-btn-preview,
+  .hs-btn-save {
+    padding: 7px 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hs-studio-workspace {
+    grid-template-columns: 110px 1fr;
+  }
+  .hs-right-panel-container {
+    display: block;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(330px, 88vw);
+    max-width: 100%;
+    z-index: 300;
+    transform: translateX(102%);
+    transition: transform 0.2s ease;
+    box-shadow: -8px 0 24px rgba(16, 52, 34, 0.15);
+  }
+  .hs-right-panel-container.is-open {
+    transform: translateX(0);
+  }
+  .hs-panel-toggle {
+    display: inline-flex;
+  }
+  .hs-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 56px 0 0 0;
+    z-index: 290;
+    border: none;
+    background: rgba(15, 35, 24, 0.28);
+    cursor: pointer;
+    padding: 0;
+  }
+  .hs-canvas-hint {
+    display: none;
+  }
+  .hs-version-label {
+    display: none;
+  }
+  .hs-topbar {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .hs-topbar-left {
+    gap: 8px;
+  }
+  .hs-project-title-input {
+    width: 150px;
+  }
+}
+
+@media (max-width: 700px) {
+  .hs-topbar {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+  }
+  .hs-topbar-right {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .hs-btn-export,
+  .hs-btn-preview,
+  .hs-btn-save {
+    padding: 6px 9px;
+  }
+  .hs-btn-text {
+    display: none;
+  }
+  .hs-project-title-input {
+    width: 130px;
+  }
+  .hs-edit-mode-badge {
+    display: none;
+  }
+  .hs-ingest-head h2 {
+    font-size: 23px;
+  }
+  .hs-ingest .upload-dock {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 16px;
+  }
+  .hs-ingest .upload-dock > div:nth-child(2) {
+    min-width: 0;
+  }
+  .hs-ingest .upload-dock .upload-button {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+  }
+  .hs-convert {
+    padding: 14px;
+  }
+  .hs-convert-meta span {
+    white-space: normal;
+  }
+  .hs-convert-percent {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .hs-studio-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .hs-slide-list {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid var(--hs-line);
+    max-height: 96px;
+    overflow-x: auto;
+  }
+  .hs-slide-list-header {
+    display: none;
+  }
+  .hs-slide-list-items {
+    flex-direction: row;
+    padding: 6px;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .hs-slide-item {
+    flex: none;
+    width: 112px;
+  }
+  .hs-add-slide-btn {
+    margin: 6px;
+    white-space: nowrap;
+  }
+  .hs-canvas-area {
+    padding: 10px;
+  }
+  .hs-slide-num {
+    font-size: 9px;
+  }
+  .hs-step-section {
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

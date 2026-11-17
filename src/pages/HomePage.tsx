@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../dashboard-canva.css';
 import { Toast } from '../components/UI/Toast';
+import { useAuth } from '../context/AuthContext';
 import { useStudio } from '../context/StudioContext';
 import { Dashboard } from '../features/projects/components/Dashboard';
 import { NewMaterialModal } from '../features/projects/components/NewMaterialModal';
@@ -19,9 +20,18 @@ const NOTICE_TIMEOUT_MS = 2600;
 export function HomePage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const { store, openProject } = useStudio();
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
+  const [fallbackDisplayName] = useState(() => {
+    try {
+      return sessionStorage.getItem('h5p-generator:display-name') ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const displayName = user?.name || fallbackDisplayName;
   const [showNew, setShowNew] = useState(false);
   const [newNonce, setNewNonce] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -52,24 +62,24 @@ export function HomePage() {
   }, []);
 
   return (
-    <div className="db-scope">
+    <div className="db-scope db-scope--reference">
       <div className="db-shell">
         <HomeSidebar
+          displayName={displayName}
+          userEmail={user?.email}
+          userRole={user?.role}
           activeNav={activeNav}
           itemCount={store.items.length}
-          onOpenNewModal={openNewModal}
           onNavigateDashboard={() => navigate('/dashboard')}
           onNavigateMateri={() => navigate('/materi')}
-          onLogout={() => navigate('/')}
+          onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
+          onLogout={logout}
         />
 
         <div className="db-main">
           <HomeTopbar
+            displayName={displayName}
             tab={tab}
-            query={query}
-            onQueryChange={setQuery}
-            searchInputRef={searchInputRef}
-            onOpenNewModal={openNewModal}
           />
 
           <HomeMobileNav
@@ -78,6 +88,7 @@ export function HomePage() {
             onOpenNewModal={openNewModal}
             onNavigateDashboard={() => navigate('/dashboard')}
             onNavigateMateri={() => navigate('/materi')}
+            onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
           />
 
           <main className="db-content">
@@ -88,11 +99,13 @@ export function HomePage() {
                 onGoMaterials={() => navigate('/materi')}
                 onCreate={openNewModal}
                 query={query}
+                onQueryChange={setQuery}
+                searchInputRef={searchInputRef}
               />
             ) : (
               <ProjectsHome
                 items={store.items}
-                onOpen={(p) => openProject(p, pathname, { saved: true })}
+                onOpen={(p, opts) => openProject(p, pathname, { saved: opts?.saved ?? true })}
                 onDelete={store.remove}
                 onRename={store.rename}
                 onDuplicate={store.duplicate}
