@@ -13,10 +13,6 @@ export function StorySettings({ settings, slideCount, onChange }: StorySettingsP
   void slideCount;
   return (
     <div>
-      <p className="muted">
-        Kalau mau peserta ngikutin tombol pilihan (tidak bisa next/back sembarangan), nyalakan kunci navigasi di
-        bawah.
-      </p>
       <div className="settings-grid">
         <label className="field-label">
           Ukuran slide (buat slide baru)

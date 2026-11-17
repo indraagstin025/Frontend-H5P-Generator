@@ -20,7 +20,6 @@ import { isQuizElement } from '../constants/h5pModel';
 import { KIND_LABEL, QUIZ_TABS, type QuizTab } from './properties/constants';
 import { ElementContentFields } from './properties/ElementContentFields';
 import { StorySettings } from './StorySettings';
-import { ValidationPanel } from './ValidationPanel';
 
 type PropertyPanelProps = {
   project: Project;
@@ -152,8 +151,6 @@ export function PropertyPanel({
         </div>
       </details>
 
-      <hr className="st-divider" />
-      <ValidationPanel project={project} />
     </aside>
   );
 }
