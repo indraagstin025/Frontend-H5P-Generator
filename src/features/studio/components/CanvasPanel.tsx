@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { ResetIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ElementPosition, Project, Slide, SlideElement } from '../constants/h5pModel';
 import { resizeElement, type ResizeCorner } from '../utils/resizeElement';
 import { ElementPreviewDialog } from './ElementPreviewDialog';
@@ -122,7 +123,7 @@ function renderElementContent(el: SlideElement) {
 
     case 'advancedText':
       return (
-        <div className="canvas-text-preview">
+        <div className="canvas-text-preview" style={{ fontSize: el.fontSize ?? 13 }}>
           {el.text ? (
             <span className="canvas-text-body">{el.text}</span>
           ) : (
@@ -168,6 +169,10 @@ type CanvasPanelProps = {
   onResizeElement: (id: string, position: ElementPosition) => void;
   onRotateElement: (id: string, rotation: number) => void;
   onChangeText: (id: string, text: string) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -197,6 +202,10 @@ export function CanvasPanel({
   onResizeElement,
   onRotateElement,
   onChangeText,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onPrev,
   onNext,
 }: CanvasPanelProps) {
@@ -348,7 +357,11 @@ export function CanvasPanel({
   return (
     <div className="canvas-panel">
       <div className="st-canvas-interaction-tools">
-        <span>Klik untuk memilih, geser untuk memindahkan, tarik sudut untuk mengubah ukuran. Klik dua kali tombol untuk mencoba interaksi.</span>
+        <div className="hs-history-actions" role="group" aria-label="Riwayat perubahan">
+          <button type="button" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Urungkan perubahan"><ResetIcon aria-hidden="true" /></button>
+          <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Ulangi perubahan"><ReloadIcon aria-hidden="true" /></button>
+        </div>
+        <span>Klik dua kali tombol untuk mencoba interaksi.</span>
         {selectedPopup && <button type="button" className="secondary-button" onClick={() => setPreview({ slideId: slide.id, elementId: selectedPopup.id })}>Coba interaksi</button>}
       </div>
       <div className="canvas-wrap">
@@ -456,7 +469,7 @@ export function CanvasPanel({
               aria-label="Edit teks di canvas"
               value={selected.text}
               placeholder="Ketik teks di sini…"
-              style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)` }}
+              style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, fontSize: selected.fontSize ?? 13 }}
               onChange={(event) => onChangeText(selected.id, event.target.value)}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}

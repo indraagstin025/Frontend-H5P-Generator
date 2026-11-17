@@ -8,6 +8,29 @@ import { registerMedia } from '../../utils/mediaRegistry';
 import { KIND_LABEL } from './constants';
 import { PositionFields } from './PositionFields';
 
+function FontSizeField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <label className="field-label">
+      Ukuran font (px)
+      <input type="number" min={1} step={1} value={draft ?? value}
+        onFocus={() => setDraft(String(value))}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => {
+          const next = Number(draft);
+          if (draft?.trim() && Number.isFinite(next) && next >= 1) onChange(next);
+          setDraft(null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            event.currentTarget.blur();
+          }
+        }} />
+    </label>
+  );
+}
+
 interface ElementContentFieldsProps {
   projectId: string;
   slide: Slide;
@@ -130,6 +153,9 @@ export function ElementContentFields({
 
   return (
     <>
+      {element.kind === 'advancedText' && (
+        <FontSizeField key={element.id} value={element.fontSize ?? 13} onChange={(fontSize) => patch({ fontSize })} />
+      )}
       {element.kind === 'link' && (
         <>
           <label className="field-label">

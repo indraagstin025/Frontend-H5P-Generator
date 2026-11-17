@@ -63,6 +63,7 @@ interface BaseElement {
 export interface AdvancedTextElement extends BaseElement {
   kind: 'advancedText';
   text: string;
+  fontSize?: number;
 }
 
 export interface LinkElement extends BaseElement {

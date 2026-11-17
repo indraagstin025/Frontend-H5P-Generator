@@ -40,6 +40,11 @@
   padding: 5px 10px;
 }
 
+.hs-history-actions { display: flex; gap: 6px; flex: none; }
+.hs-history-actions button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--hs-green-border); border-radius: 8px; background: var(--hs-green-softer); color: var(--hs-green); cursor: pointer; }
+.hs-history-actions button:hover:not(:disabled) { background: var(--hs-green-soft); border-color: var(--hs-green); }
+.hs-history-actions svg { width: 18px; height: 18px; }
+
 .hs-canvas-hint {
   font-size: 11px;
   color: var(--hs-ink-muted);

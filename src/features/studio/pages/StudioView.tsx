@@ -254,6 +254,10 @@ export function StudioView() {
                 onResizeElement={(id, position) => actions.updateElement(id, { position })}
                 onRotateElement={(id, rotation) => actions.updateElement(id, { rotation })}
                 onChangeText={(id, text) => actions.updateElement(id, { text })}
+                onUndo={actions.undo}
+                onRedo={actions.redo}
+                canUndo={state.canUndo}
+                canRedo={state.canRedo}
                 onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
                 onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
               />
