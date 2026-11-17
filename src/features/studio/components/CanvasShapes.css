@@ -27,6 +27,28 @@
 }
 
 .canvas-element { touch-action: none; }
+.hs-studio-shell .st-canvas-text-editor {
+  position: absolute;
+  z-index: 8;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 10px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: white;
+  color: var(--hs-ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  resize: none;
+  transform-origin: center;
+  cursor: text;
+}
+.hs-studio-shell .st-canvas-text-editor:focus-visible { outline: none; }
 .canvas-element.kind-image:not(.is-popup-trigger):has(.st-canvas-image) {
   padding: 0;
   background: transparent;

@@ -174,6 +174,8 @@
 @media (max-width: 1100px) {
   .hs-studio-workspace {
     grid-template-columns: 140px minmax(0, 1fr) 250px;
+    gap: 10px;
+    padding: 10px;
   }
   .hs-btn-preview,
   .hs-btn-save {
@@ -188,7 +190,7 @@
   .hs-right-panel-container {
     display: block;
     position: fixed;
-    top: 56px;
+    top: var(--hs-header-height);
     right: 0;
     bottom: 0;
     width: min(330px, 88vw);
@@ -207,7 +209,7 @@
   .hs-panel-backdrop {
     display: block;
     position: fixed;
-    inset: 56px 0 0 0;
+    inset: var(--hs-header-height) 0 0 0;
     z-index: 290;
     border: none;
     background: rgba(15, 35, 24, 0.28);
@@ -233,13 +235,16 @@
 }
 
 @media (max-width: 700px) {
+  .hs-studio-shell { --hs-header-height: 120px; }
   .hs-topbar {
-    height: auto;
-    min-height: 56px;
+    height: var(--hs-header-height);
+    min-height: var(--hs-header-height);
     flex-wrap: wrap;
     padding: 6px 10px;
   }
   .hs-topbar-right {
+    width: 100%;
+    justify-content: flex-end;
     gap: 6px;
     flex-wrap: wrap;
   }
@@ -254,6 +259,8 @@
   .hs-project-title-input {
     width: 130px;
   }
+  .hs-project-meta { padding-left: 10px; }
+  .canvas-panel { padding: 6px; }
   .hs-edit-mode-badge {
     display: none;
   }
@@ -314,7 +321,7 @@
     white-space: nowrap;
   }
   .hs-canvas-area {
-    padding: 10px;
+    padding: 0;
   }
   .hs-slide-num {
     font-size: 9px;

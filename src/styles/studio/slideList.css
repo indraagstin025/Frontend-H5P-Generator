@@ -7,7 +7,9 @@
 /* ===================== WORKSPACE STUDIO (3 KOLOM) ===================== */
 .hs-studio-workspace {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 300px;
+  grid-template-columns: 176px minmax(0, 1fr) 296px;
+  padding: 16px;
+  gap: 16px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -16,23 +18,27 @@
 /* ===================== PANEL KIRI: DAFTAR SLIDE ===================== */
 .hs-slide-list {
   background: #ffffff;
-  border-right: 1px solid var(--hs-line);
+  border: 1px solid var(--hs-line);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
 .hs-slide-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--hs-line);
+  margin-bottom: 12px;
   padding: 18px 14px 12px;
   flex: none;
 }
 
 .hs-slide-list-label {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--hs-ink-muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hs-ink);
 }
 
 .hs-slide-list-items {
@@ -104,6 +110,8 @@
   border-color: var(--hs-green);
   box-shadow: 0 0 0 1.5px var(--hs-green);
 }
+
+.hs-slide-count { padding: 2px 8px; background: var(--hs-green-soft); color: var(--hs-green); border-radius: 6px; font-size: 11px; }
 
 .hs-slide-num {
   position: absolute;

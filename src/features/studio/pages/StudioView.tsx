@@ -219,8 +219,8 @@ export function StudioView() {
           <div className="hs-canvas-area">
             {/* Edit mode indicator */}
             <div className="hs-canvas-topbar">
-              <span className="hs-edit-mode-badge">EDIT MODE</span>
-              <span className="hs-canvas-hint">Klik elemen pada slide untuk mengedit</span>
+              <span className="hs-edit-mode-badge">Slide {state.activeSlide?.order ?? 0} / {state.slides.length}</span>
+              <span className="hs-canvas-hint">Pilih elemen untuk mengedit · ← → pindah slide</span>
               <button
                 type="button"
                 className="hs-panel-toggle"
@@ -253,6 +253,7 @@ export function StudioView() {
                 }}
                 onResizeElement={(id, position) => actions.updateElement(id, { position })}
                 onRotateElement={(id, rotation) => actions.updateElement(id, { rotation })}
+                onChangeText={(id, text) => actions.updateElement(id, { text })}
                 onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
                 onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
               />
