@@ -83,18 +83,25 @@ export function StudioView() {
   };
 
   useEffect(() => {
-    const handleDelete = (event: KeyboardEvent) => {
-      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
-      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (step !== 2 || !state.selectedElement || document.querySelector('dialog[open], [role="dialog"]')) return;
+    const handleStudioKey = (event: KeyboardEvent) => {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Backspace' && event.key !== 'Delete') return;
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (step !== 2 || !currentId || document.querySelector('dialog[open], [role="dialog"]')) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        if (state.selectedElementId || !state.activeSlide) return;
+        event.preventDefault();
+        actions.setActiveSlideId(prevNextId(state.slides.map((slide) => slide.id), state.activeSlide.id, event.key === 'ArrowRight' ? 1 : -1));
+        return;
+      }
+      if (!state.selectedElement) return;
       event.preventDefault();
       actions.deleteElement(state.selectedElement.id);
     };
-    window.addEventListener('keydown', handleDelete);
-    return () => window.removeEventListener('keydown', handleDelete);
-  }, [step, state.selectedElement, actions]);
+    window.addEventListener('keydown', handleStudioKey);
+    return () => window.removeEventListener('keydown', handleStudioKey);
+  }, [step, currentId, state.selectedElement, state.selectedElementId, state.activeSlide, state.slides, actions]);
 
   if (!currentId) {
     return (

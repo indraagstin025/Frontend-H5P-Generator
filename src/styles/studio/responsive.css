@@ -173,7 +173,7 @@
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 1100px) {
   .hs-studio-workspace {
-    grid-template-columns: 140px 1fr 250px;
+    grid-template-columns: 140px minmax(0, 1fr) 250px;
   }
   .hs-btn-preview,
   .hs-btn-save {
@@ -183,7 +183,7 @@
 
 @media (max-width: 900px) {
   .hs-studio-workspace {
-    grid-template-columns: 110px 1fr;
+    grid-template-columns: 110px minmax(0, 1fr);
   }
   .hs-right-panel-container {
     display: block;
