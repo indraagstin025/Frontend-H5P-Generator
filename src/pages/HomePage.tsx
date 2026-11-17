@@ -24,14 +24,7 @@ export function HomePage() {
   const { store, openProject } = useStudio();
   const [notice, setNotice] = useState('');
   const [query, setQuery] = useState('');
-  const [fallbackDisplayName] = useState(() => {
-    try {
-      return sessionStorage.getItem('h5p-generator:display-name') ?? '';
-    } catch {
-      return '';
-    }
-  });
-  const displayName = user?.name || fallbackDisplayName;
+  const displayName = user?.name.trim() ?? '';
   const [showNew, setShowNew] = useState(false);
   const [newNonce, setNewNonce] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
