@@ -101,17 +101,33 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const id = sessionStorage.getItem(getCurrentProjectSessionKey(userId));
+      const requestedId = window.location.pathname === '/studio'
+        ? new URLSearchParams(window.location.search).get('project')
+        : null;
+      const id = requestedId || sessionStorage.getItem(getCurrentProjectSessionKey(userId));
       const raw = localStorage.getItem(getProjectsStorageKey(userId));
       const items = raw ? (JSON.parse(raw) as Array<{ id: string; snapshot: Project }>) : [];
 
       if (id && items.length > 0) {
         const found = items.find((p) => p.id === id);
         if (found) {
+          sessionStorage.setItem(getCurrentProjectSessionKey(userId), found.id);
           actions.replaceProject(hydrateProject(found.snapshot));
           savedSnapshot.current = found.snapshot;
           setCurrentId(found.id);
           setSavedLabel('Draf tersimpan');
+          if (requestedId && found.snapshot.slides.length === 0 && isServerProjectId(found.id)) {
+            let cancelled = false;
+            void fetchServerProject(found.id).then((full) => {
+              if (cancelled) return;
+              actions.replaceProject(hydrateProject(full));
+              savedSnapshot.current = full;
+              store.save(full);
+            }).catch(() => {
+              if (!cancelled) setSavedLabel('Gagal memuat slide. Muat ulang untuk mencoba lagi.');
+            });
+            return () => { cancelled = true; };
+          }
           return;
         }
       }

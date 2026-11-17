@@ -25,6 +25,7 @@ import { ProjectSlideThumbnail } from '../../projects/components/ProjectSlideThu
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
   onOpen: (project: Project, opts?: { saved?: boolean }) => void;
+  onOpenInNewTab: (project: Project) => void;
   onDelete: (id: string) => Promise<ProjectActionResult>;
   onRename: (id: string, title: string) => Promise<ProjectActionResult>;
   onDuplicate: (id: string) => Promise<ProjectActionResult>;
@@ -52,7 +53,7 @@ function sourceOf(item: StoredProjectMeta): { key: Exclude<SourceFilter, 'all'>;
   return { key: 'manual', label: 'Dari nol' };
 }
 
-export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
+export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [creating, setCreating] = useState(false);
@@ -149,7 +150,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
               <div className="materials-recent-body">
                 <h3 className="materials-recent-title">{item.title}</h3>
                 <p>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</p>
-                <div><span>{timeAgo(item.updatedAt)}</span><button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>Buka di studio</button></div>
+                <div><span>{timeAgo(item.updatedAt)}</span><button className="secondary-button" type="button" onClick={() => onOpenInNewTab(item.snapshot)}>Buka di studio</button></div>
               </div>
             </article>
           ))}
@@ -294,7 +295,7 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
               <td>{timeAgo(item.updatedAt)}</td>
               <td>
               <div className="project-card-actions">
-                <button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>
+                <button className="secondary-button" type="button" onClick={() => onOpenInNewTab(item.snapshot)}>
                   <OpenInNewWindowIcon /> Buka di studio
                 </button>
                 <button

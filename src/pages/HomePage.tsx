@@ -14,6 +14,7 @@ import { ProjectsHome } from '../features/exporter/components/ProjectsHome';
 import { HomeSidebar } from './home/HomeSidebar';
 import { HomeTopbar } from './home/HomeTopbar';
 import { HomeMobileNav } from './home/HomeMobileNav';
+import type { Project } from '../features/studio/constants/h5pModel';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
@@ -31,6 +32,11 @@ export function HomePage() {
 
   const tab = pathname === '/materi' ? 'materi' : 'dashboard';
   const activeNav = tab === 'materi' ? 'materi' : 'dashboard';
+
+  const openStudioInNewTab = (project: Project) => {
+    const query = new URLSearchParams({ project: project.id, from: pathname });
+    window.open(`/studio?${query.toString()}`, '_blank', 'noopener,noreferrer');
+  };
 
   const openNewModal = () => {
     setNewNonce((n) => n + 1);
@@ -88,7 +94,7 @@ export function HomePage() {
             {tab === 'dashboard' ? (
               <Dashboard
                 items={store.items}
-                onOpen={(p) => openProject(p, pathname, { saved: true })}
+                onOpen={openStudioInNewTab}
                 onGoMaterials={() => navigate('/materi')}
                 onCreate={openNewModal}
                 query={query}
@@ -99,6 +105,7 @@ export function HomePage() {
               <ProjectsHome
                 items={store.items}
                 onOpen={(p, opts) => openProject(p, pathname, { saved: opts?.saved ?? true })}
+                onOpenInNewTab={openStudioInNewTab}
                 onDelete={store.remove}
                 onRename={store.rename}
                 onDuplicate={store.duplicate}

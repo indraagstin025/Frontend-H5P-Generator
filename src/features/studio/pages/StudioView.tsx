@@ -122,7 +122,9 @@ export function StudioView() {
     );
   }
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+  const sourcePage = new URLSearchParams(location.search).get('from');
+  const from = (location.state as { from?: string } | null)?.from
+    ?? (sourcePage === '/materi' ? '/materi' : '/dashboard');
   const project = state.project;
   const hasSlides = state.slides.length > 0;
   const stepLabel = WIZARD_STEPS.find((s) => s.id === step)?.label ?? '';

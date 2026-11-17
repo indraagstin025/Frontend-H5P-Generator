@@ -130,6 +130,18 @@ export function ElementContentFields({
 
   return (
     <>
+      {element.kind === 'advancedText' && (
+        <label className="field-label">
+          Isi teks
+          <textarea
+            rows={6}
+            value={element.text}
+            placeholder="Tulis penjelasan di sini…"
+            onChange={(e) => patch({ text: e.target.value })}
+          />
+          <span className="field-hint">Isi teks tetap dapat diedit saat ditampilkan sebagai tombol.</span>
+        </label>
+      )}
       {element.kind === 'link' && (
         <>
           <label className="field-label">
@@ -379,10 +391,22 @@ export function ElementContentFields({
             <input
               type="checkbox"
               checked={element.displayAsButton}
-              onChange={(e) => patch({ displayAsButton: e.target.checked })}
+              onChange={(e) => patch({
+                displayAsButton: e.target.checked,
+                ...(element.kind === 'advancedText' && e.target.checked && !element.buttonLabel.trim()
+                  ? { buttonLabel: 'Baca penjelasan' }
+                  : {}),
+              })}
             />
-            <span>Jadi tombol kecil (diklik baru kebuka)</span>
+            <span>{element.kind === 'advancedText' ? 'Tambahkan button' : 'Jadi tombol kecil (diklik baru kebuka)'}</span>
           </label>
+          {element.kind === 'advancedText' && (
+            <p className="field-hint">
+              {element.displayAsButton
+                ? 'Klik tombol di slide untuk membuka teks sebagai pop-up.'
+                : 'Teks tampil langsung di slide. Centang untuk menampilkannya melalui tombol.'}
+            </p>
+          )}
           {element.displayAsButton && (
             <label className="check-row compact">
               <input
@@ -438,7 +462,7 @@ export function ElementContentFields({
           )}
           {element.displayAsButton && (
             <label className="field-label">
-              Tulisan di tombolnya
+              {element.kind === 'advancedText' ? 'Label tombol' : 'Tulisan di tombolnya'}
               <input
                 value={element.buttonLabel}
                 placeholder={KIND_LABEL[element.kind]}
