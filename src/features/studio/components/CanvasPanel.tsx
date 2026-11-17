@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ResetIcon, ReloadIcon } from '@radix-ui/react-icons';
+import { ResetIcon } from '@radix-ui/react-icons';
 import type { ElementPosition, Project, Slide, SlideElement } from '../constants/h5pModel';
 import { resizeElement, type ResizeCorner } from '../utils/resizeElement';
 import { ElementPreviewDialog } from './ElementPreviewDialog';
@@ -414,7 +414,7 @@ export function CanvasPanel({
       <div className="st-canvas-interaction-tools">
         <div className="hs-history-actions" role="group" aria-label="Riwayat perubahan">
           <button type="button" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Urungkan perubahan"><ResetIcon aria-hidden="true" /></button>
-          <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Ulangi perubahan"><ReloadIcon aria-hidden="true" /></button>
+          <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Ulangi perubahan"><ResetIcon aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>
         </div>
         <span>Klik dua kali tombol untuk mencoba interaksi.</span>
         <div className="canvas-zoom-controls" role="group" aria-label="Zoom canvas">

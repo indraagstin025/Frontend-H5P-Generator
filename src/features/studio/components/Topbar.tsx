@@ -1,32 +1,29 @@
 import { useEffect, useState } from 'react';
-import { DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
-import { COURSE_PRESENTATION_MINORS, DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
+import { ArrowLeftIcon, DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 
 type TopbarProps = {
   projectTitle: string;
   savedLabel: string;
-  cpMinor?: number;
-  onCpMinorChange?: (minor: number) => void;
   onHome: () => void;
   onSave: () => void;
   onExport?: () => void;
   isExporting?: boolean;
   onPreview?: () => void;
   isPreparingPreview?: boolean;
+  isPreviewActive?: boolean;
   onRenameTitle?: (title: string) => void;
 };
 
 export function Topbar({
   projectTitle,
   savedLabel,
-  cpMinor = DEFAULT_CP_MINOR,
-  onCpMinorChange,
   onHome,
   onSave,
   onExport,
   isExporting,
   onPreview,
   isPreparingPreview = false,
+  isPreviewActive = false,
   onRenameTitle,
 }: TopbarProps) {
   const [draft, setDraft] = useState(projectTitle);
@@ -80,37 +77,8 @@ export function Topbar({
         </div>
       </div>
 
-      {/* Kanan: Aksi (Versi, Export, Pratinjau, Simpan) */}
+      {/* Kanan: Pratinjau, Simpan, Export */}
       <div className="hs-topbar-right">
-        {/* Pilihan Versi Course Presentation */}
-        <div className="hs-version-selector" title="Pilih versi H5P Course Presentation (samakan dengan versi LMS Anda)">
-          <span className="hs-version-label">Versi:</span>
-          <select
-            className="hs-version-select"
-            value={cpMinor}
-            aria-label="Pilihan versi Course Presentation"
-            onChange={(e) => onCpMinorChange?.(Number(e.target.value))}
-          >
-            {COURSE_PRESENTATION_MINORS.map((m) => (
-              <option key={m} value={m}>
-                v1.{m} {m === 24 ? '(Default)' : m === 26 ? '(Terbaru)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Tombol Export H5P */}
-        <button
-          className="hs-btn-export"
-          type="button"
-          onClick={onExport}
-          disabled={isExporting}
-          title="Unduh paket .h5p siap pakai ke LMS"
-        >
-          <DownloadIcon width={15} height={15} />
-          <span className="hs-btn-text">{isExporting ? 'Mengemas...' : 'Unduh H5P'}</span>
-        </button>
-
         {/* Tombol Pratinjau */}
         <button
           className="hs-btn-preview"
@@ -118,10 +86,10 @@ export function Topbar({
           onClick={onPreview}
           disabled={isPreparingPreview}
           aria-busy={isPreparingPreview}
-          title="Pratinjau"
+          title={isPreviewActive ? 'Kembali ke editor' : 'Pratinjau'}
         >
-          <EyeOpenIcon width={15} height={15} />
-          <span className="hs-btn-text">{isPreparingPreview ? 'Menyimpan…' : 'Pratinjau'}</span>
+          {isPreviewActive ? <ArrowLeftIcon width={15} height={15} /> : <EyeOpenIcon width={15} height={15} />}
+          <span className="hs-btn-text">{isPreparingPreview ? 'Menyimpan…' : isPreviewActive ? 'Kembali' : 'Pratinjau'}</span>
         </button>
 
         {/* Tombol Simpan */}
@@ -137,6 +105,17 @@ export function Topbar({
             <path d="M4 1V5H10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <span className="hs-btn-text">Simpan</span>
+        </button>
+        <button
+          className="hs-btn-export"
+          type="button"
+          onClick={onExport}
+          disabled={isExporting}
+          aria-busy={isExporting}
+          title="Unduh paket .h5p siap pakai ke LMS"
+        >
+          <DownloadIcon width={15} height={15} />
+          <span className="hs-btn-text">{isExporting ? 'Mengemas…' : 'Export H5P'}</span>
         </button>
       </div>
     </header>

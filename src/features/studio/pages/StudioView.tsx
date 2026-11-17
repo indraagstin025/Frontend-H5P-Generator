@@ -190,8 +190,6 @@ export function StudioView() {
       <Topbar
         projectTitle={project.title}
         savedLabel={savedLabel}
-        cpMinor={cpMinor}
-        onCpMinorChange={handleCpMinorChange}
         onExport={handleExport}
         isExporting={exporting}
         onHome={goBack}
@@ -204,8 +202,12 @@ export function StudioView() {
             );
           });
         }}
-        onPreview={() => { void handlePreview(); }}
+        onPreview={() => {
+          if (step === 3) setStep(2);
+          else void handlePreview();
+        }}
         isPreparingPreview={savingPreview}
+        isPreviewActive={step === 3}
         onRenameTitle={(title) => {
           actions.setTitle(title);
           showNotice('Judul diganti — jangan lupa Simpan.');
@@ -385,8 +387,8 @@ export function StudioView() {
         </section>
       )}
 
-      {/* Navigasi langkah bawah (hanya di luar layar Susun agar tampilan Studio persis seperti referensi) */}
-      {step !== 2 && (
+      {/* Upload and export retain the footer; preview returns through the topbar. */}
+      {(step === 1 || step === 4) && (
         <nav className="hs-step-nav" aria-label="Navigasi langkah">
           <span className="muted">
             Langkah {step} dari {WIZARD_STEPS.length} · {stepLabel}
