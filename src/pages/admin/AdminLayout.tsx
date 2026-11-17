@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { DashboardIcon, ExitIcon, PersonIcon } from '@radix-ui/react-icons';
+import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
 import './AdminUsersPage.css';
 
@@ -48,9 +48,6 @@ export function AdminLayout() {
         <nav aria-label="Navigasi administrator">
           <NavLink to="/admin/users" end>
             <PersonIcon aria-hidden="true" /> Kelola pengguna
-          </NavLink>
-          <NavLink to="/dashboard">
-            <DashboardIcon aria-hidden="true" /> Dashboard materi
           </NavLink>
         </nav>
         <div
