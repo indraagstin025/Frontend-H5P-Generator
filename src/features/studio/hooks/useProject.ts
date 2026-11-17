@@ -112,8 +112,11 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   const addSlide = useCallback(() => {
     const order = slides.length + 1;
     const slide = createSlide(order, 'Slide baru', project.settings.aspect);
+    slide.chapter = '';
+    slide.keywords = [];
     setSlides([...slides, slide]);
     setActiveSlideId(slide.id);
+    setSelectedElementId(null);
   }, [slides, project.settings.aspect, setSlides]);
 
   const duplicateSlide = useCallback(

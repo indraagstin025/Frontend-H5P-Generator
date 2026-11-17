@@ -109,14 +109,21 @@
   position: absolute;
   bottom: 8px;
   left: 8px;
-  right: 8px;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #c5d9c6;
+  border-radius: 5px;
+  background: #ffffff;
   font-size: 10px;
   font-weight: 700;
   color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: left;
+  text-align: center;
   line-height: 1.2;
 }
 

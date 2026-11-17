@@ -355,9 +355,9 @@ export function CanvasPanel({
           onClick={() => onSelectElement(null)}
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
-          <div className="canvas-grid" aria-hidden="true"></div>
+          {slide.chapter && <div className="canvas-grid" aria-hidden="true"></div>}
 
-          {!slide.backgroundUrl && (
+          {!slide.backgroundUrl && slide.chapter && (
             <div className="canvas-slide-content">
               {slide.chapter && (
                 <div className="canvas-chapter-badge">
