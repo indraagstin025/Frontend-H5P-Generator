@@ -82,6 +82,20 @@ export function StudioView() {
     window.setTimeout(() => setNotice(''), NOTICE_TIMEOUT_MS);
   };
 
+  useEffect(() => {
+    const handleDelete = (event: KeyboardEvent) => {
+      if (event.key !== 'Backspace' && event.key !== 'Delete') return;
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (step !== 2 || !state.selectedElement || document.querySelector('dialog[open], [role="dialog"]')) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return;
+      event.preventDefault();
+      actions.deleteElement(state.selectedElement.id);
+    };
+    window.addEventListener('keydown', handleDelete);
+    return () => window.removeEventListener('keydown', handleDelete);
+  }, [step, state.selectedElement, actions]);
+
   if (!currentId) {
     return (
       <main className="app-shell">
