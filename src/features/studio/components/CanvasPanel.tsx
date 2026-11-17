@@ -167,6 +167,7 @@ type CanvasPanelProps = {
   onMoveElement: (id: string, x: number, y: number) => void;
   onResizeElement: (id: string, position: ElementPosition) => void;
   onRotateElement: (id: string, rotation: number) => void;
+  onChangeText: (id: string, text: string) => void;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -195,6 +196,7 @@ export function CanvasPanel({
   onMoveElement,
   onResizeElement,
   onRotateElement,
+  onChangeText,
   onPrev,
   onNext,
 }: CanvasPanelProps) {
@@ -446,6 +448,28 @@ export function CanvasPanel({
               )}
             </button>
           ))}
+          {selected?.kind === 'advancedText' && !selected.displayAsButton && (
+            <textarea
+              key={selected.id}
+              autoFocus
+              className="st-canvas-text-editor"
+              aria-label="Edit teks di canvas"
+              value={selected.text}
+              placeholder="Ketik teks di sini…"
+              style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)` }}
+              onChange={(event) => onChangeText(selected.id, event.target.value)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  onSelectElement(null);
+                }
+              }}
+            />
+          )}
           {selected && (
             <div className="st-resize-frame" style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, transformOrigin: 'center' }}>
               <button type="button" className="st-rotate-handle" aria-label={`Putar ${elementLabel(selected)}`}

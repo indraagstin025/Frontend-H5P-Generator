@@ -20,6 +20,7 @@ import { createServerProject, persistImportedH5pProject } from '../../ingest/api
 import { parseH5p } from '../api/h5pPackager';
 import type { ProjectActionResult, StoredProjectMeta } from '../../projects/hooks/useProjectStore';
 import { formatNetworkError, isBrowserOffline } from '../../../services/network';
+import { ProjectSlideThumbnail } from '../../projects/components/ProjectSlideThumbnail';
 
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
@@ -144,12 +145,9 @@ export function ProjectsHome({ items, onOpen, onDelete, onRename, onDuplicate, o
         {recent.length > 0 && <div className="materials-recent-grid">
           {recent.map((item, index) => (
             <article className={`materials-recent-card materials-recent-${index}`} key={item.id}>
-              <div className="materials-recent-visual">
-                <span className="db-badge db-badge-green">{sourceOf(item).label}</span>
-                <span className="materials-recent-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                <h3>{item.title}</h3>
-              </div>
+              <ProjectSlideThumbnail project={item.snapshot} />
               <div className="materials-recent-body">
+                <h3 className="materials-recent-title">{item.title}</h3>
                 <p>{item.slideCount} slide · {item.snapshot.slides.flatMap((slide) => slide.elements).filter(isQuizElement).length} kuis</p>
                 <div><span>{timeAgo(item.updatedAt)}</span><button className="secondary-button" type="button" onClick={() => onOpen(item.snapshot)}>Buka di studio</button></div>
               </div>

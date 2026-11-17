@@ -12,7 +12,7 @@
   min-height: 0;
   overflow: hidden;
   background: var(--hs-bg);
-  padding: 16px;
+  padding: 0;
   gap: 12px;
 }
 
@@ -23,6 +23,10 @@
   flex: none;
   gap: 12px;
   min-height: 38px;
+  background: white;
+  border: 1px solid var(--hs-line);
+  border-radius: 12px;
+  padding: 10px 14px;
 }
 
 .hs-edit-mode-badge {
@@ -84,7 +88,10 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: transparent;
+  background: #e9efe9;
+  border: 1px solid var(--hs-line);
+  border-radius: 16px;
+  padding: 12px;
   align-items: center;
   justify-content: center;
 }
@@ -102,9 +109,9 @@
 
 .slide-canvas {
   position: relative;
-  width: min(680px, 100%);
+  width: min(960px, 100%);
   aspect-ratio: 16 / 9;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
   background: #ffffff;
@@ -463,12 +470,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: min(680px, 100%);
+  width: 100%;
   padding: 6px 14px;
   margin-bottom: 8px;
   background: #ffffff;
   border: 1px solid var(--hs-line);
-  border-radius: 9999px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
 }

@@ -130,16 +130,6 @@ export function ElementContentFields({
 
   return (
     <>
-      <label className="field-label">
-        Nama (boleh dikosongkan)
-        <input value={element.title} onChange={(e) => patch({ title: e.target.value })} />
-      </label>
-      {element.kind === 'advancedText' && (
-        <label className="field-label">
-          Isi teks
-          <textarea rows={4} value={element.text} onChange={(e) => patch({ text: e.target.value })} />
-        </label>
-      )}
       {element.kind === 'link' && (
         <>
           <label className="field-label">
