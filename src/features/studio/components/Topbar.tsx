@@ -58,7 +58,7 @@ export function Topbar({
               className="hs-project-title-input"
               value={draft}
               aria-label="Judul materi"
-              title="Klik untuk ganti judul"
+              title={`${projectTitle} — klik untuk ganti judul`}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}

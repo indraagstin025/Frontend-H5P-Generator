@@ -92,6 +92,10 @@
   max-width: 260px;
   width: 200px;
   line-height: 1.3;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .hs-project-title-input:hover {
@@ -121,6 +125,10 @@
 .hs-project-subtitle {
   font-size: 11px;
   color: #6b7280;
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .hs-saved-label {

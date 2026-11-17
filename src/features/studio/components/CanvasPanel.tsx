@@ -210,6 +210,7 @@ export function CanvasPanel({
   onNext,
 }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<{ slideId: string; elementId: string } | null>(null);
   const [zoom, setZoom] = useState(100);
   const [fitWidth, setFitWidth] = useState(680);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -429,7 +430,7 @@ export function CanvasPanel({
         <div
           className={`slide-canvas ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
           style={{ width: fitWidth, height: fitWidth / aspect, transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}
-          onClick={() => onSelectElement(null)}
+          onClick={() => { setEditingText(null); onSelectElement(null); }}
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
           {slide.chapter && <div className="canvas-grid" aria-hidden="true"></div>}
@@ -486,6 +487,11 @@ export function CanvasPanel({
               }}
               onClick={(ev) => {
                 ev.stopPropagation();
+                if (selectedElementId === el.id && el.kind === 'advancedText' && !el.displayAsButton) {
+                  setEditingText({ slideId: slide.id, elementId: el.id });
+                } else {
+                  setEditingText(null);
+                }
                 onSelectElement(el.id);
               }}
             >
@@ -523,7 +529,8 @@ export function CanvasPanel({
               )}
             </button>
           ))}
-          {selected?.kind === 'advancedText' && !selected.displayAsButton && (
+          {selected?.kind === 'advancedText' && !selected.displayAsButton
+            && editingText?.slideId === slide.id && editingText.elementId === selected.id && (
             <textarea
               key={selected.id}
               autoFocus
@@ -533,6 +540,7 @@ export function CanvasPanel({
               placeholder="Ketik teks di sini…"
               style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, fontSize: selected.fontSize ?? 13 }}
               onChange={(event) => onChangeText(selected.id, event.target.value)}
+              onBlur={() => setEditingText(null)}
               onPointerDown={(event) => event.stopPropagation()}
               onClick={(event) => event.stopPropagation()}
               onDoubleClick={(event) => event.stopPropagation()}
@@ -540,7 +548,7 @@ export function CanvasPanel({
                 event.stopPropagation();
                 if (event.key === 'Escape') {
                   event.preventDefault();
-                  onSelectElement(null);
+                  setEditingText(null);
                 }
               }}
             />
