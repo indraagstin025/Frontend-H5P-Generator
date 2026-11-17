@@ -15,6 +15,15 @@
 .admin-profile-popup { color: #163a23; }
 .admin-main { max-width: 1440px; margin-inline: auto; }
 .admin-content { min-width: 0; }
+@media (min-width: 951px) {
+  .admin-shell { background: #077c1a; }
+  .admin-content {
+    background: #f4f8f4;
+    border-radius: 32px 0 0 32px;
+    overflow: clip;
+    min-height: 100dvh;
+  }
+}
 .admin-heading { margin-top: 12px; margin-bottom: 30px; }
 .admin-heading h1 { color: #163a23; letter-spacing: -.04em; }
 .admin-summary, .admin-directory { border-radius: 20px; border-color: #dce8df; box-shadow: 0 8px 30px #163a2305; }
