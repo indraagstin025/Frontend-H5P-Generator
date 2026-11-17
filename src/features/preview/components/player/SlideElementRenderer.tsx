@@ -61,7 +61,7 @@ export function SlideElementRenderer({
   }
 
   if (el.kind === 'advancedText') {
-    return <div key={el.id} className="pv-text">{el.text}</div>;
+    return <div key={el.id} className="pv-text" style={{ fontSize: el.fontSize ?? 13 }}>{el.text}</div>;
   }
 
   if (el.kind === 'link') {

@@ -280,7 +280,7 @@ export function toAction(
 ): Record<string, unknown> | null {
   switch (el.kind) {
     case 'advancedText':
-      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.fontSize && Number.isFinite(el.fontSize) ? `<div style="font-size: ${Math.max(1, el.fontSize)}px">${el.text}</div>` : el.text } };
     case 'link': {
       const link = el as LinkElement;
       return {

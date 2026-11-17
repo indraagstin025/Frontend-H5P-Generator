@@ -5,6 +5,7 @@ import { getStoredUser, loadPendingSyncIds } from '../../../services/authService
 
 function content(element: SlideElement) {
   if (element.displayAsButton) return element.popupButtonInvisible ? null : <span>{element.buttonLabel || element.title || 'Interaksi'}</span>;
+  if (element.kind === 'advancedText') return <span style={{ fontSize: element.fontSize ?? 13 }}>{element.text}</span>;
   if (element.kind === 'image') return element.objectUrl ? <img src={element.objectUrl} alt="" /> : null;
   if (element.kind === 'shape') return <div style={{ width: '100%', height: '100%', background: element.color, borderRadius: element.shapeType === 'circle' ? '50%' : 0 }} />;
   if (element.kind === 'goToSlide') return element.invisible ? null : element.label;
