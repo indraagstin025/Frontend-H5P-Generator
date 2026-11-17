@@ -88,6 +88,8 @@
 
 /* ===================== CANVAS PANEL ===================== */
 .canvas-panel {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -102,15 +104,26 @@
 }
 
 .canvas-wrap {
+  touch-action: none;
   flex: 1;
   width: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: auto;
+  padding: 16px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 0;
   background: transparent;
 }
+
+.canvas-zoom-stage { position: relative; flex: none; margin: auto; }
+.canvas-zoom-controls { display: flex; align-items: center; gap: 4px; flex: none; }
+.canvas-zoom-controls button { min-width: 34px; height: 36px; border: 1px solid var(--hs-green-border); border-radius: 8px; background: white; color: var(--hs-ink); font-size: 18px; cursor: pointer; }
+.canvas-zoom-controls .canvas-zoom-value { min-width: 64px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.canvas-zoom-controls button:hover:not(:disabled) { background: var(--hs-green-soft); }
 
 .slide-canvas {
   position: relative;
@@ -472,6 +485,9 @@
 
 /* ===================== CANVAS NAVIGATION BAR ===================== */
 .canvas-navigation-bar {
+  position: relative;
+  z-index: 10;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

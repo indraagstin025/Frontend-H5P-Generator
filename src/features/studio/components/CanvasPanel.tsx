@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ResetIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ElementPosition, Project, Slide, SlideElement } from '../constants/h5pModel';
 import { resizeElement, type ResizeCorner } from '../utils/resizeElement';
@@ -210,6 +210,19 @@ export function CanvasPanel({
   onNext,
 }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [fitWidth, setFitWidth] = useState(680);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const aspect = slide.aspect === '4:3' ? 4 / 3 : 16 / 9;
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(() => {
+      setFitWidth(Math.max(1, Math.min(960, viewport.clientWidth - 32, (viewport.clientHeight - 32) * aspect)));
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [aspect]);
   const [preview, setPreview] = useState<{ slideId: string; elementId: string } | null>(null);
   const previewElement = preview?.slideId === slide.id
     ? slide.elements.find((el) => el.id === preview.elementId && el.displayAsButton && el.kind !== 'goToSlide')
@@ -220,6 +233,48 @@ export function CanvasPanel({
   const resize = useRef<{ id: string; pointerId: number; x: number; y: number; start: ElementPosition; corner: ResizeCorner; canvasWidth: number; canvasHeight: number; preserveRatio: boolean; rotation: number } | null>(null);
   const selected = slide.elements.find((el) => el.id === selectedElementId);
   const rotate = useRef<{ id: string; pointerId: number; centerX: number; centerY: number; startAngle: number; rotation: number } | null>(null);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let distance: number | null = null;
+    const wheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1);
+      setZoom((value) => Math.max(25, Math.min(300, value * Math.exp(-delta * .01))));
+    };
+    const touchDistance = (touches: TouchList) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    const start = (event: TouchEvent) => {
+      if (event.touches.length !== 2) { distance = null; return; }
+      event.preventDefault();
+      distance = touchDistance(event.touches);
+      drag.current = null;
+      resize.current = null;
+      rotate.current = null;
+      setDragId(null);
+    };
+    const move = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || distance === null) return;
+      event.preventDefault();
+      const next = touchDistance(event.touches);
+      const ratio = distance > 0 ? next / distance : 1;
+      distance = next;
+      setZoom((value) => Math.max(25, Math.min(300, value * ratio)));
+    };
+    const end = () => { distance = null; };
+    viewport.addEventListener('wheel', wheel, { passive: false });
+    viewport.addEventListener('touchstart', start, { passive: false });
+    viewport.addEventListener('touchmove', move, { passive: false });
+    viewport.addEventListener('touchend', end);
+    viewport.addEventListener('touchcancel', end);
+    return () => {
+      viewport.removeEventListener('wheel', wheel);
+      viewport.removeEventListener('touchstart', start);
+      viewport.removeEventListener('touchmove', move);
+      viewport.removeEventListener('touchend', end);
+      viewport.removeEventListener('touchcancel', end);
+    };
+  }, []);
   const startRotate = (el: SlideElement) => (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
@@ -362,11 +417,18 @@ export function CanvasPanel({
           <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Ulangi perubahan"><ReloadIcon aria-hidden="true" /></button>
         </div>
         <span>Klik dua kali tombol untuk mencoba interaksi.</span>
+        <div className="canvas-zoom-controls" role="group" aria-label="Zoom canvas">
+          <button type="button" aria-label="Perkecil slide" disabled={zoom <= 25} onClick={() => setZoom((value) => Math.max(25, value - 25))}>−</button>
+          <button type="button" className="canvas-zoom-value" aria-label={`Zoom ${Math.round(zoom)} persen, klik untuk menyesuaikan ke area canvas`} title="Sesuaikan ke area canvas" onClick={() => setZoom(100)}>{Math.round(zoom)}%</button>
+          <button type="button" aria-label="Perbesar slide" disabled={zoom >= 300} onClick={() => setZoom((value) => Math.min(300, value + 25))}>+</button>
+        </div>
         {selectedPopup && <button type="button" className="secondary-button" onClick={() => setPreview({ slideId: slide.id, elementId: selectedPopup.id })}>Coba interaksi</button>}
       </div>
-      <div className="canvas-wrap">
+      <div className="canvas-wrap" ref={viewportRef}>
+        <div className="canvas-zoom-stage" style={{ width: fitWidth * zoom / 100, height: fitWidth / aspect * zoom / 100 }}>
         <div
           className={`slide-canvas ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
+          style={{ width: fitWidth, height: fitWidth / aspect, transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}
           onClick={() => onSelectElement(null)}
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
@@ -518,6 +580,7 @@ export function CanvasPanel({
             </div>
           )}
         </div>
+      </div>
       </div>
       <div className="canvas-navigation-bar">
         <div className="canvas-nav-left">
