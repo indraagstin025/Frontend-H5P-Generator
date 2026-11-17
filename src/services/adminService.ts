@@ -37,6 +37,13 @@ export interface AdminUsersResponse {
   summary: AdminUsersSummary;
 }
 
+export function createAdminUser(input: { name: string; email: string; password: string }) {
+  return apiFetch<{ message: string; data: AdminUserRecord }>('/admin/users', {
+    method: 'POST',
+    body: input,
+  });
+}
+
 export async function fetchAdminUsers(params: {
   q?: string;
   role?: AdminRoleFilter;

@@ -1,0 +1,20 @@
+.floating-shapes-host { isolation: isolate; }
+.floating-shapes { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.floating-shape { position: absolute; display: block; border: 1px solid #ffffff24; background: #ffffff05; }
+.floating-shape--square { width: 160px; height: 160px; left: -70px; top: 8%; border-radius: 18px; transform: rotate(24deg); }
+.floating-shape--ring { width: 210px; height: 210px; right: -135px; top: 32%; border-radius: 50%; background: transparent; }
+.floating-shape--triangle { width: 140px; height: 140px; left: 5%; bottom: 18%; border: 0; background: #ffffff09; clip-path: polygon(50% 0, 100% 100%, 0 100%); transform: rotate(-12deg); }
+.floating-shape--small-square { width: 62px; height: 62px; right: 12%; top: 56%; border-radius: 12px; transform: rotate(-18deg); }
+.floating-shape--circle { width: 140px; height: 140px; right: -65px; bottom: -40px; border-radius: 50%; background: #ffffff08; }
+@media (prefers-reduced-motion: no-preference) {
+  .floating-shape { animation: floating-shape-drift 7s ease-in-out infinite alternate; }
+  .floating-shape--ring { animation-duration: 9s; animation-delay: -3s; }
+  .floating-shape--triangle { animation-duration: 8s; animation-delay: -5s; }
+  .floating-shape--small-square { animation-delay: -2s; animation-direction: alternate-reverse; }
+  .floating-shape--circle { animation-duration: 10s; animation-delay: -6s; }
+  .floating-shapes-host:focus-within > .floating-shapes .floating-shape { animation-play-state: paused; }
+}
+@keyframes floating-shape-drift {
+  from { translate: -6px 6px; rotate: -4deg; }
+  to { translate: 12px -14px; rotate: 5deg; }
+}

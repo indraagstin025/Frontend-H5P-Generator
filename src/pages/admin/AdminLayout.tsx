@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
+import { ExitIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
+import { FloatingShapes } from '../../components/UI/FloatingShapes';
 import './AdminUsersPage.css';
+import './AdminTheme.css';
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -37,9 +39,10 @@ export function AdminLayout() {
       <a className="admin-skip" href="#admin-main">
         Lewati ke konten
       </a>
-      <aside className="admin-sidebar" aria-label="Panel administrator">
+      <aside className="admin-sidebar floating-shapes-host" aria-label="Panel administrator">
+        <FloatingShapes />
         <Link to="/admin/users" className="admin-brand">
-          <img src="/dashboard-logo.png" alt="H5P Generator" width={60} height={54} />
+          <img src="/landing-logo.png" alt="H5P Generator" width={60} height={54} />
           <span>
             <strong>H5P Generator</strong>
             <small>Ruang administrasi</small>
@@ -48,6 +51,9 @@ export function AdminLayout() {
         <nav aria-label="Navigasi administrator">
           <NavLink to="/admin/users" end>
             <PersonIcon aria-hidden="true" /> Kelola pengguna
+          </NavLink>
+          <NavLink to="/admin/users/new" className="admin-add-user">
+            <PlusIcon aria-hidden="true" /> Tambah User
           </NavLink>
         </nav>
         <div

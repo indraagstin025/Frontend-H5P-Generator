@@ -1,4 +1,5 @@
 import { DashboardIcon, LayersIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
+import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
 interface HomeMobileNavProps {
   activeNav: 'dashboard' | 'materi';
@@ -18,7 +19,8 @@ export function HomeMobileNav({
   onNavigateAdmin,
 }: HomeMobileNavProps) {
   return (
-    <nav className="db-mobile-nav" aria-label="Navigasi seluler">
+    <nav className="db-mobile-nav floating-shapes-host" aria-label="Navigasi seluler">
+      <FloatingShapes />
       <button
         type="button"
         className={`db-nav-btn ${activeNav === 'dashboard' ? 'active' : ''}`}
