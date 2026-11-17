@@ -4,9 +4,12 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Cross2Icon,
+  CircleBackslashIcon,
   MagnifyingGlassIcon,
   PersonIcon,
+  PlusIcon,
   ReloadIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -63,6 +66,12 @@ export function AdminUsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [modalError, setModalError] = useState('');
   const [notice, setNotice] = useState<{ text: string; isError?: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -400,6 +409,7 @@ export function AdminUsersPage() {
                               onClick={() => openModal('role', entry)}
                               aria-label={`${entry.role === 'ADMIN' ? 'Jadikan Pengguna' : 'Jadikan Admin'} untuk ${entry.name}`}
                             >
+                              <span className="admin-role-icon" aria-hidden="true"><PersonIcon /><PlusIcon /></span>
                               {entry.role === 'ADMIN' ? 'Jadikan Pengguna' : 'Jadikan Admin'}
                             </button>
                             <button
@@ -409,6 +419,7 @@ export function AdminUsersPage() {
                               onClick={() => openModal('status', entry)}
                               aria-label={`${entry.isActive ? 'Blokir' : 'Buka blokir'} ${entry.name}`}
                             >
+                              <CircleBackslashIcon aria-hidden="true" />
                               {entry.isActive ? 'Blokir' : 'Buka blokir'}
                             </button>
                             <button
@@ -419,7 +430,7 @@ export function AdminUsersPage() {
                               onClick={() => openModal('delete', entry)}
                               aria-label={`Hapus ${entry.name}`}
                             >
-                              Hapus
+                              <TrashIcon aria-hidden="true" /> Hapus
                             </button>
                           </div>
                         </td>

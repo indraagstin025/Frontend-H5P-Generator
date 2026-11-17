@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, CheckCircledIcon, EyeClosedIcon, EyeOpenIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 import { createAdminUser } from '../../services/adminService';
 import { formatNetworkError } from '../../services/network';
-import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
 export function AdminCreateUserPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [error, setError] = useState('');
   const [created, setCreated] = useState<{ name: string; email: string } | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -59,6 +59,7 @@ export function AdminCreateUserPage() {
       const result = await createAdminUser({ name, email, password });
       form.reset();
       setShowPassword(false);
+      setShowConfirmation(false);
       setCreated({ name: result.data.name, email: result.data.email });
     } catch (err) {
       setError(formatNetworkError(err, 'Akun belum berhasil ditambahkan. Silakan coba lagi.'));
@@ -103,7 +104,10 @@ export function AdminCreateUserPage() {
                   </div>
                   <small id="new-password-hint">Minimal 8 karakter, gunakan kombinasi huruf dan angka.</small>
                   <label htmlFor="new-user-confirmation">Konfirmasi password</label>
-                  <input id="new-user-confirmation" name="confirmation" type="password" autoComplete="new-password" placeholder="Ketik ulang password" minLength={8} maxLength={128} required />
+                  <div className="admin-password-field">
+                    <input id="new-user-confirmation" name="confirmation" type={showConfirmation ? 'text' : 'password'} autoComplete="new-password" placeholder="Ketik ulang password" minLength={8} maxLength={128} required />
+                    <button type="button" onClick={() => setShowConfirmation((shown) => !shown)} aria-label={showConfirmation ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'} aria-pressed={showConfirmation}>{showConfirmation ? <EyeClosedIcon /> : <EyeOpenIcon />}</button>
+                  </div>
                   <div className="admin-form-actions">
                     <button type="button" className="admin-button" onClick={() => navigate('/admin/users')}>Batal</button>
                     <button type="submit" className="admin-button admin-primary"><PlusIcon aria-hidden="true" />{submitting ? 'Menyimpan…' : 'Tambah User'}</button>
@@ -113,14 +117,6 @@ export function AdminCreateUserPage() {
             </>
           )}
         </section>
-        <aside className="admin-create-note floating-shapes-host">
-          <FloatingShapes />
-          <span className="admin-eyebrow">BELAJAR TANPA BATAS</span>
-          <h2>Satu akun baru.<br />Banyak ide berikutnya.</h2>
-          <p>Bantu pengguna memulai langkahnya membuat materi pembelajaran interaktif bersama H5P Generator.</p>
-          <div className="admin-account-info"><CheckCircledIcon aria-hidden="true" /><div><strong>Siap digunakan</strong><p>Akun langsung aktif dengan peran User setelah disimpan.</p></div></div>
-          <div className="admin-account-info"><PersonIcon aria-hidden="true" /><div><strong>Ruang berkarya pribadi</strong><p>Pengguna dapat membuat dan mengelola materi pembelajarannya sendiri.</p></div></div>
-        </aside>
       </div>
     </>
   );
