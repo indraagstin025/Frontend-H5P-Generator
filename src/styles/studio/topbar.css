@@ -30,7 +30,7 @@
   gap: 6px;
   min-width: 0;
   font-size: 11px;
-  color: #6b7280;
+  color: var(--hs-ink-muted);
 }
 
 .hs-topbar-logo {
@@ -49,6 +49,8 @@
 .hs-topbar-logo:hover {
   background: var(--hs-green-soft);
 }
+
+.hs-brand-image { flex: none; object-fit: contain; }
 
 .hs-logo-icon {
   background: var(--hs-green);
@@ -75,7 +77,7 @@
 }
 
 .hs-project-title-input {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--hs-ink-muted);
   background: transparent;
@@ -135,8 +137,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f9fafb;
-  border: 1px solid #d1d5db;
+  background: var(--hs-green-softer);
+  border: 1px solid var(--hs-line);
   border-radius: 8px;
   padding: 4px 8px 4px 10px;
   transition: border-color 0.15s;
@@ -149,7 +151,7 @@
 .hs-version-label {
   font-size: 11px;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--hs-ink-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
@@ -160,7 +162,7 @@
   background: transparent;
   font-size: 12px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--hs-ink);
   cursor: pointer;
   padding: 2px 2px;
   outline: none;
@@ -170,9 +172,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #ecfdf5;
-  border: 1.5px solid #10b981;
-  color: #047857;
+  background: var(--hs-green-soft);
+  border: 1px solid var(--hs-green-border);
+  color: var(--hs-green);
   border-radius: 8px;
   padding: 7px 14px;
   font-size: 13px;
@@ -183,9 +185,9 @@
 }
 
 .hs-btn-export:hover:not(:disabled) {
-  background: #d1fae5;
-  border-color: #059669;
-  color: #065f46;
+  background: #dbe7ce;
+  border-color: #91b596;
+  color: #194f30;
 }
 
 .hs-btn-export:disabled {
@@ -198,8 +200,8 @@
   align-items: center;
   gap: 6px;
   background: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--hs-line);
+  color: var(--hs-ink);
   border-radius: 8px;
   padding: 7px 16px;
   font-size: 13px;
@@ -209,16 +211,16 @@
 }
 
 .hs-btn-preview:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--hs-green-softer);
+  border-color: var(--hs-green-border);
 }
 
 .hs-btn-save {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #1c6b3e;
-  border: 1px solid #1c6b3e;
+  background: var(--hs-green);
+  border: 1px solid var(--hs-green);
   color: #ffffff;
   border-radius: 8px;
   padding: 7px 18px;
@@ -229,6 +231,8 @@
 }
 
 .hs-btn-save:hover {
-  background: #155730;
-  border-color: #155730;
+  background: #194f30;
+  border-color: #194f30;
 }
+
+.hs-btn-export, .hs-btn-preview, .hs-btn-save { min-height: 40px; border-radius: 10px; justify-content: center; }

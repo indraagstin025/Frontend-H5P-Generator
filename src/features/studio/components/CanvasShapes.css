@@ -63,6 +63,10 @@
 .st-resize-ne { top: 0; right: 0; cursor: nesw-resize; }
 .st-resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 .st-resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.st-resize-w { top: 50%; left: 0; transform: translateY(-50%); cursor: ew-resize; }
+.st-resize-e { top: 50%; right: 0; transform: translateY(-50%); cursor: ew-resize; }
+.st-resize-w::after { top: 50%; left: 0; transform: translateY(-50%); }
+.st-resize-e::after { top: 50%; right: 0; transform: translateY(-50%); }
 .st-resize-nw::after { top: 0; left: 0; }
 .st-resize-ne::after { top: 0; right: 0; }
 .st-resize-sw::after { bottom: 0; left: 0; }

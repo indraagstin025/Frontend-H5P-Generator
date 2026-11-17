@@ -79,6 +79,7 @@ export function StudioLeftPanel({
                 type="button"
                 className={`hs-slide-thumb ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
                 title={`Slide ${slide.order}: ${slide.title}`}
+                aria-label={`Slide ${slide.order}: ${slide.title}`}
                 onClick={() => onSelectSlide(slide.id)}
               >
                 {slide.backgroundUrl ? (
@@ -87,7 +88,7 @@ export function StudioLeftPanel({
                   <div className="hs-thumb-minibar" />
                 )}
                 <span className="hs-slide-num">
-                  {String(slide.order).padStart(2, '0')} {slide.title}
+                  {String(slide.order).padStart(2, '0')}
                 </span>
               </button>
 

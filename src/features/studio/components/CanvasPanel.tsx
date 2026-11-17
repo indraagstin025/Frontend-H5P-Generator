@@ -355,9 +355,9 @@ export function CanvasPanel({
           onClick={() => onSelectElement(null)}
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
-          <div className="canvas-grid" aria-hidden="true"></div>
+          {slide.chapter && <div className="canvas-grid" aria-hidden="true"></div>}
 
-          {!slide.backgroundUrl && (
+          {!slide.backgroundUrl && slide.chapter && (
             <div className="canvas-slide-content">
               {slide.chapter && (
                 <div className="canvas-chapter-badge">
@@ -459,9 +459,9 @@ export function CanvasPanel({
                   event.preventDefault(); event.stopPropagation();
                   onRotateElement(selected.id, ((selected.rotation ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 15 : 1) + 360) % 360);
                 }}><span aria-hidden="true">↻</span></button>
-              {(['nw', 'ne', 'sw', 'se'] as const).map((corner) => (
+              {(['nw', 'ne', 'sw', 'se', 'w', 'e'] as const).map((corner) => (
                 <button key={corner} type="button" className={`st-resize-handle st-resize-${corner}`}
-                  aria-label={`Ubah ukuran ${elementLabel(selected)} dari sudut ${{ nw: 'kiri atas', ne: 'kanan atas', sw: 'kiri bawah', se: 'kanan bawah' }[corner]}`}
+                  aria-label={`Ubah ukuran ${elementLabel(selected)} dari ${{ nw: 'sudut kiri atas', ne: 'sudut kanan atas', sw: 'sudut kiri bawah', se: 'sudut kanan bawah', w: 'sisi kiri', e: 'sisi kanan' }[corner]}`}
                   title="Tarik untuk mengubah ukuran; tombol panah untuk presisi"
                   onPointerDown={startResize(selected, corner)} onPointerMove={moveResize}
                   onPointerUp={endResize} onPointerCancel={endResize}

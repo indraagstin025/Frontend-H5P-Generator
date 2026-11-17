@@ -48,7 +48,7 @@ export function Topbar({
           onClick={onHome}
           title="Kembali ke daftar materi"
         >
-          <span className="hs-logo-icon">H5P</span>
+          <img className="hs-brand-image" src="/dashboard-logo.png" alt="" width={42} height={38} />
           <span className="hs-logo-text">
             <span className="hs-logo-title">H5P Studio</span>
           </span>
@@ -106,7 +106,7 @@ export function Topbar({
           title="Unduh paket .h5p siap pakai ke LMS"
         >
           <DownloadIcon width={15} height={15} />
-          <span className="hs-btn-text">{isExporting ? 'Mengemas...' : 'Export H5P'}</span>
+          <span className="hs-btn-text">{isExporting ? 'Mengemas...' : 'Unduh H5P'}</span>
         </button>
 
         {/* Tombol Pratinjau */}

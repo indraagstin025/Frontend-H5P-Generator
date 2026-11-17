@@ -1,6 +1,6 @@
 import type { ElementPosition } from '../constants/h5pModel';
 
-export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se';
+export type ResizeCorner = 'nw' | 'ne' | 'sw' | 'se' | 'w' | 'e';
 
 /** Percentage coordinates; the corner opposite the dragged handle stays fixed. */
 export function resizeElement(start: ElementPosition, dx: number, dy: number, corner: ResizeCorner, preserveRatio: boolean, rotation = 0, canvasAspect = 16 / 9): ElementPosition {
@@ -23,10 +23,11 @@ export function resizeElement(start: ElementPosition, dx: number, dy: number, co
   const maxWidth = Math.max(0, west ? anchorX : 100 - anchorX);
   const maxHeight = Math.max(0, north ? anchorY : 100 - anchorY);
   const changeW = west ? -dx : dx;
-  const changeH = north ? -dy : dy;
+  const horizontalOnly = corner === 'w' || corner === 'e';
+  const changeH = horizontalOnly ? 0 : north ? -dy : dy;
   let width: number;
   let height: number;
-  if (preserveRatio && start.width > 0 && start.height > 0) {
+  if (preserveRatio && !horizontalOnly && start.width > 0 && start.height > 0) {
     const desired = 1 + (changeW * start.width + changeH * start.height) / (start.width ** 2 + start.height ** 2);
     const limit = Math.min(maxWidth / start.width, maxHeight / start.height);
     const minimum = Math.min(limit, Math.max(2 / start.width, 2 / start.height));
