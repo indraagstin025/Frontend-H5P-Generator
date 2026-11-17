@@ -10,6 +10,16 @@
   --db-green-primary-hover: #075f26;
 }
 
+@media (min-width: 901px) {
+  .db-scope--reference .db-shell { background: #077c1a; }
+  .db-scope--reference .db-main {
+    background: var(--db-canvas);
+    border-radius: 32px 0 0 32px;
+    overflow: clip;
+    min-height: 100dvh;
+  }
+}
+
 .db-scope--reference .db-sidebar {
   width: 250px;
   padding: 25px 18px;
