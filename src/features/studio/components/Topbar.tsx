@@ -12,6 +12,7 @@ type TopbarProps = {
   onExport?: () => void;
   isExporting?: boolean;
   onPreview?: () => void;
+  isPreparingPreview?: boolean;
   onRenameTitle?: (title: string) => void;
 };
 
@@ -25,6 +26,7 @@ export function Topbar({
   onExport,
   isExporting,
   onPreview,
+  isPreparingPreview = false,
   onRenameTitle,
 }: TopbarProps) {
   const [draft, setDraft] = useState(projectTitle);
@@ -114,10 +116,12 @@ export function Topbar({
           className="hs-btn-preview"
           type="button"
           onClick={onPreview}
+          disabled={isPreparingPreview}
+          aria-busy={isPreparingPreview}
           title="Pratinjau"
         >
           <EyeOpenIcon width={15} height={15} />
-          <span className="hs-btn-text">Pratinjau</span>
+          <span className="hs-btn-text">{isPreparingPreview ? 'Menyimpan…' : 'Pratinjau'}</span>
         </button>
 
         {/* Tombol Simpan */}

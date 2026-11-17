@@ -1,0 +1,2 @@
+/* Classic slides have the same player controls but a taller content area. */
+.h5p-course-presentation:not(.h5p-fullscreen) .h5p-box-wrapper { aspect-ratio: 4 / 3; }

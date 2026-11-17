@@ -1,0 +1,11 @@
+/* H5P normally allocates 90% of a 16:9 player to the slide. Keep the actual
+   slide at the project's ratio and let navigation add its own height below. */
+.h5p-course-presentation:not(.h5p-fullscreen) .h5p-wrapper {
+  height: auto !important;
+}
+.h5p-course-presentation:not(.h5p-fullscreen) .h5p-box-wrapper {
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.h5p-course-presentation:not(.h5p-fullscreen) .h5p-cp-navigation { height: .8em; }
+.h5p-course-presentation:not(.h5p-fullscreen) .h5p-footer { height: 2em; min-height: 28px; }
