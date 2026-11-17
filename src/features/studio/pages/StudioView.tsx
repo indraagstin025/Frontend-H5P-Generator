@@ -11,8 +11,6 @@ import '../../../studio-canva.css';
 import { ExportStep } from '../../exporter/components/ExportStep';
 import { peekPendingFile, takePendingFile } from '../../ingest/api/pendingUpload';
 import { H5PRealPlayer } from '../../preview/components/H5PRealPlayer';
-import { H5PServerPlayer } from '../../preview/components/H5PServerPlayer';
-import { PreviewPlayer } from '../../preview/components/PreviewPlayer';
 import { CanvasPanel } from '../components/CanvasPanel';
 import { ElementPanel } from '../components/ElementPanel';
 import { IngestStep } from '../components/IngestStep';
@@ -35,7 +33,6 @@ export function StudioView() {
     const requested = (location.state as { step?: number } | null)?.step;
     return requested === 1 || requested === 3 || requested === 4 ? requested : 2;
   });
-  const [previewMode, setPreviewMode] = useState<'simulasi' | 'asli' | 'server'>('simulasi');
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
@@ -45,6 +42,8 @@ export function StudioView() {
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
   const [exporting, setExporting] = useState(false);
+  const [savingPreview, setSavingPreview] = useState(false);
+  const previewSavePending = useRef(false);
   // Jangan timpa pilihan user saat probe library selesai.
   const cpPickedByUser = useRef(false);
 
@@ -135,6 +134,30 @@ export function StudioView() {
     navigate(from);
   };
 
+  const handlePreview = async () => {
+    if (previewSavePending.current) return;
+    if (!hasSlides) {
+      showNotice('Tambahkan slide terlebih dahulu sebelum membuka preview.');
+      return;
+    }
+    previewSavePending.current = true;
+    setSavingPreview(true);
+    try {
+      const saved = await saveDraft();
+      if (!saved) {
+        showNotice('Perubahan belum berhasil disimpan ke server. Preview belum dibuka; periksa koneksi lalu coba lagi.');
+        return;
+      }
+      setStep(3);
+      showNotice('Perubahan disimpan. Preview siap dibuka.');
+    } catch (err) {
+      showNotice(formatNetworkError(err, 'Perubahan belum berhasil disimpan. Silakan coba lagi sebelum membuka preview.'));
+    } finally {
+      previewSavePending.current = false;
+      setSavingPreview(false);
+    }
+  };
+
   const handleExport = async () => {
     if (project.slides.length === 0) {
       showNotice('Belum ada slide untuk diekspor.');
@@ -179,7 +202,8 @@ export function StudioView() {
             );
           });
         }}
-        onPreview={() => setStep(3)}
+        onPreview={() => { void handlePreview(); }}
+        isPreparingPreview={savingPreview}
         onRenameTitle={(title) => {
           actions.setTitle(title);
           showNotice('Judul diganti — jangan lupa Simpan.');
@@ -334,43 +358,7 @@ export function StudioView() {
               </div>
             </div>
             {hasSlides ? (
-              <>
-                <div className="home-tabs pv-mode-tabs">
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'simulasi' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('simulasi')}
-                  >
-                    Coba cepat (simulasi)
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'asli' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('asli')}
-                  >
-                    Player H5P asli
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'server' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('server')}
-                  >
-                    Player server + nilai
-                  </button>
-                </div>
-                {previewMode === 'simulasi' ? (
-                  <PreviewPlayer key={project.id + project.slides.length} project={project} />
-                ) : previewMode === 'asli' ? (
-                  <H5PRealPlayer key={`real-${project.id}-${project.updatedAt}`} project={project} />
-                ) : (
-                  <H5PServerPlayer
-                    key={`server-${project.id}-${project.updatedAt}`}
-                    project={project}
-                    cpMinor={cpMinor}
-                    onNotice={showNotice}
-                  />
-                )}
-              </>
+              <H5PRealPlayer key={`reader-${project.id}-${project.updatedAt}`} project={project} cpMinor={cpMinor} />
             ) : (
               <p className="muted">Belum ada slide. Selesaikan Langkah 1 dulu.</p>
             )}

@@ -1,0 +1,8 @@
+.pv-offline-reader { background: #fff; border-radius: 16px; min-height: 360px; }
+.pv-offline-reader[hidden] { display: none; }
+.pv-offline-reader h5p-player { display: block; width: 100%; min-height: 360px; }
+.pv-offline-reader:has(h5p-player[state="ready"]),
+.pv-offline-reader h5p-player[state="ready"] { min-height: 0; }
+@media (max-width: 640px) {
+  .pv-offline-reader, .pv-offline-reader h5p-player { min-height: 220px; }
+}
