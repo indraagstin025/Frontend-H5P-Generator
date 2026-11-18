@@ -300,20 +300,22 @@
 @media (max-width: 640px) {
   .hs-studio-workspace {
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
   }
   .hs-slide-list {
-    flex-direction: column;
+    flex-direction: row;
   }
   .hs-slide-list-header {
     display: flex;
   }
   .hs-slide-list-items {
-    flex-direction: column;
-    overflow-y: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
   .hs-slide-item {
     flex: none;
+    width: 128px;
   }
   .hs-add-slide-btn {
     margin: 6px;

@@ -4,7 +4,7 @@
  * duplikat, dan hapus slide.
  */
 import { useRef, useState } from 'react';
-import { CopyIcon, PlusIcon, TrashIcon, ViewGridIcon } from '@radix-ui/react-icons';
+import { CopyIcon, PlusIcon, TrashIcon } from '@radix-ui/react-icons';
 import type { Slide } from '../constants/h5pModel';
 
 type StudioLeftPanelProps = {
@@ -28,7 +28,6 @@ export function StudioLeftPanel({
 }: StudioLeftPanelProps) {
   const dragId = useRef<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleDrop = (toIndex: number) => {
     if (dragId.current) onReorderSlide(dragId.current, toIndex);
@@ -37,15 +36,7 @@ export function StudioLeftPanel({
   };
 
   return (
-    <div className={`hs-slide-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
-    <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar slide" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(!sidebarOpen)}><ViewGridIcon width={20} height={20} /><span>Slide</span></button>
     <aside className="hs-slide-list" aria-label="Daftar slide">
-      {/* Header */}
-      <div className="hs-slide-list-header">
-        <span className="hs-slide-list-label">Daftar slide</span>
-        <span className="hs-slide-count">{slides.length}</span>
-      </div>
-
       {/* Daftar slide */}
       <div className="hs-slide-list-items" role="list" aria-label="Daftar slide">
         {slides.length === 0 ? (
@@ -134,6 +125,5 @@ export function StudioLeftPanel({
         Tambah slide
       </button>
     </aside>
-    </div>
   );
 }

@@ -36,7 +36,7 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
-  const [elementsOpen, setElementsOpen] = useState(false);
+  const [activeSidebar, setActiveSidebar] = useState<'elements' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -76,6 +76,16 @@ export function StudioView() {
       setRightPanel('properties');
     }
   }, [state.selectedElement]);
+
+  useEffect(() => {
+    if (!state.selectedElementId) return;
+    const deselectElement = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.canvas-element, .hs-properties-wrapper')) return;
+      actions.setSelectedElementId(null);
+    };
+    document.addEventListener('pointerdown', deselectElement);
+    return () => document.removeEventListener('pointerdown', deselectElement);
+  }, [state.selectedElementId, actions]);
 
   const showNotice = (message: string) => {
     setNotice(message);
@@ -233,22 +243,11 @@ export function StudioView() {
       {step === 2 && (
         <div className="hs-studio-workspace">
           {/* Kolom kiri: Daftar Slide */}
-          <div className="hs-left-panels">
-          <StudioLeftPanel
-            slides={state.slides}
-            activeSlideId={state.activeSlideId}
-            onSelectSlide={actions.setActiveSlideId}
-            onAddSlide={actions.addSlide}
-            onDuplicateSlide={actions.duplicateSlide}
-            onDeleteSlide={(id) => {
-              actions.deleteSlide(id);
-              showNotice('Slide dihapus.');
-            }}
-            onReorderSlide={actions.reorderSlide}
-          />
-          <div className={`hs-elements-sidebar ${elementsOpen ? 'is-open' : ''}`}>
-            <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar elemen" aria-expanded={elementsOpen} onClick={() => setElementsOpen(!elementsOpen)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4" /><path d="M14 2l7 4-7 4zM3 21v-3a4 4 0 0 1 4-4h1v7M15 14h3a3 3 0 0 1 0 6h-3a3 3 0 0 1 0-6z" /></svg><span>Elemen</span></button>
-            {elementsOpen && <div className="hs-elements-sidebar-content"><ElementPanel onAddElement={(kind) => {
+          <div className={`hs-left-panels ${activeSidebar ? 'is-open' : ''}`}>
+          <div className="hs-sidebar-ornaments" aria-hidden="true"><span /><span /><span /></div>
+          <div className={`hs-elements-sidebar ${activeSidebar === 'elements' ? 'is-open' : ''}`}>
+            <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar elemen" aria-expanded={activeSidebar === 'elements'} onClick={() => setActiveSidebar((current) => current === 'elements' ? null : 'elements')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4" /><path d="M14 2l7 4-7 4zM3 21v-3a4 4 0 0 1 4-4h1v7M15 14h3a3 3 0 0 1 0 6h-3a3 3 0 0 1 0-6z" /></svg><span>Elemen</span></button>
+            {activeSidebar === 'elements' && <div className="hs-elements-sidebar-content"><ElementPanel onAddElement={(kind) => {
               actions.addElement(kind);
               showNotice('Elemen baru ditambah — atur propertinya.');
               setRightPanel('properties');
@@ -308,6 +307,19 @@ export function StudioView() {
               </div>
             )}
           </div>
+
+          <StudioLeftPanel
+            slides={state.slides}
+            activeSlideId={state.activeSlideId}
+            onSelectSlide={actions.setActiveSlideId}
+            onAddSlide={actions.addSlide}
+            onDuplicateSlide={actions.duplicateSlide}
+            onDeleteSlide={(id) => {
+              actions.deleteSlide(id);
+              showNotice('Slide dihapus.');
+            }}
+            onReorderSlide={actions.reorderSlide}
+          />
 
           {/* Kolom kanan: Panel Elemen / Properti */}
           {panelOpen && rightPanel === 'properties' && state.selectedElement && (
