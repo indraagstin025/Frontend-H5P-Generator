@@ -112,8 +112,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const found = items.find((p) => p.id === id);
         if (found) {
           sessionStorage.setItem(getCurrentProjectSessionKey(userId), found.id);
-          actions.replaceProject(hydrateProject(found.snapshot));
-          savedSnapshot.current = found.snapshot;
+          const hydrated = hydrateProject(found.snapshot);
+          actions.replaceProject(hydrated);
+          savedSnapshot.current = hydrated;
           setCurrentId(found.id);
           setSavedLabel('Draf tersimpan');
           if (requestedId && found.snapshot.slides.length === 0 && isServerProjectId(found.id)) {
@@ -163,8 +164,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const openProject = useCallback(
     (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => {
-      actions.replaceProject(hydrateProject(project));
-      savedSnapshot.current = opts?.saved ? project : null;
+      const hydrated = hydrateProject(project);
+      actions.replaceProject(hydrated);
+      savedSnapshot.current = opts?.saved ? hydrated : null;
       setCurrentId(project.id);
       setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
       if (opts?.saved) {
@@ -255,7 +257,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       try {
         await pushProjectToServer(state.project);
         removePendingSyncId(userId, id);
-        setSavedLabel(`Tersimpan di server ${time}`);
+        setSavedLabel(projectRef.current === state.project ? `Tersimpan di server ${time}` : 'Belum disimpan');
         return true;
       } catch (err) {
         if (isNetworkFailure(err)) {
