@@ -289,7 +289,7 @@ export function ElementContentFields({
               >
                 {slides.map((s) => (
                   <option key={s.id} value={s.order}>
-                    {String(s.order).padStart(2, '0')} / {s.title}
+                    Slide {s.order}
                   </option>
                 ))}
               </select>

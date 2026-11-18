@@ -7,15 +7,96 @@
 /* ===================== WORKSPACE STUDIO (3 KOLOM) ===================== */
 .hs-studio-workspace {
   display: grid;
-  grid-template-columns: 176px minmax(0, 1fr) 296px;
+  grid-template-columns: auto minmax(0, 1fr) 296px;
   padding: 16px;
   gap: 16px;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  background: linear-gradient(#00000018, #00000018), radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(118deg, #075f26 0%, #077c1a 55%, #248b38 100%);
 }
 
 /* ===================== PANEL KIRI: DAFTAR SLIDE ===================== */
+.hs-left-panels {
+  position: relative;
+  display: flex;
+  min-height: 0;
+}
+
+.hs-elements-sidebar > .hs-slide-sidebar-toggle {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  z-index: 11;
+}
+
+.hs-elements-sidebar-content {
+  width: 296px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--hs-bg-card);
+  border: 1px solid var(--hs-line);
+}
+
+.hs-studio-workspace:not(:has(.hs-right-panel-container)) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.hs-slide-sidebar {
+  position: relative;
+  z-index: 10;
+  width: 48px;
+  box-sizing: content-box;
+  margin: -16px 0 -16px -16px;
+  padding: 16px 0 0 16px;
+}
+
+.hs-slide-sidebar.is-open {
+  width: 224px;
+}
+
+.hs-slide-sidebar-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 48px;
+  height: 56px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--hs-radius-sm);
+  color: white;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.hs-slide-sidebar-toggle:hover,
+.hs-slide-sidebar.is-open .hs-slide-sidebar-toggle {
+  background: #ffffff20;
+}
+
+.hs-slide-sidebar .hs-slide-list {
+  position: absolute;
+  top: 0;
+  left: 64px;
+  width: 176px;
+  height: 100%;
+  border-radius: 0;
+  visibility: hidden;
+}
+
+.hs-slide-sidebar.is-open .hs-slide-list {
+  visibility: visible;
+}
+
+@media (max-width: 1100px) {
+  .hs-left-panels .hs-slide-sidebar .hs-slide-list {
+    left: 58px;
+  }
+}
+
 .hs-slide-list {
   background: #ffffff;
   border: 1px solid var(--hs-line);

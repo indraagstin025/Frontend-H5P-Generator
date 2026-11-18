@@ -36,6 +36,7 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+  const [elementsOpen, setElementsOpen] = useState(false);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -83,6 +84,11 @@ export function StudioView() {
 
   useEffect(() => {
     const handleStudioKey = (event: KeyboardEvent) => {
+      if (currentId && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (state.canUndo) actions.undo();
+        return;
+      }
       if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Backspace' && event.key !== 'Delete') return;
       if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
       if (step !== 2 || !currentId || document.querySelector('dialog[open], [role="dialog"]')) return;
@@ -100,7 +106,7 @@ export function StudioView() {
     };
     window.addEventListener('keydown', handleStudioKey);
     return () => window.removeEventListener('keydown', handleStudioKey);
-  }, [step, currentId, state.selectedElement, state.selectedElementId, state.activeSlide, state.slides, actions]);
+  }, [step, currentId, state.canUndo, state.selectedElement, state.selectedElementId, state.activeSlide, state.slides, actions]);
 
   if (!currentId) {
     return (
@@ -227,6 +233,7 @@ export function StudioView() {
       {step === 2 && (
         <div className="hs-studio-workspace">
           {/* Kolom kiri: Daftar Slide */}
+          <div className="hs-left-panels">
           <StudioLeftPanel
             slides={state.slides}
             activeSlideId={state.activeSlideId}
@@ -239,6 +246,16 @@ export function StudioView() {
             }}
             onReorderSlide={actions.reorderSlide}
           />
+          <div className={`hs-elements-sidebar ${elementsOpen ? 'is-open' : ''}`}>
+            <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar elemen" aria-expanded={elementsOpen} onClick={() => setElementsOpen(!elementsOpen)}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4" /><path d="M14 2l7 4-7 4zM3 21v-3a4 4 0 0 1 4-4h1v7M15 14h3a3 3 0 0 1 0 6h-3a3 3 0 0 1 0-6z" /></svg><span>Elemen</span></button>
+            {elementsOpen && <div className="hs-elements-sidebar-content"><ElementPanel onAddElement={(kind) => {
+              actions.addElement(kind);
+              showNotice('Elemen baru ditambah — atur propertinya.');
+              setRightPanel('properties');
+              setPanelOpen(true);
+            }} /></div>}
+          </div>
+          </div>
 
           {/* Kolom tengah: Canvas */}
           <div className="hs-canvas-area">
@@ -262,7 +279,6 @@ export function StudioView() {
                 slide={state.activeSlide}
                 total={state.slides.length}
                 selectedElementId={state.selectedElementId}
-                activeSurface={project.settings.activeSurface}
                 onSelectElement={(id) => {
                   actions.setSelectedElementId(id);
                   if (id) {
@@ -294,7 +310,7 @@ export function StudioView() {
           </div>
 
           {/* Kolom kanan: Panel Elemen / Properti */}
-          {panelOpen && (
+          {panelOpen && rightPanel === 'properties' && state.selectedElement && (
             <button
               type="button"
               className="hs-panel-backdrop"
@@ -302,29 +318,8 @@ export function StudioView() {
               onClick={() => setPanelOpen(false)}
             />
           )}
-          <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
-            {rightPanel === 'elements' || !state.selectedElement ? (
-              <>
-                <ElementPanel
-                  onAddElement={(kind) => {
-                    actions.addElement(kind);
-                    showNotice('Elemen baru ditambah — atur propertinya.');
-                    setRightPanel('properties');
-                    setPanelOpen(true);
-                  }}
-                />
-              </>
-            ) : (
+          {rightPanel === 'properties' && state.selectedElement && <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
               <div className="hs-properties-wrapper">
-                <div className="hs-panel-switch">
-                  <button
-                    type="button"
-                    className="hs-panel-switch-btn"
-                    onClick={() => setRightPanel('elements')}
-                  >
-                    ← Tambah Elemen
-                  </button>
-                </div>
                 <PropertyPanel
                   key={state.selectedElement?.id ?? state.activeSlide?.id ?? 'empty'}
                   project={project}
@@ -345,8 +340,7 @@ export function StudioView() {
                   onNotice={showNotice}
                 />
               </div>
-            )}
-          </div>
+          </div>}
         </div>
       )}
 

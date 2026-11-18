@@ -177,10 +177,10 @@ export function Topbar({
           onClick={onExport}
           disabled={isExporting}
           aria-busy={isExporting}
+          aria-label={isExporting ? 'Mengemas' : 'Export H5P'}
           title="Unduh paket .h5p siap pakai ke LMS"
         >
           <DownloadIcon width={15} height={15} />
-          <span className="hs-btn-text">{isExporting ? 'Mengemas…' : 'Export H5P'}</span>
         </button>
       </div>
     </header>
