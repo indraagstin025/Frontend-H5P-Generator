@@ -278,6 +278,7 @@ export interface ProjectSettings {
   language: 'id' | 'en';
   aspect: AspectRatio;
   keywordListEnabled: boolean;
+  requireQuestionsBeforeNavigation: boolean;
   /** FR-06: kunci navigasi, peserta hanya pindah via Go-To-Slide */
   activeSurface: boolean;
   /** §5 xAPI: ringkasan + solusi di slide akhir */
@@ -525,6 +526,7 @@ export function createProject(title: string, aspect: AspectRatio, sourceFileName
       language: 'id',
       aspect,
       keywordListEnabled: true,
+      requireQuestionsBeforeNavigation: true,
       activeSurface: false,
       hideSummarySlide: false,
       showSolutionButton: true,

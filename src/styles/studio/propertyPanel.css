@@ -20,6 +20,10 @@
   padding: 20px 16px;
 }
 
+.hs-story-settings-panel .settings-grid {
+  grid-template-columns: 1fr;
+}
+
 .hs-elements-sidebar-content :is(.hs-ep-title, .hs-ep-subtitle, .hs-ep-section-label, .hs-ep-interaction-label, .hs-ep-interaction-plus) {
   color: var(--hs-ink);
 }

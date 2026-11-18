@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { GearIcon } from '@radix-ui/react-icons';
 import { Toast } from '../../../components/UI/Toast';
 import { useStudio } from '../../../context/StudioContext';
 import '../../../studio-canva.css';
@@ -16,6 +17,7 @@ import { ElementPanel } from '../components/ElementPanel';
 import { IngestStep } from '../components/IngestStep';
 import { PropertyPanel } from '../components/PropertyPanel';
 import { StudioLeftPanel } from '../components/StudioLeftPanel';
+import { StorySettings } from '../components/StorySettings';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
@@ -36,7 +38,7 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
-  const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | null>(null);
+  const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | 'settings' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -250,12 +252,13 @@ export function StudioView() {
             <button type="button" className="hs-slide-sidebar-toggle hs-text-sidebar-toggle" aria-label="Panel teks" aria-expanded={activeSidebar === 'text'} onClick={() => setActiveSidebar((current) => current === 'text' ? null : 'text')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3" /></svg><span>Teks</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-image-sidebar-toggle" aria-label="Panel gambar" aria-expanded={activeSidebar === 'image'} onClick={() => setActiveSidebar((current) => current === 'image' ? null : 'image')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 6-6 4 4 3-3 5 5" /></svg><span>Gambar</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-video-sidebar-toggle" aria-label="Panel video" aria-expanded={activeSidebar === 'video'} onClick={() => setActiveSidebar((current) => current === 'video' ? null : 'video')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2" /><path d="m16 9 6-3v12l-6-3z" /></svg><span>Video</span></button>
-            {activeSidebar && <div className="hs-elements-sidebar-content"><ElementPanel mode={activeSidebar} onAddElement={(kind) => {
+            <button type="button" className="hs-slide-sidebar-toggle hs-settings-sidebar-toggle" aria-label="Pengaturan cerita" aria-expanded={activeSidebar === 'settings'} onClick={() => setActiveSidebar((current) => current === 'settings' ? null : 'settings')}><GearIcon width={22} height={22} /><span>Pengaturan cerita</span></button>
+            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan cerita</h2></div><StorySettings settings={project.settings} slideCount={state.slides.length} onChange={actions.updateSettings} /></aside> : <ElementPanel mode={activeSidebar} onAddElement={(kind) => {
               actions.addElement(kind);
               showNotice('Elemen baru ditambah — atur propertinya.');
               setRightPanel('properties');
               setPanelOpen(true);
-            }} /></div>}
+            }} />}</div>}
           </div>
           </div>
 
@@ -336,8 +339,6 @@ export function StudioView() {
                   slide={state.activeSlide}
                   slides={state.slides}
                   element={state.selectedElement}
-                  settings={project.settings}
-                  slideCount={state.slides.length}
                   onUpdateElement={actions.updateElement}
                   onDeleteElement={(id) => {
                     actions.deleteElement(id);
@@ -346,7 +347,6 @@ export function StudioView() {
                   }}
                   onUpdateSlide={actions.updateSlide}
                   onUpdateKeyword={actions.updateKeywordMain}
-                  onUpdateSettings={actions.updateSettings}
                   onNotice={showNotice}
                 />
               </div>

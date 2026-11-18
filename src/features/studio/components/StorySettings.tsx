@@ -33,6 +33,18 @@ export function StorySettings({ settings, slideCount, onChange }: StorySettingsP
       <label className="check-row">
         <input
           type="checkbox"
+          checked={settings.requireQuestionsBeforeNavigation !== false}
+          onChange={(e) => onChange({ requireQuestionsBeforeNavigation: e.target.checked })}
+        />
+        <span>
+          <strong>Wajib jawab semua soal sebelum melanjutkan</strong>
+          <small>Tombol navigasi pada slide muncul setelah semua soal di slide tersebut dijawab.</small>
+        </span>
+      </label>
+
+      <label className="check-row">
+        <input
+          type="checkbox"
           checked={settings.keywordListEnabled}
           onChange={(e) => onChange({ keywordListEnabled: e.target.checked })}
         />

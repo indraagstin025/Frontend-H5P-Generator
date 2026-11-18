@@ -8,7 +8,7 @@
   }
   proto.attachElement = function (element, instance, slide) {
     var wrapper = attach.apply(this, arguments);
-    if (this.editor) return wrapper;
+    if (this.editor || this.presentation.generatorRequireQuestionsBeforeNavigation === false) return wrapper;
     var cp = this;
     var config = cp.slides.find(function (entry) { return entry.elements.indexOf(element) !== -1; });
     if (!config) return wrapper;

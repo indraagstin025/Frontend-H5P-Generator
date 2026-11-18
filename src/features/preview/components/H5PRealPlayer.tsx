@@ -79,6 +79,7 @@ export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project
         return;
       }
       if (verb !== 'answered' && verb !== 'completed') return;
+      if (project.settings.requireQuestionsBeforeNavigation === false) return;
       let activity = statement?.object?.id ?? '';
       try { activity = decodeURIComponent(activity); } catch { /* Keep the original activity ID. */ }
       const matchedSlide = project.slides.find((slide) => slide.elements.some((element) =>

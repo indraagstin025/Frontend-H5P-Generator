@@ -96,6 +96,7 @@
 .hs-elements-sidebar > .hs-text-sidebar-toggle { top: 64px; }
 .hs-elements-sidebar > .hs-image-sidebar-toggle { top: 128px; }
 .hs-elements-sidebar > .hs-video-sidebar-toggle { top: 192px; }
+.hs-elements-sidebar > .hs-settings-sidebar-toggle { top: 256px; }
 .hs-left-panels .hs-slide-sidebar-toggle[aria-expanded='true'] { background: #f1f2f5; color: var(--hs-green); }
 .hs-left-panels .hs-slide-sidebar-toggle[aria-expanded='false'] { background: transparent; }
 

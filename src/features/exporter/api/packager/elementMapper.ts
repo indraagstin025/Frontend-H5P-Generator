@@ -684,6 +684,7 @@ export function toContentJson(
   const content: Record<string, unknown> = {
     presentation: {
       slides,
+      generatorRequireQuestionsBeforeNavigation: project.settings.requireQuestionsBeforeNavigation !== false,
       keywordListEnabled: project.settings.keywordListEnabled,
       keywordListAlwaysShow: false,
       keywordListAutoHide: false,

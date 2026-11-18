@@ -331,6 +331,7 @@ export async function parseH5p(file: File): Promise<Project> {
         slideBackgroundSelector?: { imageSlideBackground?: { path?: string } };
       }>;
       keywordListEnabled?: boolean;
+      generatorRequireQuestionsBeforeNavigation?: boolean;
     };
     override?: {
       activeSurface?: boolean;
@@ -347,6 +348,7 @@ export async function parseH5p(file: File): Promise<Project> {
   );
   project.settings.language = manifest.language === 'en' ? 'en' : 'id';
   project.settings.keywordListEnabled = content.presentation?.keywordListEnabled ?? true;
+  project.settings.requireQuestionsBeforeNavigation = content.presentation?.generatorRequireQuestionsBeforeNavigation ?? true;
   project.settings.activeSurface = content.override?.activeSurface ?? false;
   project.settings.hideSummarySlide = content.override?.hideSummarySlide ?? false;
   const sol = content.override?.showSolutionButton;
