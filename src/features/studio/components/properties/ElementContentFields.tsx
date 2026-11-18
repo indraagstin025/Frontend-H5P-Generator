@@ -55,26 +55,16 @@ export function ElementContentFields({
 }: ElementContentFieldsProps) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  const pickMedia = (kind: 'image' | 'audio' | 'video', file: File | undefined) => {
+  const pickMedia = (file: File | undefined) => {
     if (!file || !element) return;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const okImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext);
     const okAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
-    const okVideo = ['mp4', 'm4v', 'webm', 'ogv'].includes(ext);
-    if (kind === 'image' && !okImage) {
-      onNotice('Gambar harus .png/.jpg/.jpeg/.gif/.webp/.svg ya.');
-      return;
-    }
-    if (kind === 'audio' && !okAudio) {
+    if (!okAudio) {
       onNotice('Suara harus .mp3/.wav/.ogg/.m4a ya.');
       return;
     }
-    if (kind === 'video' && !okVideo) {
-      onNotice('Video harus .mp4/.m4v/.webm/.ogv ya.');
-      return;
-    }
-    if (file.size > (kind === 'video' ? 50 : 10) * 1024 * 1024) {
-      onNotice(`File-nya kegedean, maksimal ${kind === 'video' ? 50 : 10} MB.`);
+    if (file.size > 10 * 1024 * 1024) {
+      onNotice('File-nya kegedean, maksimal 10 MB.');
       return;
     }
 
@@ -183,15 +173,6 @@ export function ElementContentFields({
       )}
       {element.kind === 'image' && (
         <>
-          <label className="field-label">
-            File gambar
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
-              disabled={uploadingMedia}
-              onChange={(e) => pickMedia('image', e.target.files?.[0])}
-            />
-          </label>
           {element.objectUrl && <img className="media-preview" src={element.objectUrl} alt={element.alt} />}
           <label className="field-label">
             Deskripsi singkat gambar
@@ -225,15 +206,6 @@ export function ElementContentFields({
       )}
       {element.kind === 'video' && (
         <>
-          <label className="field-label">
-            File video
-            <input
-              type="file"
-              accept=".mp4,.m4v,.webm,.ogv"
-              disabled={uploadingMedia}
-              onChange={(e) => pickMedia('video', e.target.files?.[0])}
-            />
-          </label>
           {element.objectUrl && (
             <video
               className="media-preview"
@@ -256,7 +228,7 @@ export function ElementContentFields({
               type="file"
               accept=".mp3,.wav,.ogg,.m4a"
               disabled={uploadingMedia}
-              onChange={(e) => pickMedia('audio', e.target.files?.[0])}
+              onChange={(e) => pickMedia(e.target.files?.[0])}
             />
           </label>
           {uploadingMedia && <p className="field-hint">Mengunggah media ke server…</p>}

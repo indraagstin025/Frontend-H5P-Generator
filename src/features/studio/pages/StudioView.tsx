@@ -11,6 +11,8 @@ import { useStudio } from '../../../context/StudioContext';
 import '../../../studio-canva.css';
 import { ExportStep } from '../../exporter/components/ExportStep';
 import { peekPendingFile, takePendingFile } from '../../ingest/api/pendingUpload';
+import { absUrl, isServerProjectId } from '../../ingest/api/serverIngest';
+import { apiFetch } from '../../../services/api';
 import { H5PRealPlayer } from '../../preview/components/H5PRealPlayer';
 import { CanvasPanel } from '../components/CanvasPanel';
 import { ElementPanel } from '../components/ElementPanel';
@@ -24,6 +26,8 @@ import { WIZARD_STEPS } from '../constants/wizardSteps';
 import { exportH5pPackage } from '../../exporter/api/exportService';
 import { detectAvailableCpMinor } from '../../exporter/api/h5pPackager';
 import { formatNetworkError, isBrowserOffline } from '../../../services/network';
+import { getAuthToken } from '../../../services/authService';
+import type { SlideElement } from '../constants/h5pModel';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
@@ -36,11 +40,16 @@ export function StudioView() {
     return requested === 1 || requested === 3 || requested === 4 ? requested : 2;
   });
   const [notice, setNotice] = useState('');
+  const copiedElement = useRef<{ projectId: string; element: SlideElement } | null>(null);
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
   const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | 'settings' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
+  const mediaTargetRef = useRef({ projectId: state.project.id, slideId: state.activeSlide?.id, addElement: actions.addElement });
+  useEffect(() => {
+    mediaTargetRef.current = { projectId: state.project.id, slideId: state.activeSlide?.id, addElement: actions.addElement };
+  }, [state.project.id, state.activeSlide?.id, actions.addElement]);
 
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
@@ -96,6 +105,21 @@ export function StudioView() {
 
   useEffect(() => {
     const handleStudioKey = (event: KeyboardEvent) => {
+      if (step === 2 && currentId && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing && !event.defaultPrevented && !document.querySelector('dialog[open], [role="dialog"]')) {
+        const target = event.target;
+        const editingText = target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
+        if (!editingText && event.key.toLowerCase() === 'c' && state.selectedElement) {
+          event.preventDefault();
+          copiedElement.current = { projectId: currentId, element: structuredClone(state.selectedElement) };
+          return;
+        }
+        if (!editingText && event.key.toLowerCase() === 'v' && copiedElement.current?.projectId === currentId && state.activeSlide) {
+          event.preventDefault();
+          const { id: _id, ...element } = structuredClone(copiedElement.current.element);
+          actions.addElement(element.kind, element);
+          return;
+        }
+      }
       if (currentId && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         if (state.canUndo) actions.undo();
@@ -252,8 +276,40 @@ export function StudioView() {
             <button type="button" className="hs-slide-sidebar-toggle hs-text-sidebar-toggle" aria-label="Panel teks" aria-expanded={activeSidebar === 'text'} onClick={() => setActiveSidebar((current) => current === 'text' ? null : 'text')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3" /></svg><span>Teks</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-image-sidebar-toggle" aria-label="Panel gambar" aria-expanded={activeSidebar === 'image'} onClick={() => setActiveSidebar((current) => current === 'image' ? null : 'image')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 6-6 4 4 3-3 5 5" /></svg><span>Gambar</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-video-sidebar-toggle" aria-label="Panel video" aria-expanded={activeSidebar === 'video'} onClick={() => setActiveSidebar((current) => current === 'video' ? null : 'video')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2" /><path d="m16 9 6-3v12l-6-3z" /></svg><span>Video</span></button>
-            <button type="button" className="hs-slide-sidebar-toggle hs-settings-sidebar-toggle" aria-label="Pengaturan cerita" aria-expanded={activeSidebar === 'settings'} onClick={() => setActiveSidebar((current) => current === 'settings' ? null : 'settings')}><GearIcon width={22} height={22} /><span>Pengaturan cerita</span></button>
-            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan cerita</h2></div><StorySettings settings={project.settings} slideCount={state.slides.length} onChange={actions.updateSettings} /></aside> : <ElementPanel mode={activeSidebar} onAddElement={(kind) => {
+            <button type="button" className="hs-slide-sidebar-toggle hs-settings-sidebar-toggle" aria-label="Pengaturan cerita" aria-expanded={activeSidebar === 'settings'} onClick={() => setActiveSidebar((current) => current === 'settings' ? null : 'settings')}><GearIcon width={22} height={22} /><span>Pengaturan Slide</span></button>
+            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan Slide</h2></div><StorySettings settings={project.settings} slideCount={state.slides.length} onChange={actions.updateSettings} /></aside> : <ElementPanel mode={activeSidebar} mediaRevision={state.slides.flatMap((slide) => slide.elements.map((element) => 'asset' in element ? element.asset ?? '' : '')).join('|')} onAddMedia={(media) => {
+              const target = mediaTargetRef.current;
+              if (!target.slideId) { showNotice('Pilih slide terlebih dahulu.'); return; }
+              void (async () => {
+                let assetUrl: string;
+                let asset: string | undefined;
+                let fileName = media.fileName;
+                let file: File | null = null;
+                if (isServerProjectId(target.projectId)) {
+                  const copied = await apiFetch<{ data: { asset: string; assetUrl: string; fileName: string } }>(`/projects/${target.projectId}/media/${encodeURIComponent(media.fileName)}`, { method: 'POST' });
+                  asset = copied.data.asset;
+                  assetUrl = absUrl(copied.data.assetUrl) ?? copied.data.assetUrl;
+                  fileName = copied.data.fileName;
+                } else {
+                  const token = getAuthToken();
+                  const response = await fetch(media.assetUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  if (!response.ok) throw new Error('Gagal mengambil media.');
+                  const blob = await response.blob();
+                  file = new File([blob], media.fileName, { type: blob.type });
+                  assetUrl = URL.createObjectURL(file);
+                }
+                const current = mediaTargetRef.current;
+                if (current.projectId !== target.projectId || current.slideId !== target.slideId) {
+                  if (assetUrl.startsWith('blob:')) URL.revokeObjectURL(assetUrl);
+                  showNotice('Slide berubah. Pilih kembali media untuk menambahkannya.');
+                  return;
+                }
+                current.addElement(media.kind, { asset, fileName, objectUrl: assetUrl, file });
+                setRightPanel('properties');
+                setPanelOpen(true);
+                showNotice('Media ditambahkan ke slide.');
+              })().catch(() => showNotice('Media tidak dapat ditambahkan. Periksa koneksi dan coba lagi.'));
+            }} onAddElement={(kind) => {
               actions.addElement(kind);
               showNotice('Elemen baru ditambah — atur propertinya.');
               setRightPanel('properties');

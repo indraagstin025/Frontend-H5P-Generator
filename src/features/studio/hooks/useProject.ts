@@ -237,9 +237,9 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   );
 
   const addElement = useCallback(
-    (kind: ElementKind) => {
+    (kind: ElementKind, patch?: Partial<SlideElement>) => {
       if (!activeSlide) return;
-      const el = createElement(kind, slides.length);
+      const el = { ...createElement(kind, slides.length), ...patch } as SlideElement;
       // Elemen baru terpilih agar langsung bisa diedit di inspektor
       updateSlide(activeSlide.id, { elements: [...activeSlide.elements, el] });
       setSelectedElementId(el.id);
