@@ -122,19 +122,11 @@ export function StudioView() {
     );
   }
 
-  const sourcePage = new URLSearchParams(location.search).get('from');
-  const from = (location.state as { from?: string } | null)?.from
-    ?? (sourcePage === '/materi' ? '/materi' : '/dashboard');
   const project = state.project;
   const hasSlides = state.slides.length > 0;
   const stepLabel = WIZARD_STEPS.find((s) => s.id === step)?.label ?? '';
   const nextLabel = WIZARD_STEPS.find((s) => s.id === step + 1)?.label ?? '';
   const canNext = step < WIZARD_STEPS.length && (step > 1 || hasSlides);
-
-  const goBack = () => {
-    if (hasSlides) saveDraft();
-    navigate(from);
-  };
 
   const handlePreview = async () => {
     if (previewSavePending.current) return;
@@ -192,14 +184,19 @@ export function StudioView() {
         savedLabel={savedLabel}
         onExport={handleExport}
         isExporting={exporting}
-        onHome={goBack}
+        onHome={() => {
+          if (hasSlides) void saveDraft();
+          navigate('/dashboard');
+        }}
         onSave={() => {
-          void saveDraft().then((synced) => {
+          return saveDraft().then((synced) => {
             showNotice(
               synced
                 ? 'Sudah tersimpan ke server.'
                 : 'Koneksi internet terputus — gagal menyimpan ke server. Perubahan masih ada di layar; hubungkan internet lalu klik Simpan lagi.',
             );
+          }).catch((err) => {
+            showNotice(formatNetworkError(err, 'Perubahan belum berhasil disimpan. Silakan coba lagi.'));
           });
         }}
         onPreview={() => {
