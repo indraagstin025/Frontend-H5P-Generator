@@ -36,7 +36,7 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   // Panel kanan aktif: 'elements' atau 'properties'
   const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
-  const [activeSidebar, setActiveSidebar] = useState<'elements' | null>(null);
+  const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -247,7 +247,10 @@ export function StudioView() {
           <div className="hs-sidebar-ornaments" aria-hidden="true"><span /><span /><span /></div>
           <div className={`hs-elements-sidebar ${activeSidebar === 'elements' ? 'is-open' : ''}`}>
             <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar elemen" aria-expanded={activeSidebar === 'elements'} onClick={() => setActiveSidebar((current) => current === 'elements' ? null : 'elements')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4" /><path d="M14 2l7 4-7 4zM3 21v-3a4 4 0 0 1 4-4h1v7M15 14h3a3 3 0 0 1 0 6h-3a3 3 0 0 1 0-6z" /></svg><span>Elemen</span></button>
-            {activeSidebar === 'elements' && <div className="hs-elements-sidebar-content"><ElementPanel onAddElement={(kind) => {
+            <button type="button" className="hs-slide-sidebar-toggle hs-text-sidebar-toggle" aria-label="Panel teks" aria-expanded={activeSidebar === 'text'} onClick={() => setActiveSidebar((current) => current === 'text' ? null : 'text')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3" /></svg><span>Teks</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-image-sidebar-toggle" aria-label="Panel gambar" aria-expanded={activeSidebar === 'image'} onClick={() => setActiveSidebar((current) => current === 'image' ? null : 'image')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 6-6 4 4 3-3 5 5" /></svg><span>Gambar</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-video-sidebar-toggle" aria-label="Panel video" aria-expanded={activeSidebar === 'video'} onClick={() => setActiveSidebar((current) => current === 'video' ? null : 'video')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2" /><path d="m16 9 6-3v12l-6-3z" /></svg><span>Video</span></button>
+            {activeSidebar && <div className="hs-elements-sidebar-content"><ElementPanel mode={activeSidebar} onAddElement={(kind) => {
               actions.addElement(kind);
               showNotice('Elemen baru ditambah — atur propertinya.');
               setRightPanel('properties');

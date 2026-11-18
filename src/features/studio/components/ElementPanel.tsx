@@ -7,6 +7,7 @@ import type { ElementKind } from '../constants/h5pModel';
 
 type ElementPanelProps = {
   onAddElement: (kind: ElementKind) => void;
+  mode?: 'elements' | 'text' | 'image' | 'video';
 };
 
 type DropdownItem = {
@@ -25,19 +26,20 @@ const INTERACTION_ITEMS: Array<{ kind: ElementKind; label: string }> = [
   { kind: 'summary', label: 'Summary' },
 ];
 
-export function ElementPanel({ onAddElement }: ElementPanelProps) {
+export function ElementPanel({ onAddElement, mode = 'elements' }: ElementPanelProps) {
+  const title = { elements: 'Tambah elemen', text: 'Teks', image: 'Gambar', video: 'Video' }[mode];
   return (
-    <aside className="hs-element-panel" aria-label="Tambah elemen">
+    <aside className="hs-element-panel" aria-label={title}>
       {/* Header */}
       <div className="hs-ep-header">
-        <h2 className="hs-ep-title">Tambah elemen</h2>
-        <p className="hs-ep-subtitle">Pilih konten untuk slide ini</p>
+        <h2 className="hs-ep-title">{title}</h2>
+        <p className="hs-ep-subtitle">{mode === 'elements' ? 'Pilih konten untuk slide ini' : `Tambahkan ${title.toLowerCase()} ke slide`}</p>
       </div>
 
       {/* ELEMEN DASAR */}
-      <div className="hs-ep-section-label">ELEMEN DASAR</div>
+      {mode === 'elements' && <div className="hs-ep-section-label">ELEMEN DASAR</div>}
       <div className="hs-ep-basic-grid">
-        <button
+        {mode === 'text' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('advancedText')}
@@ -45,8 +47,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
         >
           <span className="hs-ep-basic-icon hs-icon-text">T</span>
           <span>Add Text</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('link')}
@@ -59,8 +61,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Link</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'image' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('image')}
@@ -74,8 +76,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Image</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('shape')}
@@ -87,8 +89,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Shape</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'video' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('video')}
@@ -101,8 +103,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Video</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <><button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('goToSlide')}
@@ -128,9 +130,10 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Audio</span>
-        </button>
+        </button></>}
       </div>
 
+      {mode === 'elements' && <>
       {/* INTERAKSI & KUIS */}
       <div className="hs-ep-section-label" style={{ marginTop: '16px' }}>INTERAKSI & KUIS</div>
       <div className="hs-ep-interaction-list">
@@ -164,6 +167,7 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
           </button>
         ))}
       </div>
+      </>}
     </aside>
   );
 }
