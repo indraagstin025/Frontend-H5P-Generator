@@ -36,6 +36,7 @@ async function pushProjectToServer(project: Project): Promise<void> {
           language: project.settings.language,
           keywordListEnabled: project.settings.keywordListEnabled,
           requireQuestionsBeforeNavigation: project.settings.requireQuestionsBeforeNavigation !== false,
+          autoAdvance: project.settings.autoAdvance,
           activeSurface: project.settings.activeSurface,
           hideSummarySlide: project.settings.hideSummarySlide,
           showSolutionButton: project.settings.showSolutionButton,

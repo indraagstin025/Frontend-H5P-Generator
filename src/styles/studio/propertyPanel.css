@@ -56,6 +56,11 @@
   grid-template-columns: 1fr;
 }
 
+.hs-auto-advance-description { color: #526b5b; font-size: 13px; line-height: 1.5; }
+.hs-auto-advance-fields { display: grid; gap: 16px; margin-top: 20px; }
+.hs-auto-advance-rule { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--hs-line); border-radius: 12px; }
+.hs-auto-advance-rule-head { display: flex; align-items: center; justify-content: space-between; }
+
 .hs-elements-sidebar-content :is(.hs-ep-title, .hs-ep-subtitle, .hs-ep-section-label, .hs-ep-interaction-label, .hs-ep-interaction-plus) {
   color: var(--hs-ink);
 }

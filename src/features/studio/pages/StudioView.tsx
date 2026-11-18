@@ -20,6 +20,7 @@ import { IngestStep } from '../components/IngestStep';
 import { PropertyPanel } from '../components/PropertyPanel';
 import { StudioLeftPanel } from '../components/StudioLeftPanel';
 import { StorySettings } from '../components/StorySettings';
+import { AutoAdvancePanel } from '../components/AutoAdvancePanel';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
@@ -42,7 +43,7 @@ export function StudioView() {
   const [notice, setNotice] = useState('');
   const copiedElement = useRef<{ projectId: string; element: SlideElement } | null>(null);
   // Panel kanan aktif: 'elements' atau 'properties'
-  const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+  const [rightPanel, setRightPanel] = useState<'elements' | 'properties' | 'autoAdvance'>('elements');
   const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | 'settings' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
@@ -277,7 +278,7 @@ export function StudioView() {
             <button type="button" className="hs-slide-sidebar-toggle hs-image-sidebar-toggle" aria-label="Panel gambar" aria-expanded={activeSidebar === 'image'} onClick={() => setActiveSidebar((current) => current === 'image' ? null : 'image')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 6-6 4 4 3-3 5 5" /></svg><span>Gambar</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-video-sidebar-toggle" aria-label="Panel video" aria-expanded={activeSidebar === 'video'} onClick={() => setActiveSidebar((current) => current === 'video' ? null : 'video')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2" /><path d="m16 9 6-3v12l-6-3z" /></svg><span>Video</span></button>
             <button type="button" className="hs-slide-sidebar-toggle hs-settings-sidebar-toggle" aria-label="Pengaturan cerita" aria-expanded={activeSidebar === 'settings'} onClick={() => setActiveSidebar((current) => current === 'settings' ? null : 'settings')}><GearIcon width={22} height={22} /><span>Pengaturan Slide</span></button>
-            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan Slide</h2></div><StorySettings settings={project.settings} slideCount={state.slides.length} onChange={actions.updateSettings} /></aside> : <ElementPanel mode={activeSidebar} mediaRevision={state.slides.flatMap((slide) => slide.elements.map((element) => 'asset' in element ? element.asset ?? '' : '')).join('|')} onAddMedia={(media) => {
+            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan Slide</h2></div><StorySettings settings={project.settings} onChange={actions.updateSettings} onOpenAutoAdvance={() => { actions.setSelectedElementId(null); setRightPanel('autoAdvance'); setPanelOpen(true); }} /></aside> : <ElementPanel mode={activeSidebar} mediaRevision={state.slides.flatMap((slide) => slide.elements.map((element) => 'asset' in element ? element.asset ?? '' : '')).join('|')} onAddMedia={(media) => {
               const target = mediaTargetRef.current;
               if (!target.slideId) { showNotice('Pilih slide terlebih dahulu.'); return; }
               void (async () => {
@@ -379,6 +380,7 @@ export function StudioView() {
           />
 
           {/* Kolom kanan: Panel Elemen / Properti */}
+          {rightPanel === 'autoAdvance' && project.settings.requireQuestionsBeforeNavigation !== false && <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}><div className="hs-properties-wrapper"><AutoAdvancePanel settings={project.settings} slides={state.slides} onChange={actions.updateSettings} /></div></div>}
           {panelOpen && rightPanel === 'properties' && state.selectedElement && (
             <button
               type="button"

@@ -69,6 +69,7 @@ export function parseProjectSettings(
     if (parsed.language === 'id' || parsed.language === 'en') next.language = parsed.language;
     if (typeof parsed.keywordListEnabled === 'boolean') next.keywordListEnabled = parsed.keywordListEnabled;
     if (typeof parsed.requireQuestionsBeforeNavigation === 'boolean') next.requireQuestionsBeforeNavigation = parsed.requireQuestionsBeforeNavigation;
+    if (parsed.autoAdvance && typeof parsed.autoAdvance === 'object') next.autoAdvance = parsed.autoAdvance as ProjectSettings['autoAdvance'];
     if (typeof parsed.activeSurface === 'boolean') next.activeSurface = parsed.activeSurface;
     if (typeof parsed.hideSummarySlide === 'boolean') next.hideSummarySlide = parsed.hideSummarySlide;
     if (typeof parsed.showSolutionButton === 'boolean') next.showSolutionButton = parsed.showSolutionButton;
@@ -374,6 +375,7 @@ export async function persistImportedH5pProject(parsed: Project): Promise<Projec
         language: parsed.settings.language,
         keywordListEnabled: parsed.settings.keywordListEnabled,
         requireQuestionsBeforeNavigation: parsed.settings.requireQuestionsBeforeNavigation !== false,
+        autoAdvance: parsed.settings.autoAdvance,
         activeSurface: parsed.settings.activeSurface,
         hideSummarySlide: parsed.settings.hideSummarySlide,
         showSolutionButton: parsed.settings.showSolutionButton,

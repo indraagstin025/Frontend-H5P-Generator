@@ -279,6 +279,7 @@ export interface ProjectSettings {
   aspect: AspectRatio;
   keywordListEnabled: boolean;
   requireQuestionsBeforeNavigation: boolean;
+  autoAdvance?: { enabled: boolean; scope: 'all' | 'selected'; targetType: GoToTargetType; targetSlideId: string; rules: Array<{ sourceId: string; targetId: string }> };
   /** FR-06: kunci navigasi, peserta hanya pindah via Go-To-Slide */
   activeSurface: boolean;
   /** §5 xAPI: ringkasan + solusi di slide akhir */
