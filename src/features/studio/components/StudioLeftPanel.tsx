@@ -112,8 +112,6 @@ export function StudioLeftPanel({
             </div>
           ))
         )}
-      </div>
-
       {/* Tombol tambah slide */}
       <button
         type="button"
@@ -124,6 +122,7 @@ export function StudioLeftPanel({
         <PlusIcon width={14} height={14} />
         Tambah slide
       </button>
+      </div>
     </aside>
   );
 }

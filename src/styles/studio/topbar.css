@@ -65,11 +65,15 @@
 .hs-topbar-logo {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
   gap: 10px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 0;
   border-radius: var(--hs-radius-sm);
   text-align: left;
   transition: background 0.15s;
@@ -79,7 +83,7 @@
   background: var(--hs-green-soft);
 }
 
-.hs-brand-image { flex: none; object-fit: contain; }
+.hs-brand-image { flex: none; width: 88px; max-width: none; height: auto; object-fit: contain; transform: translateY(-2px); }
 
 .hs-logo-icon {
   background: var(--hs-green);
@@ -210,9 +214,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #077c1a;
-  border: 1px solid #077c1a;
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  color: #075f26;
   border-radius: 8px;
   padding: 7px 14px;
   font-size: 13px;
@@ -223,9 +227,9 @@
 }
 
 .hs-btn-export:hover:not(:disabled) {
-  background: #075f26;
-  border-color: #075f26;
-  color: #ffffff;
+  background: #e1f2e3;
+  border-color: #e1f2e3;
+  color: #075f26;
 }
 
 .hs-btn-export:disabled {

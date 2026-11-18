@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeftIcon, DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
-import { useAuth } from '../../../context/AuthContext';
-import { Link } from 'react-router-dom';
 
 type TopbarProps = {
   projectTitle: string;
@@ -28,32 +26,9 @@ export function Topbar({
   isPreviewActive = false,
   onRenameTitle,
 }: TopbarProps) {
-  const { user, logout } = useAuth();
-  const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-  const profileButtonRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (!profileOpen) return;
-    const closeOutside = (event: PointerEvent) => {
-      if (!profileRef.current?.contains(event.target as Node)) setProfileOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setProfileOpen(false);
-        profileButtonRef.current?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', closeOutside);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOutside);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [profileOpen]);
   const [draft, setDraft] = useState(projectTitle);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const busy = saving || isPreparingPreview;
   const isSaved = /^(tersimpan|draf tersimpan)/i.test(savedLabel) && draft.trim() === projectTitle && !busy;
   const saveDescription = busy ? 'Menyimpan perubahan…' : isSaved ? 'Semua perubahan tersimpan' : 'Ada perubahan yang belum disimpan';
@@ -84,30 +59,10 @@ export function Topbar({
           type="button"
           onClick={onHome}
           title="Ke Dashboard"
+          aria-label="Ke Dashboard"
         >
-          <img className="hs-brand-image" src="/dashboard-logo.png" alt="" width={42} height={38} />
-          <span className="hs-logo-text">
-            <span className="hs-logo-title">H5P Studio</span>
-          </span>
+          <img className="hs-brand-image" src="/landing-logo.png" alt="" width={80} height={48} />
         </button>
-        <div className="hs-profile-menu" ref={profileRef} onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setProfileOpen(false);
-        }}>
-        <button className="hs-profile-avatar" type="button" ref={profileButtonRef}
-          title={user?.name || 'Profil pengguna'} aria-label="Navigasi profil" aria-expanded={profileOpen}
-          aria-controls="studio-profile-navigation" onClick={() => setProfileOpen((open) => !open)}>
-          {user?.avatarUrl && failedAvatar !== user.avatarUrl ? (
-            <img src={user.avatarUrl} alt={`Foto profil ${user.name}`} referrerPolicy="no-referrer" onError={() => setFailedAvatar(user.avatarUrl)} />
-          ) : <span role="img" aria-label={`Profil ${user?.name || 'pengguna'}`}>{(user?.name?.trim() || 'U').charAt(0).toLocaleUpperCase('id-ID')}</span>}
-        </button>
-        {profileOpen && <nav className="hs-profile-dropdown" id="studio-profile-navigation" aria-label="Navigasi profil">
-          <Link to="/materi" onClick={() => setProfileOpen(false)}>Materi Saya</Link>
-          <button type="button" className="hs-profile-logout" onClick={() => {
-            setProfileOpen(false);
-            logout();
-          }}>Logout</button>
-        </nav>}
-        </div>
       </div>
         <div className="hs-project-meta hs-project-meta-centered">
           <div className="hs-project-title-row">
@@ -128,13 +83,6 @@ export function Topbar({
           ) : (
             <span className="hs-project-subtitle">{projectTitle}</span>
           )}
-          <button className={`hs-cloud-save ${isSaved ? 'is-saved' : ''}`} type="button" onClick={() => { void handleSave(); }}
-            disabled={busy} aria-busy={busy} aria-label={`${saveDescription}. Simpan materi`} title={`${saveDescription} — klik untuk menyimpan`}>
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M7.5 22h12a5 5 0 0 0 .7-9.95A7 7 0 0 0 6.6 10.6 5.75 5.75 0 0 0 7.5 22Z" />
-              {isSaved && <path className="hs-cloud-check" d="m9 14 3.5 3.5L20 10" />}
-            </svg>
-          </button>
           </div>
           <span className="hs-saved-label" role="status" aria-live="polite" title={savedLabel}>
             {busy ? 'Menyimpan…' : savedLabel}
@@ -143,6 +91,13 @@ export function Topbar({
 
       {/* Kanan: Pratinjau, Simpan, Export */}
       <div className="hs-topbar-right">
+        <button className={`hs-cloud-save ${isSaved ? 'is-saved' : ''}`} type="button" onClick={() => { void handleSave(); }}
+          disabled={busy} aria-busy={busy} aria-label={`${saveDescription}. Simpan materi`} title={`${saveDescription} — klik untuk menyimpan`}>
+          <svg width="15" height="15" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7.5 22h12a5 5 0 0 0 .7-9.95A7 7 0 0 0 6.6 10.6 5.75 5.75 0 0 0 7.5 22Z" />
+            {isSaved && <path className="hs-cloud-check" d="m9 14 3.5 3.5L20 10" />}
+          </svg>
+        </button>
         {/* Tombol Pratinjau */}
         <button
           className="hs-btn-preview"
