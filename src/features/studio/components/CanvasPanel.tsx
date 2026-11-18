@@ -163,7 +163,6 @@ type CanvasPanelProps = {
   slide: Slide;
   total: number;
   selectedElementId: string | null;
-  activeSurface: boolean;
   onSelectElement: (id: string | null) => void;
   onMoveElement: (id: string, x: number, y: number) => void;
   onResizeElement: (id: string, position: ElementPosition) => void;
@@ -196,7 +195,6 @@ export function CanvasPanel({
   slide,
   total,
   selectedElementId,
-  activeSurface,
   onSelectElement,
   onMoveElement,
   onResizeElement,
@@ -591,16 +589,7 @@ export function CanvasPanel({
       </div>
       </div>
       <div className="canvas-navigation-bar">
-        <div className="canvas-nav-left">
-          {activeSurface && (
-            <span
-              className="canvas-active-surface-badge"
-              title="Active Surface Mode: Navigasi bawaan dinonaktifkan, gunakan tombol buatan di slide"
-            >
-              Active Surface
-            </span>
-          )}
-        </div>
+        <div className="canvas-nav-left" />
         <div className="canvas-nav-center">
           <button
             type="button"

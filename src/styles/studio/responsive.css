@@ -173,9 +173,16 @@
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 1100px) {
   .hs-studio-workspace {
-    grid-template-columns: 140px minmax(0, 1fr) 250px;
+    grid-template-columns: auto minmax(0, 1fr) 250px;
     gap: 10px;
     padding: 10px;
+  }
+  .hs-slide-sidebar {
+    margin: -10px 0 -10px -10px;
+    padding: 10px 0 0 10px;
+  }
+  .hs-slide-sidebar .hs-slide-list {
+    left: 42px;
   }
   .hs-btn-preview,
   .hs-btn-save {
@@ -185,7 +192,7 @@
 
 @media (max-width: 900px) {
   .hs-studio-workspace {
-    grid-template-columns: 110px minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
   }
   .hs-right-panel-container {
     display: block;
@@ -292,29 +299,23 @@
 
 @media (max-width: 640px) {
   .hs-studio-workspace {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
   }
   .hs-slide-list {
     flex-direction: row;
-    border-right: none;
-    border-bottom: 1px solid var(--hs-line);
-    max-height: 96px;
-    overflow-x: auto;
   }
   .hs-slide-list-header {
-    display: none;
+    display: flex;
   }
   .hs-slide-list-items {
     flex-direction: row;
-    padding: 6px;
-    gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
   }
   .hs-slide-item {
     flex: none;
-    width: 112px;
+    width: 128px;
   }
   .hs-add-slide-btn {
     margin: 6px;

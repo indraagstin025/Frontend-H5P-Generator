@@ -37,12 +37,6 @@ export function StudioLeftPanel({
 
   return (
     <aside className="hs-slide-list" aria-label="Daftar slide">
-      {/* Header */}
-      <div className="hs-slide-list-header">
-        <span className="hs-slide-list-label">Daftar slide</span>
-        <span className="hs-slide-count">{slides.length}</span>
-      </div>
-
       {/* Daftar slide */}
       <div className="hs-slide-list-items" role="list" aria-label="Daftar slide">
         {slides.length === 0 ? (
