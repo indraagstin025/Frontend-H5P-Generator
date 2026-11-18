@@ -14,7 +14,7 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: #f1f2f5;
 }
 
 /* ===================== PANEL KIRI: DAFTAR SLIDE ===================== */
@@ -37,7 +37,7 @@
   position: absolute;
   z-index: -1;
   inset: -16px 0 -16px -16px;
-  background: linear-gradient(#00000018, #00000018), radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(118deg, #075f26 0%, #077c1a 55%, #248b38 100%);
+  background: #fff;
 }
 
 .hs-sidebar-ornaments {
@@ -50,7 +50,7 @@
   display: none;
 }
 
-.hs-left-panels.is-open .hs-sidebar-ornaments { display: block; }
+.hs-left-panels.is-open .hs-sidebar-ornaments { display: none; }
 
 .hs-sidebar-ornaments span {
   position: absolute;
@@ -144,8 +144,8 @@
 }
 
 .hs-left-panels.is-open .hs-slide-sidebar-toggle {
-  background: #ffffff20;
-  color: white;
+  background: #f1f2f5;
+  color: var(--hs-green);
 }
 
 .hs-slide-sidebar .hs-slide-list {

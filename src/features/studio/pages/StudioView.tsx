@@ -258,10 +258,6 @@ export function StudioView() {
 
           {/* Kolom tengah: Canvas */}
           <div className="hs-canvas-area">
-            {/* Edit mode indicator */}
-            <div className="hs-canvas-topbar">
-              <span className="hs-edit-mode-badge">Slide {state.activeSlide?.order ?? 0} / {state.slides.length}</span>
-              <span className="hs-canvas-hint">Pilih elemen untuk mengedit · ← → pindah slide</span>
               <button
                 type="button"
                 className="hs-panel-toggle"
@@ -270,7 +266,6 @@ export function StudioView() {
               >
                 {panelOpen ? 'Tutup panel' : 'Panel elemen'}
               </button>
-            </div>
 
             {state.activeSlide ? (
               <CanvasPanel

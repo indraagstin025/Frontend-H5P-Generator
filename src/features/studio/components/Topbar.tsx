@@ -76,6 +76,7 @@ export function Topbar({
 
   return (
     <header className="hs-topbar">
+      <div className="hs-topbar-ornaments" aria-hidden="true"><span /><span /><span /><span /></div>
       {/* Kiri: identitas aplikasi dan profil pengguna */}
       <div className="hs-topbar-left">
         <button

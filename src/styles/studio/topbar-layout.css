@@ -5,7 +5,7 @@
 .hs-project-meta-centered { width: 100%; align-items: center; border: 0; padding: 0; gap: 2px; }
 .hs-project-title-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 40px; align-items: center; width: 100%; min-width: 0; gap: 8px; }
 .hs-project-meta-centered .hs-project-title-input,
-.hs-project-meta-centered .hs-project-subtitle { grid-column: 2; width: 100%; max-width: none; min-width: 0; text-align: center; padding: 6px 10px; font-size: 15px; }
+.hs-project-meta-centered .hs-project-subtitle { grid-column: 2; width: 100%; max-width: none; min-width: 0; text-align: center; padding: 3px 10px; font-size: 15px; }
 .hs-project-meta-centered .hs-saved-label { font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: block; white-space: nowrap; }
 .hs-cloud-save { grid-column: 3; display: grid; place-items: center; width: 40px; height: 36px; border: 1px solid #cde3d1; border-radius: 10px; background: #f2faf3; color: #526b5b; cursor: pointer; }
 .hs-cloud-save.is-saved { background: #edf8ee; color: #077c1a; border-color: #bed7c2; }
@@ -24,11 +24,13 @@
 .hs-profile-dropdown .hs-profile-logout { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; border: 0; border-top: 1px solid #e1ece3; border-radius: 8px; background: transparent; color: #a32d2d; text-align: left; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .hs-profile-dropdown .hs-profile-logout:hover, .hs-profile-dropdown .hs-profile-logout:focus-visible { background: #fff1f1; }
 @media (max-width: 1100px) {
+  .hs-studio-shell { --hs-header-height: 110px; }
   .hs-topbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; height: auto; min-height: 110px; gap: 4px 12px; padding: 8px 16px; }
   .hs-project-meta-centered { grid-row: 2; grid-column: 1 / -1; max-width: 640px; justify-self: center; }
   .hs-topbar-right { grid-column: 2; grid-row: 1; }
 }
 @media (max-width: 700px) {
+  .hs-studio-shell { --hs-header-height: 120px; }
   .hs-topbar { padding: 6px 10px; min-height: var(--hs-header-height); gap: 4px 8px; }
   .hs-topbar-left { gap: 6px; }
   .hs-topbar-logo { padding-inline: 0; gap: 5px; }

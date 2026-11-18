@@ -24,7 +24,7 @@
 
 /* Shell Utama Studio */
 .hs-studio-shell {
-  --hs-header-height: 76px;
+  --hs-header-height: 64px;
   display: flex;
   flex-direction: column;
   height: 100dvh;

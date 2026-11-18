@@ -11,7 +11,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  background: var(--hs-bg);
+  background: #f1f2f5;
   padding: 0;
   gap: 12px;
 }
@@ -95,9 +95,9 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: #e9efe9;
-  border: 1px solid var(--hs-line);
-  border-radius: 16px;
+  background: #f1f2f5;
+  border: 0;
+  border-radius: 0;
   padding: 12px;
   align-items: center;
   justify-content: center;
