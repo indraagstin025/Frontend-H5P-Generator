@@ -5,6 +5,7 @@ import { formatNetworkError } from '../../../services/network';
 import { buildH5p, safeFileName } from '../../exporter/api/h5pPackager';
 import { DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
+import { isQuizElement } from '../../studio/constants/h5pModel';
 import './H5PReader.css';
 import slideLayoutUrl from './reader-slide-layout.css?url';
 import classicSlideLayoutUrl from './reader-slide-layout-4-3.css?url';
@@ -33,12 +34,16 @@ export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project
   const [attempt, setAttempt] = useState(0);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [mediaWarnings, setMediaWarnings] = useState<string[]>([]);
+  const [completionNotice, setCompletionNotice] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     let reader: H5PPlayerElement | null = null;
     let timeout: ReturnType<typeof setTimeout> | undefined;
     let activityId = 0;
+    const answered = new Set<string>();
+    const notified = new Set<string>();
+    let noticeSlideOrder: number | null = null;
     const host = hostRef.current;
     const fail = (message: string) => {
       if (cancelled) return;
@@ -59,6 +64,35 @@ export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project
       if (cancelled) return;
       const entry = { ...summarizeActivity(event), id: ++activityId };
       setActivities((previous) => [...previous.slice(-19), entry]);
+      const statement = (event as CustomEvent<{ statement?: {
+        verb?: { id?: string };
+        object?: { id?: string; definition?: { extensions?: Record<string, unknown> } };
+        result?: { response?: string; completion?: boolean };
+      } }>).detail?.statement;
+      const verb = statement?.verb?.id?.split('/').pop();
+      if (verb === 'progressed') {
+        const destination = statement?.object?.definition?.extensions?.['http://id.tincanapi.com/extension/ending-point'];
+        if (noticeSlideOrder !== null && Number(destination) !== noticeSlideOrder) {
+          setCompletionNotice('');
+          noticeSlideOrder = null;
+        }
+        return;
+      }
+      if (verb !== 'answered' && verb !== 'completed') return;
+      let activity = statement?.object?.id ?? '';
+      try { activity = decodeURIComponent(activity); } catch { /* Keep the original activity ID. */ }
+      const matchedSlide = project.slides.find((slide) => slide.elements.some((element) =>
+        isQuizElement(element) && activity.split(/[?&#/=]/).includes(element.id)));
+      if (!matchedSlide) return;
+      const quizzes = matchedSlide.elements.filter(isQuizElement);
+      const quiz = quizzes.find((element) => activity.split(/[?&#/=]/).includes(element.id));
+      if (!quiz) return;
+      answered.add(quiz.id);
+      if (!notified.has(matchedSlide.id) && quizzes.every((element) => answered.has(element.id))) {
+        notified.add(matchedSlide.id);
+        noticeSlideOrder = matchedSlide.order;
+        setCompletionNotice(`Semua soal pada slide ${matchedSlide.order} sudah diisi.${matchedSlide.order < project.slides.length ? ' Anda dapat melanjutkan ke slide berikutnya.' : ''}`);
+      }
     };
 
     void (async () => {
@@ -120,6 +154,10 @@ export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project
 
   return (
     <div className="pv-real-wrap">
+      {completionNotice && <div className="pv-slide-complete" role="status">
+        <span>{completionNotice}</span>
+        <button type="button" aria-label="Tutup pemberitahuan" onClick={() => setCompletionNotice('')}>×</button>
+      </div>}
       {(status === 'preparing' || status === 'loading') && (
         <p className="muted" role="status">{status === 'preparing' ? 'Menyiapkan materi untuk preview…' : 'Membuka reader H5P…'}</p>
       )}
@@ -131,6 +169,7 @@ export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project
             setError('');
             setActivities([]);
             setMediaWarnings([]);
+            setCompletionNotice('');
             setStatus('preparing');
             setAttempt((value) => value + 1);
           }}>Coba lagi</button>

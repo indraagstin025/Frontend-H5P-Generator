@@ -655,7 +655,7 @@ export function toCpElement(
   }
   const action = toAction(el, cpMinor, media);
   if (!action) return null;
-  return { ...base, action };
+  return { ...base, action: { ...action, subContentId: el.id } };
 }
 
 export function toContentJson(

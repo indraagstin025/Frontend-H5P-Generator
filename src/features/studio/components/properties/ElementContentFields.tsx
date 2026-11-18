@@ -15,12 +15,13 @@ function FontSizeField({ value, onChange }: { value: number; onChange: (value: n
       Ukuran font (px)
       <input type="number" min={1} step={1} value={draft ?? value}
         onFocus={() => setDraft(String(value))}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => {
-          const next = Number(draft);
-          if (draft?.trim() && Number.isFinite(next) && next >= 1) onChange(next);
-          setDraft(null);
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          const next = event.target.valueAsNumber;
+          if (raw.trim() && Number.isFinite(next) && next >= 1) onChange(next);
         }}
+        onBlur={() => setDraft(null)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') {
             event.preventDefault();

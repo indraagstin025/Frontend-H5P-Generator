@@ -400,7 +400,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
   };
   switch (kind) {
     case 'advancedText':
-      return { ...base, kind, text: 'Tulis narasi cerita di sini…' };
+      return { ...base, kind, text: 'Klik 2x untuk menulis' };
     case 'link':
       return { ...base, kind, url: 'https://', linkText: 'Klik di sini' };
     case 'image':
