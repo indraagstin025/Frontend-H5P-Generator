@@ -13,6 +13,8 @@ export interface AuthUser {
   role: UserRole;
   isActive: boolean;
   avatarUrl: string | null;
+  birthDate?: string | null;
+  profileCompleted?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,6 +22,7 @@ export interface AuthUser {
 export interface AuthResponseData {
   user: AuthUser;
   token: string;
+  generatedPassword?: string;
 }
 
 export const AUTH_TOKEN_KEY = 'h5p-generator:auth-token:v1';
@@ -60,6 +63,8 @@ export function getStoredUser(): AuthUser | null {
       role: parsed.role,
       isActive: parsed.isActive !== false,
       avatarUrl: typeof parsed.avatarUrl === 'string' ? parsed.avatarUrl : null,
+      birthDate: typeof parsed.birthDate === 'string' ? parsed.birthDate : null,
+      profileCompleted: parsed.profileCompleted !== false,
       createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : '',
       updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : '',
     };
@@ -187,5 +192,58 @@ export async function registerWithEmail(input: {
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
   const res = await apiFetch<{ data: AuthUser }>('/auth/me');
+  return res.data;
+}
+
+export async function fetchAuthProviders(): Promise<{ google: boolean }> {
+  const res = await apiFetch<{ data: { google: boolean } }>('/auth/providers');
+  return res.data;
+}
+
+export function getGoogleLoginUrl(): string {
+  const base = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/+$/, '');
+  return `${base}/auth/google`;
+}
+
+export async function exchangeGoogleCode(code: string): Promise<AuthResponseData> {
+  const res = await apiFetch<{ message: string; data: AuthResponseData }>('/auth/google/exchange', {
+    method: 'POST',
+    body: { code },
+  });
+  setAuthSession(res.data.token, res.data.user);
+  return res.data;
+}
+
+export async function uploadProfileAvatar(file: File): Promise<{ avatarUrl: string; user: AuthUser }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await apiFetch<{ message: string; data: { avatarUrl: string; user: AuthUser } }>('/auth/avatar', {
+    method: 'POST',
+    body: formData,
+  });
+  const activeToken = getAuthToken();
+  if (activeToken) {
+    setAuthSession(activeToken, res.data.user);
+  }
+  return res.data;
+}
+
+export async function updateUserProfile(input: {
+  name: string;
+  birthDate: string;
+  newPassword?: string;
+}): Promise<AuthUser> {
+  const res = await apiFetch<{ message: string; data: AuthUser }>('/auth/profile', {
+    method: 'PATCH',
+    body: {
+      name: input.name.trim(),
+      birthDate: input.birthDate,
+      ...(input.newPassword ? { newPassword: input.newPassword } : {}),
+    },
+  });
+  const activeToken = getAuthToken();
+  if (activeToken) {
+    setAuthSession(activeToken, res.data);
+  }
   return res.data;
 }
