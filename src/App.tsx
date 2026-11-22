@@ -8,6 +8,7 @@ import { StudioView } from './features/studio/pages/StudioView';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { LandingPage } from './pages/LandingPage';
+import { CompleteProfilePage } from './pages/CompleteProfilePage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminCreateUserPage } from './pages/admin/AdminCreateUserPage';
@@ -30,6 +31,14 @@ function App() {
             <Route path="/" element={<LandingRoute />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Navigate to="/login" replace />} />
+            <Route
+              path="/complete-profile"
+              element={
+                <ProtectedRoute>
+                  <CompleteProfilePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
