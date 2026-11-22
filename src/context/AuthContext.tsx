@@ -12,12 +12,14 @@ import { ApiError } from '../services/api';
 import { subscribeOnlineRecovery } from '../services/network';
 import {
   clearAuthSession,
+  exchangeGoogleCode,
   fetchCurrentUser,
   getAuthToken,
   getStoredUser,
   loginWithEmail,
   registerWithEmail,
   setAuthSession,
+  updateUserProfile,
   type AuthUser,
 } from '../services/authService';
 
@@ -26,8 +28,12 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  pendingGeneratedPassword: string | null;
   login: (email: string, password: string) => Promise<AuthUser>;
+  loginWithGoogleCode: (code: string) => Promise<AuthUser>;
   register: (input: { email: string; password: string; name: string }) => Promise<AuthUser>;
+  completeProfile: (input: { name: string; birthDate: string; newPassword?: string }) => Promise<AuthUser>;
+  clearPendingPassword: () => void;
   logout: () => void;
   refreshUser: () => Promise<AuthUser | null>;
 }
@@ -39,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => getAuthToken());
   const [user, setUser] = useState<AuthUser | null>(() => (getAuthToken() ? getStoredUser() : null));
   const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(getAuthToken() && !getStoredUser()));
+  const [pendingGeneratedPassword, setPendingGeneratedPassword] = useState<string | null>(null);
 
   const syncFromStorage = useCallback(() => {
     const nextToken = getAuthToken();
@@ -110,6 +117,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     const data = await loginWithEmail(email, password);
+    setPendingGeneratedPassword(null);
+    setToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const loginWithGoogleCode = useCallback(async (code: string): Promise<AuthUser> => {
+    const data = await exchangeGoogleCode(code);
+    setPendingGeneratedPassword(data.generatedPassword ?? null);
     setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -118,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (input: { email: string; password: string; name: string }): Promise<AuthUser> => {
       const data = await registerWithEmail(input);
+      setPendingGeneratedPassword(null);
       setToken(data.token);
       setUser(data.user);
       return data.user;
@@ -125,8 +142,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const completeProfile = useCallback(
+    async (input: { name: string; birthDate: string; newPassword?: string }): Promise<AuthUser> => {
+      const updated = await updateUserProfile(input);
+      setUser(updated);
+      setPendingGeneratedPassword(null);
+      return updated;
+    },
+    [],
+  );
+
+  const clearPendingPassword = useCallback(() => {
+    setPendingGeneratedPassword(null);
+  }, []);
+
   const logout = useCallback(() => {
     clearAuthSession();
+    setPendingGeneratedPassword(null);
     setToken(null);
     setUser(null);
     navigate('/login', { replace: true });
@@ -138,12 +170,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       isAuthenticated: Boolean(token && user),
       isLoading,
+      pendingGeneratedPassword,
       login,
+      loginWithGoogleCode,
       register,
+      completeProfile,
+      clearPendingPassword,
       logout,
       refreshUser,
     }),
-    [user, token, isLoading, login, register, logout, refreshUser],
+    [
+      user,
+      token,
+      isLoading,
+      pendingGeneratedPassword,
+      login,
+      loginWithGoogleCode,
+      register,
+      completeProfile,
+      clearPendingPassword,
+      logout,
+      refreshUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -177,6 +225,14 @@ export function ProtectedRoute({
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (
+    user?.role !== 'ADMIN' &&
+    user?.profileCompleted === false &&
+    location.pathname !== '/complete-profile'
+  ) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   if (!adminOnly && user?.role === 'ADMIN') {
