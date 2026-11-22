@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
 import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
+import { fetchAuthProviders, getGoogleLoginUrl } from '../services/authService';
 import {
   formatNetworkError,
   isBrowserOffline,
@@ -15,10 +16,14 @@ import './PublicPageMotion.css';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, user } = useAuth();
+  const location = useLocation();
+  const { login, loginWithGoogleCode, isAuthenticated, user } = useAuth();
   const { isOnline } = useNetworkStatus();
   const [enteringDashboard, setEnteringDashboard] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleChecking, setGoogleChecking] = useState(true);
+  const [oauthExchanging, setOauthExchanging] = useState(false);
 
   const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,16 +32,74 @@ export function LoginPage() {
   const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchAuthProviders()
+      .then((res) => {
+        if (!cancelled) setGoogleEnabled(Boolean(res.google));
+      })
+      .catch(() => {
+        if (!cancelled) setGoogleEnabled(false);
+      })
+      .finally(() => {
+        if (!cancelled) setGoogleChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const oauthCode = params.get('oauth_code');
+    const oauthError = params.get('oauth_error');
+    if (!oauthCode && !oauthError) return;
+
+    window.history.replaceState({}, document.title, location.pathname);
+
+    if (oauthError) {
+      setMessage(oauthError);
+      return;
+    }
+
+    if (oauthCode) {
+      setOauthExchanging(true);
+      setMessage('');
+      void loginWithGoogleCode(oauthCode)
+        .then((loggedIn) => {
+          const target =
+            loggedIn.role === 'ADMIN'
+              ? '/admin/users'
+              : loggedIn.profileCompleted === false
+                ? '/complete-profile'
+                : '/dashboard';
+          navigate(target, { replace: true });
+        })
+        .catch((err) => {
+          setMessage(formatNetworkError(err, 'Gagal menyelesaikan login Google. Silakan coba lagi.'));
+        })
+        .finally(() => {
+          setOauthExchanging(false);
+        });
+    }
+  }, [location.pathname, location.search, loginWithGoogleCode, navigate]);
+
+  useEffect(() => {
     return subscribeOnlineRecovery(() => {
       setMessage((prev) => (prev.toLowerCase().includes('koneksi') ? '' : prev));
     });
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && !enteringDashboard && !submitting) {
-      navigate(user?.role === 'ADMIN' ? '/admin/users' : '/dashboard', { replace: true });
+    if (isAuthenticated && !enteringDashboard && !submitting && !oauthExchanging) {
+      const target =
+        user?.role === 'ADMIN'
+          ? '/admin/users'
+          : user?.profileCompleted === false
+            ? '/complete-profile'
+            : '/dashboard';
+      navigate(target, { replace: true });
     }
-  }, [isAuthenticated, user?.role, enteringDashboard, submitting, navigate]);
+  }, [isAuthenticated, user?.role, user?.profileCompleted, enteringDashboard, submitting, oauthExchanging, navigate]);
 
   useEffect(() => {
     const ornaments = ornamentsRef.current?.querySelectorAll<HTMLElement>('.login-ornament');
@@ -98,15 +161,29 @@ export function LoginPage() {
   }
 
   function validateEmail(input: HTMLInputElement): boolean {
-    const error = !input.value
+    const trimmed = input.value.trim();
+    const error = !trimmed
       ? 'Email wajib diisi.'
-      : input.validity.typeMismatch || !/^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(input.value.trim()) || input.value.includes('..')
-        ? 'Email harus dalam format nama@gmail.com.'
+      : input.validity.typeMismatch ||
+          !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed) ||
+          trimmed.includes('..') ||
+          trimmed.startsWith('.') ||
+          trimmed.includes('.@')
+        ? 'Masukkan alamat email yang valid.'
         : '';
     input.setCustomValidity(error);
     setEmailError(error);
     setEmailTooltipOpen(Boolean(error));
     return !error;
+  }
+
+  function handleGoogleLogin() {
+    if (enteringDashboard || submitting || oauthExchanging || !googleEnabled) return;
+    if (isBrowserOffline()) {
+      setMessage('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk masuk dengan Google.');
+      return;
+    }
+    window.location.assign(getGoogleLoginUrl());
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -231,8 +308,7 @@ export function LoginPage() {
               name="email"
               type="email"
               autoComplete="username"
-              placeholder="nama@gmail.com"
-              pattern={'[^\\s@]+@[gG][mM][aA][iI][lL]\\.[cC][oO][mM]'}
+              placeholder="nama@email.com"
               required
               aria-invalid={Boolean(emailError)}
               aria-describedby={emailError && emailTooltipOpen ? 'login-email-error' : undefined}
@@ -276,15 +352,25 @@ export function LoginPage() {
             </button>
           </form>
           <div className="login-divider"><span>atau</span></div>
-          {/* TODO: Enable Google sign-in when authentication is available. */}
-          <button className="login-google" type="button" disabled>
+          <button
+            className="login-google"
+            type="button"
+            disabled={!googleEnabled || googleChecking || oauthExchanging || submitting || enteringDashboard}
+            onClick={handleGoogleLogin}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.89-1.74 2.98-4.3 2.98-7.36Z" />
               <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.05.97-3.38.97-2.61 0-4.83-1.76-5.62-4.13H3.04v2.59A10 10 0 0 0 12 22Z" />
               <path fill="#FBBC05" d="M6.38 13.92a6 6 0 0 1 0-3.84V7.49H3.04a10 10 0 0 0 0 9.02l3.34-2.59Z" />
               <path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.83 1.51l2.87-2.87A9.62 9.62 0 0 0 12 2a10 10 0 0 0-8.96 5.49l3.34 2.59A5.98 5.98 0 0 1 12 5.95Z" />
             </svg>
-            Google belum tersedia
+            {oauthExchanging
+              ? 'Memverifikasi akun Google…'
+              : googleChecking
+                ? 'Memeriksa layanan Google…'
+                : googleEnabled
+                  ? 'Lanjutkan dengan Google'
+                  : 'Google belum tersedia'}
           </button>
           {message && <div className="login-message" role="status">{message}</div>}
           <p className="login-help">Butuh akses akun? Hubungi administrator instansi Anda.</p>
