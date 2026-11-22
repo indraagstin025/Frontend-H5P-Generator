@@ -2,7 +2,7 @@
  * Dashboard ruang kerja pemateri
  * Ringkasan materi, akses cepat, dan status LMS internal.
  */
-import { useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import {
   ArrowRightIcon,
   ChevronLeftIcon,
@@ -14,7 +14,8 @@ import {
   ReaderIcon,
   MagnifyingGlassIcon,
 } from '@radix-ui/react-icons';
-import { loadExportHistory } from '../../exporter/api/exportHistory';
+import { fetchExportHistory, loadExportHistory } from '../../exporter/api/exportHistory';
+import { isBrowserOffline, subscribeOnlineRecovery } from '../../../services/network';
 import { isQuizElement } from '../../studio/constants/h5pModel';
 import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
 import type { Project } from '../../studio/constants/h5pModel';
@@ -55,8 +56,29 @@ function sourceOf(item: { sourceFileName?: string | null }): { key: 'manual' | '
 }
 
 export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', onQueryChange, searchInputRef }: DashboardProps) {
-  const [exports] = useState(loadExportHistory);
+  const [exports, setExports] = useState(loadExportHistory);
   const [exportPage, setExportPage] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    const syncExports = () => {
+      if (isBrowserOffline()) return;
+      void fetchExportHistory()
+        .then((rows) => {
+          if (!cancelled) setExports(rows);
+        })
+        .catch(() => {
+          // Pertahankan cache lokal bila server belum bisa dihubungi
+        });
+    };
+
+    syncExports();
+    const unsubscribe = subscribeOnlineRecovery(syncExports);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
   const [exportQuery, setExportQuery] = useState('');
   const [materialSource, setMaterialSource] = useState<SourceFilter>('all');
   const [exportSource, setExportSource] = useState<SourceFilter>('all');
@@ -147,7 +169,7 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
         <article className="db-overview-item">
           <span>Riwayat ekspor <ClockIcon aria-hidden="true" /></span>
           <strong>{exports.length}</strong>
-          <small>Paket tercatat di peramban ini</small>
+          <small>Riwayat paket tersimpan di akun Anda</small>
         </article>
       </section>
 

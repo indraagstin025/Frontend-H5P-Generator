@@ -6,7 +6,7 @@ import { ApiError } from '../../../services/api';
 import { formatNetworkError, isBrowserOffline, isNetworkFailure, NetworkError } from '../../../services/network';
 import { exportProjectFromServer, isServerProjectId } from '../../ingest/api/serverIngest';
 import type { Project } from '../../studio/constants/h5pModel';
-import { recordExport } from './exportHistory';
+import { cacheExportRecord, persistFallbackExport } from './exportHistory';
 import { MissingLibrariesError, buildH5p, downloadBlob, safeFileName } from './h5pPackager';
 
 export interface UnifiedExportResult {
@@ -40,7 +40,8 @@ export async function exportH5pPackage(opts: {
       const name = filename || safeFileName(project.title);
       const sizeKb = Math.max(1, Math.round(blob.size / 1024));
       downloadBlob(blob, name);
-      recordExport({
+      cacheExportRecord({
+        projectId: project.id,
         title: project.title,
         format: 'H5P',
         sizeKb,
@@ -72,12 +73,15 @@ export async function exportH5pPackage(opts: {
     const name = safeFileName(project.title);
     const sizeKb = Math.max(1, Math.round(blob.size / 1024));
     downloadBlob(blob, name);
-    recordExport({
+    const exportEntry = {
+      projectId: isServerProjectId(project.id) ? project.id : null,
       title: project.title,
-      format: 'H5P',
+      format: 'H5P' as const,
       sizeKb,
       sourceFileName: project.sourceFileName,
-    });
+    };
+    cacheExportRecord(exportEntry);
+    void persistFallbackExport(exportEntry);
     const bits: string[] = [];
     if (bundled.length > 0) bits.push(`${bundled.length} library ikut di dalam`);
     if (media.bundled > 0) bits.push(`${media.bundled} media ikut di paket`);
