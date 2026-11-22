@@ -1,0 +1,12 @@
+.pv-offline-reader { background: #fff; border-radius: 16px; min-height: 360px; }
+.pv-offline-reader[hidden] { display: none; }
+.pv-offline-reader h5p-player { display: block; width: 100%; min-height: 360px; }
+.pv-offline-reader:has(h5p-player[state="ready"]),
+.pv-offline-reader h5p-player[state="ready"] { min-height: 0; }
+@media (max-width: 640px) {
+  .pv-offline-reader, .pv-offline-reader h5p-player { min-height: 220px; }
+}
+.pv-slide-complete { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; margin-bottom: 12px; border: 1px solid #c5d9c6; border-radius: 10px; background: #eaf1df; color: #163a23; font-size: 14px; }
+.pv-slide-complete button { flex: none; width: 36px; height: 36px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; font-size: 22px; }
+.pv-slide-complete button:hover { background: #dbe7ce; }
+.pv-slide-complete button:focus-visible { outline: 2px solid #24733e; outline-offset: 2px; }

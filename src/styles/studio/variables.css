@@ -4,18 +4,18 @@
  */
 
 :root {
-  --hs-green: #267348;
-  --hs-green-mid: #388e58;
+  --hs-green: #24733e;
+  --hs-green-mid: #477454;
   --hs-green-light: #4caf70;
-  --hs-green-soft: #e8f5ec;
-  --hs-green-softer: #f0f7f2;
-  --hs-green-border: #c8e6d2;
-  --hs-bg: #f0f4f0;
+  --hs-green-soft: #eaf1df;
+  --hs-green-softer: #f4f8f0;
+  --hs-green-border: #c5d9c6;
+  --hs-bg: #f4f8f4;
   --hs-bg-card: #ffffff;
-  --hs-ink: #1a2e22;
-  --hs-ink-mid: #3d5445;
-  --hs-ink-muted: #6b8070;
-  --hs-line: #dde8e0;
+  --hs-ink: #163a23;
+  --hs-ink-mid: #385642;
+  --hs-ink-muted: #52665a;
+  --hs-line: #dce8df;
   --hs-shadow: 0 2px 12px rgba(30, 60, 40, 0.08);
   --hs-shadow-lg: 0 4px 24px rgba(30, 60, 40, 0.12);
   --hs-radius: 12px;
@@ -24,11 +24,17 @@
 
 /* Shell Utama Studio */
 .hs-studio-shell {
+  --hs-header-height: 64px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   min-height: 0;
   background: var(--hs-bg);
   overflow: hidden;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: inherit;
+  color: var(--hs-ink);
 }
+
+.hs-studio-shell :is(button, input, select, textarea) { font-family: inherit; }
+.hs-studio-shell :is(button, input, select, textarea, a):focus-visible { outline: 2px solid var(--hs-green); outline-offset: 3px; }
+.hs-studio-shell button:disabled { cursor: not-allowed; opacity: .55; }

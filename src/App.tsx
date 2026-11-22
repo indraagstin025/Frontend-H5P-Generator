@@ -10,6 +10,7 @@ import { LoginPage } from './pages/LoginPage';
 import { LandingPage } from './pages/LandingPage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminCreateUserPage } from './pages/admin/AdminCreateUserPage';
 
 function LandingRoute() {
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ function App() {
             >
               <Route index element={<Navigate to="users" replace />} />
               <Route path="users" element={<AdminUsersPage />} />
+              <Route path="users/new" element={<AdminCreateUserPage />} />
               <Route path="*" element={<Navigate to="/admin/users" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

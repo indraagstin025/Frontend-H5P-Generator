@@ -1,5 +1,6 @@
 import { DashboardIcon, ExitIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
 import { useEffect, useRef, useState } from 'react';
+import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
 interface HomeSidebarProps {
   displayName: string;
@@ -49,9 +50,10 @@ export function HomeSidebar({
     };
   }, [profileOpen]);
   return (
-    <aside className="db-sidebar" aria-label="Navigasi utama">
+    <aside className="db-sidebar floating-shapes-host" aria-label="Navigasi utama">
+      <FloatingShapes />
       <div className="db-brand">
-        <img src="/dashboard-logo.png" alt="H5P Generator" className="db-brand-logo" width={68} height={60} />
+        <img src="/landing-logo.png" alt="H5P Generator" className="db-brand-logo" width={68} height={60} />
         <div className="db-brand-text">
           <span className="db-brand-title">H5P Generator</span>
           <div className="db-brand-sub">

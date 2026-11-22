@@ -63,27 +63,35 @@
 .admin-search svg { position: absolute; left: 13px; width: 17px; height: 17px; color: var(--admin-muted); }
 .admin-search input { padding-left: 39px; width: 100%; }
 .admin-filters select { min-width: 145px; }
-.admin-table { border-collapse: collapse; width: 100%; text-align: left; font-size: 12px; }
+.admin-table-wrap { overflow-x: auto; }
+.admin-table { border-collapse: collapse; width: 100%; min-width: 900px; text-align: left; font-size: 12px; }
 .admin-table th { background: #f5f8f2; font-weight: 600; color: var(--admin-muted); padding: 13px 14px; border-top: 1px solid var(--admin-line); border-bottom: 1px solid var(--admin-line); }
-.admin-table td { border-bottom: 1px solid #e7ece4; padding: 17px 14px; }
+.admin-table td { border-bottom: 1px solid #e7ece4; padding: 17px 14px; vertical-align: middle; }
 .admin-table :is(td, th):first-child { padding-left: 24px; }
-.admin-table :is(td, th):last-child { padding-right: 24px; }
+.admin-table :is(td, th):last-child { width: 1%; padding-right: 24px; text-align: left; white-space: nowrap; }
 .admin-table tbody tr:hover { background: #fafcf7; }
 .admin-user { display: flex; align-items: center; gap: 10px; }
 .admin-user > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .admin-user strong { display: block; font-weight: 600; }
 .admin-user small { display: block; font-size: 11px; color: var(--admin-muted); }
 .admin-user .admin-self { display: inline; font-weight: 400; }
-.admin-role { color: var(--admin-muted); }
-.admin-role.is-admin { color: #185337; font-weight: 700; }
-.admin-status { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #205635; white-space: nowrap; }
+.admin-role { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 3px 11px; border-radius: 9px; background: #e6e8e5; color: #4c544e; font-size: 11px; line-height: 1.4; white-space: nowrap; }
+.admin-role.is-admin { background: #c9dbc4; color: #244e2e; font-weight: 600; }
+.admin-status { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 24px; padding: 3px 10px; border-radius: 9px; background: #e2eddd; font-size: 11px; line-height: 1.4; color: #286332; white-space: nowrap; }
 .admin-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.admin-status.is-blocked { color: #9d3029; }
-.admin-row-actions { display: flex; flex-wrap: wrap; gap: 0 12px; max-width: 260px; }
-.admin-row-actions button { background: transparent; border: 0; padding: 8px 0; min-height: 44px; color: #226c46; text-decoration: underline; text-underline-offset: 4px; font-size: 11px; white-space: nowrap; }
-.admin-row-actions button:hover:not(:disabled) { text-decoration-thickness: 2px; color: #123f29; }
-.admin-row-actions button:disabled { color: #52665a; text-decoration: none; opacity: .65; }
-.admin-row-actions .admin-danger-text { color: #a02d26; }
+.admin-status.is-blocked { background: #f1e3d9; color: #88512f; }
+.admin-row-actions { display: grid; grid-template-columns: 164px 110px 94px; gap: 10px; width: max-content; }
+.admin-row-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #cfddca; border: 1px solid #cfddca; border-radius: 10px; padding: 8px 12px; min-height: 40px; color: #2e5036; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.admin-row-actions button:hover:not(:disabled) { background: #bdcfb7; border-color: #bdcfb7; }
+.admin-row-actions button > svg { width: 18px; height: 18px; flex: none; }
+.admin-role-icon { position: relative; display: inline-flex; width: 20px; height: 20px; flex: none; }
+.admin-role-icon svg:first-child { width: 18px; height: 18px; }
+.admin-role-icon svg:last-child { position: absolute; right: -2px; bottom: 0; width: 10px; height: 10px; background: inherit; }
+.admin-row-actions button:nth-child(2) { background: #e4dec5; border-color: #e4dec5; color: #62542b; }
+.admin-row-actions button:nth-child(2):hover:not(:disabled) { background: #d7cfad; border-color: #d7cfad; }
+.admin-row-actions .admin-danger-text { color: #963c35; background: #efd2cd; border-color: #efd2cd; }
+.admin-row-actions .admin-danger-text:hover:not(:disabled) { background: #e5bdb6; border-color: #e5bdb6; }
+.admin-row-actions button:disabled, .admin-row-actions .admin-danger-text:disabled { background: #e6e8e4; border-color: #e6e8e4; color: #91968f; opacity: 1; }
 .admin-pagination, .admin-pagination nav { display: flex; align-items: center; gap: 12px; }
 .admin-pagination { justify-content: space-between; padding: 16px 24px; font-size: 12px; color: var(--admin-muted); flex-wrap: wrap; }
 .admin-pagination nav { gap: 10px; }
@@ -156,13 +164,17 @@
   .admin-filters select { min-width: 0; width: 100%; }
   .admin-directory-heading { padding: 20px 16px; }
   .admin-table, .admin-table tbody, .admin-table tr, .admin-table td { display: block; width: 100%; }
+  .admin-table { min-width: 0; }
+  .admin-table :is(td, th):last-child { width: 100%; white-space: normal; }
   .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .admin-table tr { border-top: 1px solid var(--admin-line); padding: 12px 16px; }
   .admin-table td, .admin-table td:first-child, .admin-table td:last-child { padding: 6px 0; border: 0; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
   .admin-table td:not(:first-child)::before { content: attr(data-label); color: var(--admin-muted); font-size: 11px; }
   .admin-user .admin-initial { display: grid; }
   .admin-user { padding-bottom: 8px; }
-  .admin-row-actions { justify-content: flex-end; gap: 0 14px; }
+  .admin-table td[data-label="Tindakan"] { flex-wrap: wrap; }
+  .admin-row-actions { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1fr); width: 100%; gap: 6px; }
+  .admin-row-actions button { padding-inline: 4px; gap: 4px; font-size: 10px; min-height: 44px; }
   .admin-pagination { padding: 16px; border-top: 1px solid var(--admin-line); gap: 14px; }
   .admin-dialog { padding: 20px; }
 }

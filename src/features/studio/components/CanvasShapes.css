@@ -27,6 +27,28 @@
 }
 
 .canvas-element { touch-action: none; }
+.hs-studio-shell .st-canvas-text-editor {
+  position: absolute;
+  z-index: 8;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 10px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: white;
+  color: var(--hs-ink);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  resize: none;
+  transform-origin: center;
+  cursor: text;
+}
+.hs-studio-shell .st-canvas-text-editor:focus-visible { outline: none; }
 .canvas-element.kind-image:not(.is-popup-trigger):has(.st-canvas-image) {
   padding: 0;
   background: transparent;
@@ -63,6 +85,10 @@
 .st-resize-ne { top: 0; right: 0; cursor: nesw-resize; }
 .st-resize-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 .st-resize-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.st-resize-w { top: 50%; left: 0; transform: translateY(-50%); cursor: ew-resize; }
+.st-resize-e { top: 50%; right: 0; transform: translateY(-50%); cursor: ew-resize; }
+.st-resize-w::after { top: 50%; left: 0; transform: translateY(-50%); }
+.st-resize-e::after { top: 50%; right: 0; transform: translateY(-50%); }
 .st-resize-nw::after { top: 0; left: 0; }
 .st-resize-ne::after { top: 0; right: 0; }
 .st-resize-sw::after { bottom: 0; left: 0; }

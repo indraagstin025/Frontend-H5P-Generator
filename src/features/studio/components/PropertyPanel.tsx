@@ -12,28 +12,22 @@ import {
 } from '../../interactions/components/QuizEditor';
 import type {
   Project,
-  ProjectSettings,
   Slide,
   SlideElement,
 } from '../constants/h5pModel';
 import { isQuizElement } from '../constants/h5pModel';
 import { KIND_LABEL, QUIZ_TABS, type QuizTab } from './properties/constants';
 import { ElementContentFields } from './properties/ElementContentFields';
-import { StorySettings } from './StorySettings';
-import { ValidationPanel } from './ValidationPanel';
 
 type PropertyPanelProps = {
   project: Project;
   slide: Slide | null;
   slides: Slide[];
   element: SlideElement | null;
-  settings: ProjectSettings;
-  slideCount: number;
   onUpdateElement: (id: string, patch: Partial<SlideElement>) => void;
   onDeleteElement: (id: string) => void;
   onUpdateSlide: (id: string, patch: Partial<Slide>) => void;
   onUpdateKeyword: (slideId: string, main: string) => void;
-  onUpdateSettings: (patch: Partial<ProjectSettings>) => void;
   onNotice: (message: string) => void;
 };
 
@@ -42,13 +36,10 @@ export function PropertyPanel({
   slide,
   slides,
   element,
-  settings,
-  slideCount,
   onUpdateElement,
   onDeleteElement,
   onUpdateSlide,
   onUpdateKeyword,
-  onUpdateSettings,
   onNotice,
 }: PropertyPanelProps) {
   const [tab, setTab] = useState<QuizTab>('konten');
@@ -144,16 +135,6 @@ export function PropertyPanel({
         )}
       </div>
 
-      <hr className="st-divider" />
-      <details>
-        <summary className="st-settings-toggle">Pengaturan cerita</summary>
-        <div className="st-settings-body">
-          <StorySettings settings={settings} slideCount={slideCount} onChange={onUpdateSettings} />
-        </div>
-      </details>
-
-      <hr className="st-divider" />
-      <ValidationPanel project={project} />
     </aside>
   );
 }

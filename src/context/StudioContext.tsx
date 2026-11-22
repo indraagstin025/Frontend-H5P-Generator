@@ -35,6 +35,8 @@ async function pushProjectToServer(project: Project): Promise<void> {
         settings: {
           language: project.settings.language,
           keywordListEnabled: project.settings.keywordListEnabled,
+          requireQuestionsBeforeNavigation: project.settings.requireQuestionsBeforeNavigation !== false,
+          autoAdvance: project.settings.autoAdvance,
           activeSurface: project.settings.activeSurface,
           hideSummarySlide: project.settings.hideSummarySlide,
           showSolutionButton: project.settings.showSolutionButton,
@@ -101,17 +103,34 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const id = sessionStorage.getItem(getCurrentProjectSessionKey(userId));
+      const requestedId = window.location.pathname === '/studio'
+        ? new URLSearchParams(window.location.search).get('project')
+        : null;
+      const id = requestedId || sessionStorage.getItem(getCurrentProjectSessionKey(userId));
       const raw = localStorage.getItem(getProjectsStorageKey(userId));
       const items = raw ? (JSON.parse(raw) as Array<{ id: string; snapshot: Project }>) : [];
 
       if (id && items.length > 0) {
         const found = items.find((p) => p.id === id);
         if (found) {
-          actions.replaceProject(hydrateProject(found.snapshot));
-          savedSnapshot.current = found.snapshot;
+          sessionStorage.setItem(getCurrentProjectSessionKey(userId), found.id);
+          const hydrated = hydrateProject(found.snapshot);
+          actions.replaceProject(hydrated);
+          savedSnapshot.current = hydrated;
           setCurrentId(found.id);
           setSavedLabel('Draf tersimpan');
+          if (requestedId && found.snapshot.slides.length === 0 && isServerProjectId(found.id)) {
+            let cancelled = false;
+            void fetchServerProject(found.id).then((full) => {
+              if (cancelled) return;
+              actions.replaceProject(hydrateProject(full));
+              savedSnapshot.current = full;
+              store.save(full);
+            }).catch(() => {
+              if (!cancelled) setSavedLabel('Gagal memuat slide. Muat ulang untuk mencoba lagi.');
+            });
+            return () => { cancelled = true; };
+          }
           return;
         }
       }
@@ -147,8 +166,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const openProject = useCallback(
     (project: Project, from: string, opts?: { step?: number; saved?: boolean }) => {
-      actions.replaceProject(hydrateProject(project));
-      savedSnapshot.current = opts?.saved ? project : null;
+      const hydrated = hydrateProject(project);
+      actions.replaceProject(hydrated);
+      savedSnapshot.current = opts?.saved ? hydrated : null;
       setCurrentId(project.id);
       setSavedLabel(opts?.saved ? 'Draf tersimpan' : 'Belum disimpan');
       if (opts?.saved) {
@@ -239,7 +259,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       try {
         await pushProjectToServer(state.project);
         removePendingSyncId(userId, id);
-        setSavedLabel(`Tersimpan di server ${time}`);
+        setSavedLabel(projectRef.current === state.project ? `Tersimpan di server ${time}` : 'Belum disimpan');
         return true;
       } catch (err) {
         if (isNetworkFailure(err)) {

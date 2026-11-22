@@ -1,0 +1,75 @@
+/* Shared visual direction with the landing and login pages. */
+.admin-shell { --admin-green: #077c1a; --admin-ink: #163a23; --admin-muted: #647469; --admin-line: #dce8df; background: #f4f8f4; }
+.admin-sidebar { background: radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(155deg, #075f26, #077c1a 65%, #248b38); color: #fff; border: 0; }
+.admin-brand { color: #fff; border-color: #ffffff30; }
+.admin-brand small { color: #e0f1e3; }
+.admin-sidebar nav a { color: #e8f5ea; border: 1px solid transparent; border-radius: 12px; }
+.admin-sidebar nav a:hover { background: #ffffff18; color: #fff; text-decoration: none; }
+.admin-sidebar nav a[aria-current="page"] { background: #fff; color: #075f26; box-shadow: 0 5px 16px #00341520; }
+.admin-sidebar nav .admin-add-user { border-color: #ffffff55; }
+.admin-account { border-color: #ffffff30; }
+.admin-profile-trigger { color: #fff; background: #ffffff12; }
+.admin-sidebar .admin-account small { color: #e0f1e3; }
+.admin-profile-trigger:hover, .admin-profile-trigger:active, .admin-profile-trigger[aria-expanded="true"] { background: #ffffff22; }
+.admin-sidebar .admin-initial { background: #ffffff20; color: white; }
+.admin-profile-popup { color: #163a23; }
+.admin-main { max-width: 1440px; margin-inline: auto; }
+.admin-content { min-width: 0; }
+@media (min-width: 951px) {
+  .admin-shell { background: #077c1a; }
+  .admin-content {
+    background: #f4f8f4;
+    border-radius: 32px 0 0 32px;
+    overflow: clip;
+    min-height: 100dvh;
+  }
+}
+.admin-heading { margin-top: 12px; margin-bottom: 30px; }
+.admin-heading h1 { color: #163a23; letter-spacing: -.04em; }
+.admin-summary, .admin-directory { border-radius: 20px; border-color: #dce8df; box-shadow: 0 8px 30px #163a2305; }
+.admin-summary { overflow: hidden; }
+.admin-summary strong { color: #077c1a; }
+.admin-table th { background: #f2f8f3; }
+.admin-shell .admin-button { border-radius: 10px; }
+.admin-shell .admin-primary { background: #077c1a; border-color: #077c1a; color: white; }
+.admin-shell .admin-primary:hover:not(:disabled) { background: #075f26; border-color: #075f26; }
+.admin-shell :is(input, select) { border-radius: 10px; }
+.admin-shell :is(a, button, input, select):focus-visible { outline: 3px solid #55b56b; outline-offset: 3px; }
+.admin-sidebar :is(a, button):focus-visible { outline-color: #fff; }
+.admin-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; color: #52665a; font-size: 13px; text-decoration: none; }
+.admin-back:hover { color: #077c1a; text-decoration: underline; }
+.admin-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em; margin-bottom: 12px; color: #077c1a; }
+.admin-create-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; align-items: start; }
+.admin-create-card { border: 1px solid #dce8df; background: #fff; border-radius: 24px; padding: clamp(22px, 3vw, 40px); box-shadow: 0 12px 40px #163a2306; min-width: 0; }
+.admin-create-heading { display: flex; gap: 14px; align-items: center; margin-bottom: 28px; }
+.admin-create-heading h2 { margin: 0 0 6px; font-size: 20px; letter-spacing: -.02em; }
+.admin-create-heading p { color: #647469; margin: 0; font-size: 13px; line-height: 1.7; }
+.admin-form-icon { display: grid; place-items: center; width: 48px; height: 48px; flex: none; border-radius: 14px; background: #edf8ee; color: #077c1a; }
+.admin-form-icon svg { width: 22px; height: 22px; }
+.admin-create-form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.admin-shell .admin-create-form label { display: block; margin: 22px 0 9px; font-size: 13px; color: #263d2d; }
+.admin-shell .admin-create-form input { display: block; width: 100%; min-height: 50px; font-size: 14px; padding: 12px 14px; }
+.admin-create-form small { display: block; color: #647469; font-size: 12px; margin-top: 8px; line-height: 1.6; }
+.admin-password-field { position: relative; }
+.admin-shell .admin-password-field input { padding-right: 52px; }
+.admin-password-field button { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 40px; height: 40px; background: transparent; color: #647469; border: 0; border-radius: 8px; cursor: pointer; }
+.admin-password-field button:hover { background: #edf8ee; color: #077c1a; }
+.admin-form-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; margin-top: 30px; padding-top: 24px; border-top: 1px solid #e7eee8; }
+.admin-form-actions .admin-button { min-height: 48px; padding-inline: 20px; }
+.admin-create-form fieldset:disabled { opacity: .7; }
+.admin-create-form fieldset:disabled button { cursor: wait; }
+.admin-create-note { position: relative; overflow: hidden; background: radial-gradient(ellipse at 100% 0, #3da84e66, transparent 65%), linear-gradient(145deg, #075f26, #077c1a); color: #fff; border-radius: 24px; padding: clamp(24px, 3vw, 40px); }
+.admin-create-note .admin-eyebrow { color: #d5edda; }
+.admin-create-note h2 { color: #fff; font-size: clamp(25px, 2.5vw, 34px); letter-spacing: -.04em; line-height: 1.3; margin: 24px 0 18px; }
+.admin-create-note p { color: #e0f1e3; font-size: 13px; line-height: 1.9; }
+.admin-account-info { display: flex; align-items: flex-start; gap: 12px; border-top: 1px solid #ffffff30; margin-top: 24px; padding-top: 22px; }
+.admin-account-info > svg { flex: none; width: 20px; height: 20px; margin-top: 2px; }
+.admin-account-info strong { font-size: 14px; }
+.admin-account-info p { margin: 6px 0 0; font-size: 12px; }
+.admin-created { padding-block: 28px; outline: none; }
+.admin-created > svg { width: 48px; height: 48px; color: #077c1a; }
+.admin-created h2 { font-size: 26px; line-height: 1.35; letter-spacing: -.03em; }
+.admin-created p { font-size: 14px; line-height: 1.8; color: #647469; overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .admin-create-layout { grid-template-columns: minmax(0, 1fr); } .admin-create-note { max-width: none; } }
+@media (max-width: 950px) { .admin-sidebar { border-bottom: 0; flex-wrap: wrap; } .admin-sidebar nav { flex-wrap: wrap; } }
+@media (max-width: 700px) { .admin-create-layout { gap: 20px; } .admin-create-card, .admin-create-note { border-radius: 18px; } .admin-form-actions { justify-content: stretch; } .admin-form-actions .admin-button { flex: 1; } .admin-heading h1 { font-size: 28px; } }

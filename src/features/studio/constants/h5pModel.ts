@@ -63,6 +63,7 @@ interface BaseElement {
 export interface AdvancedTextElement extends BaseElement {
   kind: 'advancedText';
   text: string;
+  fontSize?: number;
 }
 
 export interface LinkElement extends BaseElement {
@@ -277,6 +278,8 @@ export interface ProjectSettings {
   language: 'id' | 'en';
   aspect: AspectRatio;
   keywordListEnabled: boolean;
+  requireQuestionsBeforeNavigation: boolean;
+  autoAdvance?: { enabled: boolean; scope: 'all' | 'selected'; targetType: GoToTargetType; targetSlideId: string; rules: Array<{ sourceId: string; targetId: string }> };
   /** FR-06: kunci navigasi, peserta hanya pindah via Go-To-Slide */
   activeSurface: boolean;
   /** §5 xAPI: ringkasan + solusi di slide akhir */
@@ -399,7 +402,7 @@ export function createElement(kind: ElementKind, slideCount: number): SlideEleme
   };
   switch (kind) {
     case 'advancedText':
-      return { ...base, kind, text: 'Tulis narasi cerita di sini…' };
+      return { ...base, kind, text: 'Klik 2x untuk menulis' };
     case 'link':
       return { ...base, kind, url: 'https://', linkText: 'Klik di sini' };
     case 'image':
@@ -524,6 +527,7 @@ export function createProject(title: string, aspect: AspectRatio, sourceFileName
       language: 'id',
       aspect,
       keywordListEnabled: true,
+      requireQuestionsBeforeNavigation: true,
       activeSurface: false,
       hideSummarySlide: false,
       showSolutionButton: true,

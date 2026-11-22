@@ -15,10 +15,7 @@ export function ElementPreviewDialog({ project, slide, element, onClose }: {
     copy.id = `element-preview-${crypto.randomUUID()}`;
     copy.settings.activeSurface = false;
     copy.settings.hideSummarySlide = true;
-    copy.slides = [{ ...structuredClone(slide), order: 1, backgroundUrl: null,
-      elements: [{ ...structuredClone(element), displayAsButton: false, rotation: 0,
-        position: { x: 3, y: 3, width: 94, height: 90 } }],
-    }];
+    copy.slides = [{ ...structuredClone(slide), order: 1 }];
     return copy;
   }, [project, slide, element]);
 

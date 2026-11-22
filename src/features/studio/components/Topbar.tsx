@@ -1,33 +1,44 @@
-import { useEffect, useState } from 'react';
-import { DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
-import { COURSE_PRESENTATION_MINORS, DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeftIcon, DownloadIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 
 type TopbarProps = {
   projectTitle: string;
   savedLabel: string;
-  cpMinor?: number;
-  onCpMinorChange?: (minor: number) => void;
   onHome: () => void;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
   onExport?: () => void;
   isExporting?: boolean;
   onPreview?: () => void;
+  isPreparingPreview?: boolean;
+  isPreviewActive?: boolean;
   onRenameTitle?: (title: string) => void;
 };
 
 export function Topbar({
   projectTitle,
   savedLabel,
-  cpMinor = DEFAULT_CP_MINOR,
-  onCpMinorChange,
   onHome,
   onSave,
   onExport,
   isExporting,
   onPreview,
+  isPreparingPreview = false,
+  isPreviewActive = false,
   onRenameTitle,
 }: TopbarProps) {
   const [draft, setDraft] = useState(projectTitle);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const busy = saving || isPreparingPreview;
+  const isSaved = /^(tersimpan|draf tersimpan)/i.test(savedLabel) && draft.trim() === projectTitle && !busy;
+  const saveDescription = busy ? 'Menyimpan perubahan…' : isSaved ? 'Semua perubahan tersimpan' : 'Ada perubahan yang belum disimpan';
+  const handleSave = async () => {
+    if (savingRef.current || isPreparingPreview) return;
+    savingRef.current = true;
+    setSaving(true);
+    try { await onSave(); }
+    finally { savingRef.current = false; setSaving(false); }
+  };
   useEffect(() => {
     setDraft(projectTitle);
   }, [projectTitle]);
@@ -40,26 +51,27 @@ export function Topbar({
 
   return (
     <header className="hs-topbar">
-      {/* Kiri: Logo + Judul */}
+      <div className="hs-topbar-ornaments" aria-hidden="true"><span /><span /><span /><span /></div>
+      {/* Kiri: identitas aplikasi dan profil pengguna */}
       <div className="hs-topbar-left">
         <button
           className="hs-topbar-logo"
           type="button"
           onClick={onHome}
-          title="Kembali ke daftar materi"
+          title="Ke Dashboard"
+          aria-label="Ke Dashboard"
         >
-          <span className="hs-logo-icon">H5P</span>
-          <span className="hs-logo-text">
-            <span className="hs-logo-title">H5P Studio</span>
-          </span>
+          <img className="hs-brand-image" src="/landing-logo.png" alt="" width={80} height={48} />
         </button>
-        <div className="hs-project-meta">
+      </div>
+        <div className="hs-project-meta hs-project-meta-centered">
+          <div className="hs-project-title-row">
           {onRenameTitle ? (
             <input
               className="hs-project-title-input"
               value={draft}
               aria-label="Judul materi"
-              title="Klik untuk ganti judul"
+              title={`${projectTitle} — klik untuk ganti judul`}
               onClick={(e) => e.stopPropagation()}
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commit}
@@ -71,60 +83,41 @@ export function Topbar({
           ) : (
             <span className="hs-project-subtitle">{projectTitle}</span>
           )}
-          <span className="hs-subtitle-dot">·</span>
-          <span className="hs-saved-label" title={savedLabel}>
-            {savedLabel}
+          </div>
+          <span className="hs-saved-label" role="status" aria-live="polite" title={savedLabel}>
+            {busy ? 'Menyimpan…' : savedLabel}
           </span>
         </div>
-      </div>
 
-      {/* Kanan: Aksi (Versi, Export, Pratinjau, Simpan) */}
+      {/* Kanan: Pratinjau, Simpan, Export */}
       <div className="hs-topbar-right">
-        {/* Pilihan Versi Course Presentation */}
-        <div className="hs-version-selector" title="Pilih versi H5P Course Presentation (samakan dengan versi LMS Anda)">
-          <span className="hs-version-label">Versi:</span>
-          <select
-            className="hs-version-select"
-            value={cpMinor}
-            aria-label="Pilihan versi Course Presentation"
-            onChange={(e) => onCpMinorChange?.(Number(e.target.value))}
-          >
-            {COURSE_PRESENTATION_MINORS.map((m) => (
-              <option key={m} value={m}>
-                v1.{m} {m === 24 ? '(Default)' : m === 26 ? '(Terbaru)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Tombol Export H5P */}
-        <button
-          className="hs-btn-export"
-          type="button"
-          onClick={onExport}
-          disabled={isExporting}
-          title="Unduh paket .h5p siap pakai ke LMS"
-        >
-          <DownloadIcon width={15} height={15} />
-          <span className="hs-btn-text">{isExporting ? 'Mengemas...' : 'Export H5P'}</span>
+        <button className={`hs-cloud-save ${isSaved ? 'is-saved' : ''}`} type="button" onClick={() => { void handleSave(); }}
+          disabled={busy} aria-busy={busy} aria-label={`${saveDescription}. Simpan materi`} title={`${saveDescription} — klik untuk menyimpan`}>
+          <svg width="15" height="15" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7.5 22h12a5 5 0 0 0 .7-9.95A7 7 0 0 0 6.6 10.6 5.75 5.75 0 0 0 7.5 22Z" />
+            {isSaved && <path className="hs-cloud-check" d="m9 14 3.5 3.5L20 10" />}
+          </svg>
         </button>
-
         {/* Tombol Pratinjau */}
         <button
           className="hs-btn-preview"
           type="button"
           onClick={onPreview}
-          title="Pratinjau"
+          disabled={busy}
+          aria-busy={isPreparingPreview}
+          title={isPreviewActive ? 'Kembali ke editor' : 'Pratinjau'}
         >
-          <EyeOpenIcon width={15} height={15} />
-          <span className="hs-btn-text">Pratinjau</span>
+          {isPreviewActive ? <ArrowLeftIcon width={15} height={15} /> : <EyeOpenIcon width={15} height={15} />}
+          <span className="hs-btn-text">{isPreparingPreview ? 'Menyimpan…' : isPreviewActive ? 'Kembali' : 'Pratinjau'}</span>
         </button>
 
         {/* Tombol Simpan */}
         <button
           className="hs-btn-save"
           type="button"
-          onClick={onSave}
+          onClick={() => { void handleSave(); }}
+          disabled={busy}
+          aria-busy={busy}
           title="Simpan"
         >
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -133,6 +126,17 @@ export function Topbar({
             <path d="M4 1V5H10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <span className="hs-btn-text">Simpan</span>
+        </button>
+        <button
+          className="hs-btn-export"
+          type="button"
+          onClick={onExport}
+          disabled={isExporting}
+          aria-busy={isExporting}
+          aria-label={isExporting ? 'Mengemas' : 'Export H5P'}
+          title="Unduh paket .h5p siap pakai ke LMS"
+        >
+          <DownloadIcon width={15} height={15} />
         </button>
       </div>
     </header>

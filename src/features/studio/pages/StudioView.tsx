@@ -5,25 +5,30 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { GearIcon } from '@radix-ui/react-icons';
 import { Toast } from '../../../components/UI/Toast';
 import { useStudio } from '../../../context/StudioContext';
 import '../../../studio-canva.css';
 import { ExportStep } from '../../exporter/components/ExportStep';
 import { peekPendingFile, takePendingFile } from '../../ingest/api/pendingUpload';
+import { absUrl, isServerProjectId } from '../../ingest/api/serverIngest';
+import { apiFetch } from '../../../services/api';
 import { H5PRealPlayer } from '../../preview/components/H5PRealPlayer';
-import { H5PServerPlayer } from '../../preview/components/H5PServerPlayer';
-import { PreviewPlayer } from '../../preview/components/PreviewPlayer';
 import { CanvasPanel } from '../components/CanvasPanel';
 import { ElementPanel } from '../components/ElementPanel';
 import { IngestStep } from '../components/IngestStep';
 import { PropertyPanel } from '../components/PropertyPanel';
 import { StudioLeftPanel } from '../components/StudioLeftPanel';
+import { StorySettings } from '../components/StorySettings';
+import { AutoAdvancePanel } from '../components/AutoAdvancePanel';
 import { Topbar } from '../components/Topbar';
 import { DEFAULT_CP_MINOR } from '../constants/h5pLibraries';
 import { WIZARD_STEPS } from '../constants/wizardSteps';
 import { exportH5pPackage } from '../../exporter/api/exportService';
 import { detectAvailableCpMinor } from '../../exporter/api/h5pPackager';
 import { formatNetworkError, isBrowserOffline } from '../../../services/network';
+import { getAuthToken } from '../../../services/authService';
+import type { SlideElement } from '../constants/h5pModel';
 
 const NOTICE_TIMEOUT_MS = 2600;
 
@@ -35,16 +40,23 @@ export function StudioView() {
     const requested = (location.state as { step?: number } | null)?.step;
     return requested === 1 || requested === 3 || requested === 4 ? requested : 2;
   });
-  const [previewMode, setPreviewMode] = useState<'simulasi' | 'asli' | 'server'>('simulasi');
   const [notice, setNotice] = useState('');
+  const copiedElement = useRef<{ projectId: string; element: SlideElement } | null>(null);
   // Panel kanan aktif: 'elements' atau 'properties'
-  const [rightPanel, setRightPanel] = useState<'elements' | 'properties'>('elements');
+  const [rightPanel, setRightPanel] = useState<'elements' | 'properties' | 'autoAdvance'>('elements');
+  const [activeSidebar, setActiveSidebar] = useState<'elements' | 'text' | 'image' | 'video' | 'settings' | null>(null);
   // Di layar kecil panel kanan jadi drawer
   const [panelOpen, setPanelOpen] = useState(false);
+  const mediaTargetRef = useRef({ projectId: state.project.id, slideId: state.activeSlide?.id, addElement: actions.addElement });
+  useEffect(() => {
+    mediaTargetRef.current = { projectId: state.project.id, slideId: state.activeSlide?.id, addElement: actions.addElement };
+  }, [state.project.id, state.activeSlide?.id, actions.addElement]);
 
   // Pilihan versi Course Presentation & status ekspor
   const [cpMinor, setCpMinor] = useState<number>(DEFAULT_CP_MINOR);
   const [exporting, setExporting] = useState(false);
+  const [savingPreview, setSavingPreview] = useState(false);
+  const previewSavePending = useRef(false);
   // Jangan timpa pilihan user saat probe library selesai.
   const cpPickedByUser = useRef(false);
 
@@ -77,10 +89,61 @@ export function StudioView() {
     }
   }, [state.selectedElement]);
 
+  useEffect(() => {
+    if (!state.selectedElementId) return;
+    const deselectElement = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.canvas-element, .hs-properties-wrapper')) return;
+      actions.setSelectedElementId(null);
+    };
+    document.addEventListener('pointerdown', deselectElement);
+    return () => document.removeEventListener('pointerdown', deselectElement);
+  }, [state.selectedElementId, actions]);
+
   const showNotice = (message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(''), NOTICE_TIMEOUT_MS);
   };
+
+  useEffect(() => {
+    const handleStudioKey = (event: KeyboardEvent) => {
+      if (step === 2 && currentId && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing && !event.defaultPrevented && !document.querySelector('dialog[open], [role="dialog"]')) {
+        const target = event.target;
+        const editingText = target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
+        if (!editingText && event.key.toLowerCase() === 'c' && state.selectedElement) {
+          event.preventDefault();
+          copiedElement.current = { projectId: currentId, element: structuredClone(state.selectedElement) };
+          return;
+        }
+        if (!editingText && event.key.toLowerCase() === 'v' && copiedElement.current?.projectId === currentId && state.activeSlide) {
+          event.preventDefault();
+          const { id: _id, ...element } = structuredClone(copiedElement.current.element);
+          actions.addElement(element.kind, element);
+          return;
+        }
+      }
+      if (currentId && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && !event.isComposing && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (state.canUndo) actions.undo();
+        return;
+      }
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Backspace' && event.key !== 'Delete') return;
+      if (event.defaultPrevented || event.isComposing || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (step !== 2 || !currentId || document.querySelector('dialog[open], [role="dialog"]')) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, [contenteditable], [role="textbox"]'))) return;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        if (state.selectedElementId || !state.activeSlide) return;
+        event.preventDefault();
+        actions.setActiveSlideId(prevNextId(state.slides.map((slide) => slide.id), state.activeSlide.id, event.key === 'ArrowRight' ? 1 : -1));
+        return;
+      }
+      if (!state.selectedElement) return;
+      event.preventDefault();
+      actions.deleteElement(state.selectedElement.id);
+    };
+    window.addEventListener('keydown', handleStudioKey);
+    return () => window.removeEventListener('keydown', handleStudioKey);
+  }, [step, currentId, state.canUndo, state.selectedElement, state.selectedElementId, state.activeSlide, state.slides, actions]);
 
   if (!currentId) {
     return (
@@ -102,16 +165,34 @@ export function StudioView() {
     );
   }
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
   const project = state.project;
   const hasSlides = state.slides.length > 0;
   const stepLabel = WIZARD_STEPS.find((s) => s.id === step)?.label ?? '';
   const nextLabel = WIZARD_STEPS.find((s) => s.id === step + 1)?.label ?? '';
   const canNext = step < WIZARD_STEPS.length && (step > 1 || hasSlides);
 
-  const goBack = () => {
-    if (hasSlides) saveDraft();
-    navigate(from);
+  const handlePreview = async () => {
+    if (previewSavePending.current) return;
+    if (!hasSlides) {
+      showNotice('Tambahkan slide terlebih dahulu sebelum membuka preview.');
+      return;
+    }
+    previewSavePending.current = true;
+    setSavingPreview(true);
+    try {
+      const saved = await saveDraft();
+      if (!saved) {
+        showNotice('Perubahan belum berhasil disimpan ke server. Preview belum dibuka; periksa koneksi lalu coba lagi.');
+        return;
+      }
+      setStep(3);
+      showNotice('Perubahan disimpan. Preview siap dibuka.');
+    } catch (err) {
+      showNotice(formatNetworkError(err, 'Perubahan belum berhasil disimpan. Silakan coba lagi sebelum membuka preview.'));
+    } finally {
+      previewSavePending.current = false;
+      setSavingPreview(false);
+    }
   };
 
   const handleExport = async () => {
@@ -144,21 +225,29 @@ export function StudioView() {
       <Topbar
         projectTitle={project.title}
         savedLabel={savedLabel}
-        cpMinor={cpMinor}
-        onCpMinorChange={handleCpMinorChange}
         onExport={handleExport}
         isExporting={exporting}
-        onHome={goBack}
+        onHome={() => {
+          if (hasSlides) void saveDraft();
+          navigate('/dashboard');
+        }}
         onSave={() => {
-          void saveDraft().then((synced) => {
+          return saveDraft().then((synced) => {
             showNotice(
               synced
                 ? 'Sudah tersimpan ke server.'
                 : 'Koneksi internet terputus — gagal menyimpan ke server. Perubahan masih ada di layar; hubungkan internet lalu klik Simpan lagi.',
             );
+          }).catch((err) => {
+            showNotice(formatNetworkError(err, 'Perubahan belum berhasil disimpan. Silakan coba lagi.'));
           });
         }}
-        onPreview={() => setStep(3)}
+        onPreview={() => {
+          if (step === 3) setStep(2);
+          else void handlePreview();
+        }}
+        isPreparingPreview={savingPreview}
+        isPreviewActive={step === 3}
         onRenameTitle={(title) => {
           actions.setTitle(title);
           showNotice('Judul diganti — jangan lupa Simpan.');
@@ -181,25 +270,57 @@ export function StudioView() {
       {step === 2 && (
         <div className="hs-studio-workspace">
           {/* Kolom kiri: Daftar Slide */}
-          <StudioLeftPanel
-            slides={state.slides}
-            activeSlideId={state.activeSlideId}
-            onSelectSlide={actions.setActiveSlideId}
-            onAddSlide={actions.addSlide}
-            onDuplicateSlide={actions.duplicateSlide}
-            onDeleteSlide={(id) => {
-              actions.deleteSlide(id);
-              showNotice('Slide dihapus.');
-            }}
-            onReorderSlide={actions.reorderSlide}
-          />
+          <div className={`hs-left-panels ${activeSidebar ? 'is-open' : ''}`}>
+          <div className="hs-sidebar-ornaments" aria-hidden="true"><span /><span /><span /></div>
+          <div className={`hs-elements-sidebar ${activeSidebar === 'elements' ? 'is-open' : ''}`}>
+            <button type="button" className="hs-slide-sidebar-toggle" aria-label="Daftar elemen" aria-expanded={activeSidebar === 'elements'} onClick={() => setActiveSidebar((current) => current === 'elements' ? null : 'elements')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="4" /><path d="M14 2l7 4-7 4zM3 21v-3a4 4 0 0 1 4-4h1v7M15 14h3a3 3 0 0 1 0 6h-3a3 3 0 0 1 0-6z" /></svg><span>Elemen</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-text-sidebar-toggle" aria-label="Panel teks" aria-expanded={activeSidebar === 'text'} onClick={() => setActiveSidebar((current) => current === 'text' ? null : 'text')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3" /></svg><span>Teks</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-image-sidebar-toggle" aria-label="Panel gambar" aria-expanded={activeSidebar === 'image'} onClick={() => setActiveSidebar((current) => current === 'image' ? null : 'image')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8" cy="8" r="1.5" /><path d="m3 17 6-6 4 4 3-3 5 5" /></svg><span>Gambar</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-video-sidebar-toggle" aria-label="Panel video" aria-expanded={activeSidebar === 'video'} onClick={() => setActiveSidebar((current) => current === 'video' ? null : 'video')}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2" /><path d="m16 9 6-3v12l-6-3z" /></svg><span>Video</span></button>
+            <button type="button" className="hs-slide-sidebar-toggle hs-settings-sidebar-toggle" aria-label="Pengaturan cerita" aria-expanded={activeSidebar === 'settings'} onClick={() => setActiveSidebar((current) => current === 'settings' ? null : 'settings')}><GearIcon width={22} height={22} /><span>Pengaturan Slide</span></button>
+            {activeSidebar && <div className="hs-elements-sidebar-content">{activeSidebar === 'settings' ? <aside className="hs-element-panel hs-story-settings-panel" aria-label="Pengaturan cerita"><div className="hs-ep-header"><h2 className="hs-ep-title">Pengaturan Slide</h2></div><StorySettings settings={project.settings} onChange={actions.updateSettings} onOpenAutoAdvance={() => { actions.setSelectedElementId(null); setRightPanel('autoAdvance'); setPanelOpen(true); }} /></aside> : <ElementPanel mode={activeSidebar} mediaRevision={state.slides.flatMap((slide) => slide.elements.map((element) => 'asset' in element ? element.asset ?? '' : '')).join('|')} onAddMedia={(media) => {
+              const target = mediaTargetRef.current;
+              if (!target.slideId) { showNotice('Pilih slide terlebih dahulu.'); return; }
+              void (async () => {
+                let assetUrl: string;
+                let asset: string | undefined;
+                let fileName = media.fileName;
+                let file: File | null = null;
+                if (isServerProjectId(target.projectId)) {
+                  const copied = await apiFetch<{ data: { asset: string; assetUrl: string; fileName: string } }>(`/projects/${target.projectId}/media/${encodeURIComponent(media.fileName)}`, { method: 'POST' });
+                  asset = copied.data.asset;
+                  assetUrl = absUrl(copied.data.assetUrl) ?? copied.data.assetUrl;
+                  fileName = copied.data.fileName;
+                } else {
+                  const token = getAuthToken();
+                  const response = await fetch(media.assetUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  if (!response.ok) throw new Error('Gagal mengambil media.');
+                  const blob = await response.blob();
+                  file = new File([blob], media.fileName, { type: blob.type });
+                  assetUrl = URL.createObjectURL(file);
+                }
+                const current = mediaTargetRef.current;
+                if (current.projectId !== target.projectId || current.slideId !== target.slideId) {
+                  if (assetUrl.startsWith('blob:')) URL.revokeObjectURL(assetUrl);
+                  showNotice('Slide berubah. Pilih kembali media untuk menambahkannya.');
+                  return;
+                }
+                current.addElement(media.kind, { asset, fileName, objectUrl: assetUrl, file });
+                setRightPanel('properties');
+                setPanelOpen(true);
+                showNotice('Media ditambahkan ke slide.');
+              })().catch(() => showNotice('Media tidak dapat ditambahkan. Periksa koneksi dan coba lagi.'));
+            }} onAddElement={(kind) => {
+              actions.addElement(kind);
+              showNotice('Elemen baru ditambah — atur propertinya.');
+              setRightPanel('properties');
+              setPanelOpen(true);
+            }} />}</div>}
+          </div>
+          </div>
 
           {/* Kolom tengah: Canvas */}
           <div className="hs-canvas-area">
-            {/* Edit mode indicator */}
-            <div className="hs-canvas-topbar">
-              <span className="hs-edit-mode-badge">EDIT MODE</span>
-              <span className="hs-canvas-hint">Klik elemen pada slide untuk mengedit</span>
               <button
                 type="button"
                 className="hs-panel-toggle"
@@ -208,7 +329,6 @@ export function StudioView() {
               >
                 {panelOpen ? 'Tutup panel' : 'Panel elemen'}
               </button>
-            </div>
 
             {state.activeSlide ? (
               <CanvasPanel
@@ -216,7 +336,6 @@ export function StudioView() {
                 slide={state.activeSlide}
                 total={state.slides.length}
                 selectedElementId={state.selectedElementId}
-                activeSurface={project.settings.activeSurface}
                 onSelectElement={(id) => {
                   actions.setSelectedElementId(id);
                   if (id) {
@@ -232,6 +351,11 @@ export function StudioView() {
                 }}
                 onResizeElement={(id, position) => actions.updateElement(id, { position })}
                 onRotateElement={(id, rotation) => actions.updateElement(id, { rotation })}
+                onChangeText={(id, text) => actions.updateElement(id, { text })}
+                onUndo={actions.undo}
+                onRedo={actions.redo}
+                canUndo={state.canUndo}
+                canRedo={state.canRedo}
                 onPrev={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, -1))}
                 onNext={() => state.activeSlide && actions.setActiveSlideId(prevNextId(state.slides.map((s) => s.id), state.activeSlide.id, 1))}
               />
@@ -242,8 +366,22 @@ export function StudioView() {
             )}
           </div>
 
+          <StudioLeftPanel
+            slides={state.slides}
+            activeSlideId={state.activeSlideId}
+            onSelectSlide={actions.setActiveSlideId}
+            onAddSlide={actions.addSlide}
+            onDuplicateSlide={actions.duplicateSlide}
+            onDeleteSlide={(id) => {
+              actions.deleteSlide(id);
+              showNotice('Slide dihapus.');
+            }}
+            onReorderSlide={actions.reorderSlide}
+          />
+
           {/* Kolom kanan: Panel Elemen / Properti */}
-          {panelOpen && (
+          {rightPanel === 'autoAdvance' && project.settings.requireQuestionsBeforeNavigation !== false && <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}><div className="hs-properties-wrapper"><AutoAdvancePanel settings={project.settings} slides={state.slides} onChange={actions.updateSettings} /></div></div>}
+          {panelOpen && rightPanel === 'properties' && state.selectedElement && (
             <button
               type="button"
               className="hs-panel-backdrop"
@@ -251,37 +389,14 @@ export function StudioView() {
               onClick={() => setPanelOpen(false)}
             />
           )}
-          <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
-            {rightPanel === 'elements' || !state.selectedElement ? (
-              <>
-                <ElementPanel
-                  onAddElement={(kind) => {
-                    actions.addElement(kind);
-                    showNotice('Elemen baru ditambah — atur propertinya.');
-                    setRightPanel('properties');
-                    setPanelOpen(true);
-                  }}
-                />
-              </>
-            ) : (
+          {rightPanel === 'properties' && state.selectedElement && <div className={`hs-right-panel-container ${panelOpen ? 'is-open' : ''}`}>
               <div className="hs-properties-wrapper">
-                <div className="hs-panel-switch">
-                  <button
-                    type="button"
-                    className="hs-panel-switch-btn"
-                    onClick={() => setRightPanel('elements')}
-                  >
-                    ← Tambah Elemen
-                  </button>
-                </div>
                 <PropertyPanel
                   key={state.selectedElement?.id ?? state.activeSlide?.id ?? 'empty'}
                   project={project}
                   slide={state.activeSlide}
                   slides={state.slides}
                   element={state.selectedElement}
-                  settings={project.settings}
-                  slideCount={state.slides.length}
                   onUpdateElement={actions.updateElement}
                   onDeleteElement={(id) => {
                     actions.deleteElement(id);
@@ -290,12 +405,10 @@ export function StudioView() {
                   }}
                   onUpdateSlide={actions.updateSlide}
                   onUpdateKeyword={actions.updateKeywordMain}
-                  onUpdateSettings={actions.updateSettings}
                   onNotice={showNotice}
                 />
               </div>
-            )}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -313,43 +426,7 @@ export function StudioView() {
               </div>
             </div>
             {hasSlides ? (
-              <>
-                <div className="home-tabs pv-mode-tabs">
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'simulasi' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('simulasi')}
-                  >
-                    Coba cepat (simulasi)
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'asli' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('asli')}
-                  >
-                    Player H5P asli
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab-btn ${previewMode === 'server' ? 'active' : ''}`}
-                    onClick={() => setPreviewMode('server')}
-                  >
-                    Player server + nilai
-                  </button>
-                </div>
-                {previewMode === 'simulasi' ? (
-                  <PreviewPlayer key={project.id + project.slides.length} project={project} />
-                ) : previewMode === 'asli' ? (
-                  <H5PRealPlayer key={`real-${project.id}-${project.updatedAt}`} project={project} />
-                ) : (
-                  <H5PServerPlayer
-                    key={`server-${project.id}-${project.updatedAt}`}
-                    project={project}
-                    cpMinor={cpMinor}
-                    onNotice={showNotice}
-                  />
-                )}
-              </>
+              <H5PRealPlayer key={`reader-${project.id}-${project.updatedAt}`} project={project} cpMinor={cpMinor} />
             ) : (
               <p className="muted">Belum ada slide. Selesaikan Langkah 1 dulu.</p>
             )}
@@ -369,8 +446,8 @@ export function StudioView() {
         </section>
       )}
 
-      {/* Navigasi langkah bawah (hanya di luar layar Susun agar tampilan Studio persis seperti referensi) */}
-      {step !== 2 && (
+      {/* Upload and export retain the footer; preview returns through the topbar. */}
+      {(step === 1 || step === 4) && (
         <nav className="hs-step-nav" aria-label="Navigasi langkah">
           <span className="muted">
             Langkah {step} dari {WIZARD_STEPS.length} · {stepLabel}

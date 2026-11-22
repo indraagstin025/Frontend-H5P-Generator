@@ -37,11 +37,6 @@ export function StudioLeftPanel({
 
   return (
     <aside className="hs-slide-list" aria-label="Daftar slide">
-      {/* Header */}
-      <div className="hs-slide-list-header">
-        <span className="hs-slide-list-label">DAFTAR SLIDE</span>
-      </div>
-
       {/* Daftar slide */}
       <div className="hs-slide-list-items" role="list" aria-label="Daftar slide">
         {slides.length === 0 ? (
@@ -79,6 +74,7 @@ export function StudioLeftPanel({
                 type="button"
                 className={`hs-slide-thumb ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
                 title={`Slide ${slide.order}: ${slide.title}`}
+                aria-label={`Slide ${slide.order}: ${slide.title}`}
                 onClick={() => onSelectSlide(slide.id)}
               >
                 {slide.backgroundUrl ? (
@@ -87,7 +83,7 @@ export function StudioLeftPanel({
                   <div className="hs-thumb-minibar" />
                 )}
                 <span className="hs-slide-num">
-                  {String(slide.order).padStart(2, '0')} {slide.title}
+                  {String(slide.order).padStart(2, '0')}
                 </span>
               </button>
 
@@ -116,8 +112,6 @@ export function StudioLeftPanel({
             </div>
           ))
         )}
-      </div>
-
       {/* Tombol tambah slide */}
       <button
         type="button"
@@ -128,6 +122,7 @@ export function StudioLeftPanel({
         <PlusIcon width={14} height={14} />
         Tambah slide
       </button>
+      </div>
     </aside>
   );
 }

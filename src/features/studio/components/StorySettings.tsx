@@ -5,18 +5,13 @@ import type { ProjectSettings } from '../constants/h5pModel';
 
 type StorySettingsProps = {
   settings: ProjectSettings;
-  slideCount: number;
   onChange: (patch: Partial<ProjectSettings>) => void;
+  onOpenAutoAdvance: () => void;
 };
 
-export function StorySettings({ settings, slideCount, onChange }: StorySettingsProps) {
-  void slideCount;
+export function StorySettings({ settings, onChange, onOpenAutoAdvance }: StorySettingsProps) {
   return (
     <div>
-      <p className="muted">
-        Kalau mau peserta ngikutin tombol pilihan (tidak bisa next/back sembarangan), nyalakan kunci navigasi di
-        bawah.
-      </p>
       <div className="settings-grid">
         <label className="field-label">
           Ukuran slide (buat slide baru)
@@ -33,6 +28,22 @@ export function StorySettings({ settings, slideCount, onChange }: StorySettingsP
           </select>
         </label>
       </div>
+
+      <div className="check-row" style={{ display: 'block' }}>
+      <label style={{ display: 'flex', gap: 10, alignItems: 'start' }}>
+        <input
+          type="checkbox"
+          checked={settings.requireQuestionsBeforeNavigation !== false}
+          onChange={(e) => { onChange({ requireQuestionsBeforeNavigation: e.target.checked }); if (e.target.checked) onOpenAutoAdvance(); }}
+        />
+        <span>
+          <strong>Wajib jawab semua soal sebelum melanjutkan</strong>
+          <small>Tombol navigasi pada slide muncul setelah semua soal di slide tersebut dijawab.</small>
+        </span>
+      </label>
+      {settings.requireQuestionsBeforeNavigation !== false && <button type="button" className="secondary-button" style={{ marginLeft: 26, marginTop: 10 }} onClick={onOpenAutoAdvance}>Atur perpindahan otomatis</button>}
+      </div>
+
 
       <label className="check-row">
         <input

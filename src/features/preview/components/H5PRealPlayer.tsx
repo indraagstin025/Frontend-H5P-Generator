@@ -1,321 +1,189 @@
-/**
- * Tahap 4, mode "Player asli": paket .h5p hasil rakitan dimainkan
- * dengan engine H5P betulan (h5p-standalone), bukan simulasi.
- * Butuh folder library di public/h5p-libraries (salinan dari LMS).
- * Event xAPI (jawaban, nilai) ditangkap dan ditampilkan.
- */
+/** The same self-hosted reader used by h5p-offline-player.vercel.app. */
 import { useEffect, useRef, useState } from 'react';
-import { unzipSync } from 'fflate';
-import type { H5PPlayerClass } from 'h5p-standalone';
-import { formatNetworkError, isBrowserOffline } from '../../../services/network';
-import { createLogger } from '../../../utils/logger';
-import { COURSE_PRESENTATION_MINORS } from '../../studio/constants/h5pLibraries';
+import type { H5PPlayerElement, PlayerErrorDetail } from '@missing-elements/h5p-offline-player';
+import { formatNetworkError } from '../../../services/network';
+import { buildH5p, safeFileName } from '../../exporter/api/h5pPackager';
+import { DEFAULT_CP_MINOR } from '../../studio/constants/h5pLibraries';
 import type { Project } from '../../studio/constants/h5pModel';
-import { buildH5p } from '../../exporter/api/h5pPackager';
-import {
-  clearPreviewPackage,
-  ensurePreviewWorker,
-  setPreviewPackage,
-} from '../api/previewServiceWorker';
-import type { PreviewFile } from '../api/previewServiceWorker';
+import { isQuizElement } from '../../studio/constants/h5pModel';
+import './H5PReader.css';
+import slideLayoutUrl from './reader-slide-layout.css?url';
+import classicSlideLayoutUrl from './reader-slide-layout-4-3.css?url';
 
-const log = createLogger('H5PPreview');
+type Status = 'preparing' | 'loading' | 'ready' | 'error';
+interface Activity { id: number; verb: string; score: string }
 
-type Status = 'checking' | 'missing-libs' | 'preparing' | 'ready' | 'error';
-
-interface XapiRow {
-  id: number;
-  verb: string;
-  score: string;
+function summarizeActivity(event: Event): Omit<Activity, 'id'> {
+  const statement = (event as CustomEvent<{
+    statement?: {
+      verb?: { id?: string; display?: Record<string, string> };
+      result?: { score?: { raw?: number; max?: number } };
+    };
+  }>).detail?.statement;
+  const score = statement?.result?.score;
+  return {
+    verb: statement?.verb?.display?.['id'] || statement?.verb?.display?.['en-US'] || statement?.verb?.id?.split('/').pop() || 'Aktivitas',
+    score: typeof score?.raw === 'number' ? `${score.raw}${typeof score.max === 'number' ? `/${score.max}` : ''}` : '—',
+  };
 }
 
-/**
- * Cari kelas player di hasil import h5p-standalone. Paketnya UMD tanpa
- * named export ESM, jadi bentuknya beda per bundler: { H5P } (CJS),
- * { default: { H5P } } (Vite), atau global H5PStandalone.
- */
-function findPlayerClass(root: unknown, depth = 0): H5PPlayerClass | null {
-  if (typeof root === 'function') return root as H5PPlayerClass;
-  if (root === null || typeof root !== 'object' || depth > 3) return null;
-  const obj = root as Record<string, unknown>;
-  if (typeof obj.H5P === 'function') return obj.H5P as H5PPlayerClass;
-  for (const key of ['default', 'H5PStandalone']) {
-    const found = findPlayerClass(obj[key], depth + 1);
-    if (found) return found;
-  }
-  return null;
-}
-
-async function loadPlayerClass(): Promise<H5PPlayerClass> {
-  const mod = (await import('h5p-standalone')) as unknown;
-  const found =
-    findPlayerClass(mod) ?? findPlayerClass((window as unknown as Record<string, unknown>).H5PStandalone);
-  if (!found) throw new Error('Engine H5P tidak ketemu di paket h5p-standalone.');
-  return found;
-}
-
-function mimeFor(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase() ?? '';
-  if (ext === 'json') return 'application/json';
-  if (ext === 'png') return 'image/png';
-  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
-  if (ext === 'gif') return 'image/gif';
-  if (ext === 'svg') return 'image/svg+xml';
-  if (ext === 'webp') return 'image/webp';
-  if (ext === 'mp3') return 'audio/mpeg';
-  if (ext === 'wav') return 'audio/wav';
-  if (ext === 'm4a') return 'audio/mp4';
-  if (ext === 'mp4' || ext === 'm4v') return 'video/mp4';
-  if (ext === 'webm') return 'video/webm';
-  if (ext === 'ogv') return 'video/ogg';
-  if (ext === 'ogg') return path.startsWith('videos/') ? 'video/ogg' : 'audio/ogg';
-  return 'application/octet-stream';
-}
-
-function summarizeEvent(ev: unknown): { verb: string; score: string } {
-  try {
-    const statement = (ev as { data?: { statement?: Record<string, unknown> } })?.data?.statement as
-      | {
-          verb?: { id?: string; display?: Record<string, string> };
-          result?: { score?: { raw?: number; max?: number } };
-        }
-      | undefined;
-    const display = statement?.verb?.display;
-    const verb =
-      (display && (display['en-US'] ?? Object.values(display)[0])) || statement?.verb?.id || 'aktivitas';
-    const score = statement?.result?.score;
-    const scoreText =
-      score && typeof score.raw === 'number'
-        ? `${score.raw}${typeof score.max === 'number' ? `/${score.max}` : ''}`
-        : '—';
-    return { verb: String(verb).split('/').pop() ?? 'aktivitas', score: scoreText };
-  } catch {
-    return { verb: 'aktivitas', score: '—' };
-  }
-}
-
-export function H5PRealPlayer({ project }: { project: Project }) {
+export function H5PRealPlayer({ project, cpMinor = DEFAULT_CP_MINOR }: { project: Project; cpMinor?: number }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const eventId = useRef(0);
-  const [status, setStatus] = useState<Status>('checking');
+  const [status, setStatus] = useState<Status>('preparing');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [events, setEvents] = useState<XapiRow[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [mediaWarnings, setMediaWarnings] = useState<string[]>([]);
+  const [completionNotice, setCompletionNotice] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-    const key = project.id;
+    let reader: H5PPlayerElement | null = null;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let activityId = 0;
+    const answered = new Set<string>();
+    const notified = new Set<string>();
+    let noticeSlideOrder: number | null = null;
     const host = hostRef.current;
+    const fail = (message: string) => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      setError(message);
+      setStatus('error');
+    };
+    const onReady = () => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      setStatus('ready');
+    };
+    const onError = (event: Event) => {
+      const detail = (event as CustomEvent<PlayerErrorDetail>).detail;
+      fail(detail?.message || 'Reader H5P gagal membuka materi. Silakan coba lagi.');
+    };
+    const onActivity = (event: Event) => {
+      if (cancelled) return;
+      const entry = { ...summarizeActivity(event), id: ++activityId };
+      setActivities((previous) => [...previous.slice(-19), entry]);
+      const statement = (event as CustomEvent<{ statement?: {
+        verb?: { id?: string };
+        object?: { id?: string; definition?: { extensions?: Record<string, unknown> } };
+        result?: { response?: string; completion?: boolean };
+      } }>).detail?.statement;
+      const verb = statement?.verb?.id?.split('/').pop();
+      if (verb === 'progressed') {
+        const destination = statement?.object?.definition?.extensions?.['http://id.tincanapi.com/extension/ending-point'];
+        if (noticeSlideOrder !== null && Number(destination) !== noticeSlideOrder) {
+          setCompletionNotice('');
+          noticeSlideOrder = null;
+        }
+        return;
+      }
+      if (verb !== 'answered' && verb !== 'completed') return;
+      if (project.settings.requireQuestionsBeforeNavigation === false) return;
+      let activity = statement?.object?.id ?? '';
+      try { activity = decodeURIComponent(activity); } catch { /* Keep the original activity ID. */ }
+      const matchedSlide = project.slides.find((slide) => slide.elements.some((element) =>
+        isQuizElement(element) && activity.split(/[?&#/=]/).includes(element.id)));
+      if (!matchedSlide) return;
+      const quizzes = matchedSlide.elements.filter(isQuizElement);
+      const quiz = quizzes.find((element) => activity.split(/[?&#/=]/).includes(element.id));
+      if (!quiz) return;
+      answered.add(quiz.id);
+      if (!notified.has(matchedSlide.id) && quizzes.every((element) => answered.has(element.id))) {
+        notified.add(matchedSlide.id);
+        noticeSlideOrder = matchedSlide.order;
+        setCompletionNotice(`Semua soal pada slide ${matchedSlide.order} sudah diisi.${matchedSlide.order < project.slides.length ? ' Anda dapat melanjutkan ke slide berikutnya.' : ''}`);
+      }
+    };
 
     void (async () => {
-      if (isBrowserOffline()) {
-        if (!cancelled) {
-          setStatus('error');
-          setError('Koneksi internet terputus. Hubungkan kembali jaringan Anda untuk memuat Pratinjau.');
-        }
-        return;
-      }
-
-      // 1. Cari versi CoursePresentation yang tersedia (baru → lama).
-      // Seed backend dari Hub memberi 1.26, sedangkan default ekspor (24)
-      // mengikuti LMS — player pratinjau pakai yang ada saja.
-      // (Cek isi dan berkas runner JS/CSS, bukan sekadar status: server SPA bisa
-      // menjawab index.html 200 untuk berkas yang hilang.)
-      let cpMinor: number | null = null;
-      for (const m of [...COURSE_PRESENTATION_MINORS].sort((a, b) => b - a)) {
-        try {
-          const probe = await fetch(`/h5p-libraries/H5P.CoursePresentation-1.${m}/library.json`, {
-            cache: 'no-store',
-          });
-          if (probe.ok) {
-            try {
-              const json = (await probe.json()) as {
-                machineName?: string;
-                preloadedJs?: Array<{ path: string }>;
-                preloadedCss?: Array<{ path: string }>;
-              };
-              if (json.machineName === 'H5P.CoursePresentation') {
-                // Pastikan berkas runtime (preloadedJs / preloadedCss) benar-benar ada di disk
-                const runtimeFiles = [
-                  ...(json.preloadedJs ?? []).map((j) => j.path),
-                  ...(json.preloadedCss ?? []).map((c) => c.path),
-                ];
-
-                let allFilesExist = runtimeFiles.length > 0;
-                for (const filePath of runtimeFiles) {
-                  try {
-                    const fileProbe = await fetch(
-                      `/h5p-libraries/H5P.CoursePresentation-1.${m}/${filePath}`,
-                      { cache: 'no-store' },
-                    );
-                    const contentType = fileProbe.headers.get('content-type') ?? '';
-                    // Jika file tidak ada, server SPA Vite mengembalikan index.html (text/html)
-                    if (!fileProbe.ok || contentType.includes('text/html')) {
-                      allFilesExist = false;
-                      break;
-                    }
-                  } catch {
-                    allFilesExist = false;
-                    break;
-                  }
-                }
-
-                if (allFilesExist) {
-                  cpMinor = m;
-                  break;
-                }
-              }
-            } catch {
-              // lanjut ke versi berikut
-            }
-          }
-        } catch {
-          // lanjut ke versi berikut
-        }
-        if (cancelled) return;
-      }
-      if (cpMinor === null) {
-        if (!cancelled) setStatus('missing-libs');
-        return;
-      }
-      if (cancelled) return;
-
-      // 2. Aktifkan service worker penyaji paket
-      setStatus('preparing');
-      log.info('Menyiapkan paket pratinjau', key);
-      const workerOk = await ensurePreviewWorker();
-      if (!workerOk) {
-        log.warn('Service worker pratinjau tidak mengendalikan halaman', key);
-        if (!cancelled) {
-          setStatus('error');
-          setError('Service worker gagal aktif. Muat ulang halaman ini lalu coba lagi.');
-        }
-        return;
-      }
-      if (cancelled) return;
-
-      // 3. Rakit paket + sajikan dari memori
       try {
-        // Library tidak perlu ikut ZIP: h5p-standalone memuatnya dari
-        // librariesPath (/h5p-libraries), jadi pratinjau lebih cepat.
-        const { blob, media } = await buildH5p(project, cpMinor, { includeLibraries: false });
-        if (!cancelled) setMediaWarnings(media.failed);
-        if (media.failed.length > 0) {
-          log.warn('Sebagian media tidak ikut paket', media.failed);
+        if (!window.isSecureContext || !('serviceWorker' in navigator)) {
+          throw new Error('Preview H5P memerlukan browser yang mendukung Service Worker. Buka aplikasi melalui localhost atau HTTPS.');
         }
+        const [, { runtime }, { pack }] = await Promise.all([
+          import('@missing-elements/h5p-offline-player'),
+          import('@missing-elements/h5p-runtime'),
+          import('@missing-elements/h5p-libraries'),
+        ]);
         if (cancelled) return;
-        const entries = unzipSync(new Uint8Array(await blob.arrayBuffer()));
-        const files: Record<string, PreviewFile> = {};
-        for (const [path, data] of Object.entries(entries)) {
-          files[path] = { data, mime: mimeFor(path) };
-        }
-        log.info('Paket siap disajikan', { key, files: Object.keys(files).length, sizeKb: Math.round(blob.size / 1024) });
-        await setPreviewPackage(key, files);
-        if (cancelled) return;
-        log.info('Paket tersimpan di service worker', key);
 
-        // 4. Jalankan player asli (lazy-load agar bundle awal tetap kecil)
-        if (!host) return;
-        host.innerHTML = '';
-        const H5PClass = await loadPlayerClass();
-        if (cancelled) return;
-        await new H5PClass(host, {
-          h5pJsonPath: `/__h5p_preview__/${key}`,
-          frameJs: '/h5p-player/frame.bundle.js',
-          frameCss: '/h5p-player/styles/h5p.css',
-          librariesPath: '/h5p-libraries',
-          frame: true,
-          fullScreen: true,
-        });
-        if (cancelled) return;
-        const w = window as unknown as {
-          H5P?: { externalDispatcher?: { on: (name: string, cb: (ev: unknown) => void) => void } };
-        };
-        w.H5P?.externalDispatcher?.on('xAPI', (ev) => {
-          const s = summarizeEvent(ev);
-          eventId.current += 1;
-          const id = eventId.current;
-          setEvents((prev) => [...prev.slice(-19), { id, ...s }]);
-        });
-        setStatus('ready');
+        // Only play the complete export rebuilt with our curated local libraries,
+        // never scripts taken directly from an uploaded archive.
+        const { blob, media } = await buildH5p(project, cpMinor);
+        if (cancelled || !host) return;
+        setMediaWarnings(media.failed);
+        reader = document.createElement('h5p-player');
+        reader.runtime = runtime;
+        reader.pack = pack;
+        reader.setAttribute('libraries', 'pack');
+        // Preserve the export's patched rotation and popup libraries.
+        reader.setAttribute('refresh-libraries', 'off');
+        reader.setAttribute('lang', 'id');
+        reader.setAttribute('resume', 'off');
+        reader.setAttribute('frame', 'off');
+        reader.setAttribute('export', 'off');
+        reader.setAttribute('copyright', 'off');
+        reader.setAttribute('custom-css', [slideLayoutUrl, ...(project.settings.aspect === '4:3' ? [classicSlideLayoutUrl] : [])]
+          .map((url) => new URL(url, window.location.href).href).join(' '));
+        reader.setAttribute('aria-label', `Pratinjau ${project.title || 'materi H5P'}`);
+        reader.addEventListener('ready', onReady);
+        reader.addEventListener('error', onError);
+        reader.addEventListener('xapi', onActivity);
+        host.replaceChildren(reader);
+        setStatus('loading');
+        timeout = setTimeout(() => fail('Reader membutuhkan waktu terlalu lama untuk dimuat. Silakan coba lagi.'), 90_000);
+        reader.file = new File([blob], safeFileName(project.title), { type: 'application/zip' });
       } catch (err) {
-        log.error('Gagal menyiapkan player asli', err);
-        if (!cancelled) {
-          setStatus('error');
-          setError(formatNetworkError(err, 'Player gagal dimuat.'));
-        }
+        fail(formatNetworkError(err, 'Pratinjau H5P belum dapat dimuat.'));
       }
     })();
 
     return () => {
       cancelled = true;
-      void clearPreviewPackage(key);
-      if (host) host.innerHTML = '';
+      clearTimeout(timeout);
+      if (reader) {
+        reader.removeEventListener('ready', onReady);
+        reader.removeEventListener('error', onError);
+        reader.removeEventListener('xapi', onActivity);
+        // The element's disconnect handler cancels jobs and releases its frame/file.
+        reader.remove();
+      }
+      host?.replaceChildren();
     };
-  }, [project, attempt]);
-
-  if (status === 'missing-libs') {
-    return (
-      <div className="pv-setup">
-        <strong>Player asli belum bisa jalan.</strong>
-        <p className="muted">
-          Folder <code>frontend/public/h5p-libraries/</code> masih kosong atau berkas runtime library (seperti runner JS/CSS di <code>dist/</code>) belum lengkap — salin folder-folder library dari{' '}
-          <code>backend/storage/h5p/libraries/</code> (sudah terisi otomatis saat seed, tanpa H5PEditor.*) ke sana,
-          lalu muat ulang halaman ini. Sementara itu mode simulasi tetap bisa dipakai.
-        </p>
-      </div>
-    );
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="pv-setup">
-        <strong>Player gagal dimuat.</strong>
-        <p className="muted">{error}</p>
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => {
-            setStatus('checking');
-            setError('');
-            setEvents([]);
-            setAttempt((a) => a + 1);
-          }}
-        >
-          Coba lagi
-        </button>
-      </div>
-    );
-  }
+  }, [project, cpMinor, attempt]);
 
   return (
     <div className="pv-real-wrap">
-      {(status === 'checking' || status === 'preparing') && (
-        <p className="muted">{status === 'checking' ? 'Mengecek library H5P…' : 'Menyiapkan paket & player…'}</p>
+      {completionNotice && <div className="pv-slide-complete" role="status">
+        <span>{completionNotice}</span>
+        <button type="button" aria-label="Tutup pemberitahuan" onClick={() => setCompletionNotice('')}>×</button>
+      </div>}
+      {(status === 'preparing' || status === 'loading') && (
+        <p className="muted" role="status">{status === 'preparing' ? 'Menyiapkan materi untuk preview…' : 'Membuka reader H5P…'}</p>
       )}
-      <div ref={hostRef} className="pv-real-host"></div>
+      {status === 'error' && (
+        <div className="pv-setup" role="alert">
+          <strong>Preview belum dapat ditampilkan.</strong>
+          <p className="muted">{error}</p>
+          <button type="button" className="secondary-button" onClick={() => {
+            setError('');
+            setActivities([]);
+            setMediaWarnings([]);
+            setCompletionNotice('');
+            setStatus('preparing');
+            setAttempt((value) => value + 1);
+          }}>Coba lagi</button>
+        </div>
+      )}
+      <div ref={hostRef} className="pv-real-host pv-offline-reader" hidden={status === 'error'} aria-busy={status !== 'ready'} />
       {status === 'ready' && mediaWarnings.length > 0 && (
-        <p className="muted">
-          Sebagian media tidak ikut: {mediaWarnings.slice(0, 3).join('; ')}
-          {mediaWarnings.length > 3 ? ` (+${mediaWarnings.length - 3} lagi)` : ''}
-        </p>
+        <p className="muted" role="status">Sebagian media belum dimuat: {mediaWarnings.slice(0, 3).join('; ')}{mediaWarnings.length > 3 ? ` (+${mediaWarnings.length - 3} lainnya)` : ''}</p>
       )}
-      {status === 'ready' && (
+      {status === 'ready' && activities.length > 0 && (
         <div className="pv-xapi">
-          <p className="section-kicker">Aktivitas xAPI tertangkap ({events.length})</p>
-          {events.length === 0 ? (
-            <p className="muted">Mainkan modul di atas — jawaban dan nilainya tercatat di sini.</p>
-          ) : (
-            <ul>
-              {events.map((e) => (
-                <li key={e.id}>
-                  <span>{e.verb}</span>
-                  <strong>{e.score}</strong>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="section-kicker">Aktivitas percobaan</p>
+          <ul>{activities.map((entry) => <li key={entry.id}><span>{entry.verb}</span><strong>{entry.score}</strong></li>)}</ul>
         </div>
       )}
     </div>

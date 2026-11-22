@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { DashboardIcon, ExitIcon, PersonIcon } from '@radix-ui/react-icons';
+import { ExitIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
 import './AdminUsersPage.css';
+import './AdminTheme.css';
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -49,8 +50,8 @@ export function AdminLayout() {
           <NavLink to="/admin/users" end>
             <PersonIcon aria-hidden="true" /> Kelola pengguna
           </NavLink>
-          <NavLink to="/dashboard">
-            <DashboardIcon aria-hidden="true" /> Dashboard materi
+          <NavLink to="/admin/users/new" className="admin-add-user">
+            <PlusIcon aria-hidden="true" /> Tambah User
           </NavLink>
         </nav>
         <div

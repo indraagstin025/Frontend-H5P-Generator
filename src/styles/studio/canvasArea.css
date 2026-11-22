@@ -11,8 +11,8 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  background: var(--hs-bg);
-  padding: 16px;
+  background: #f1f2f5;
+  padding: 0;
   gap: 12px;
 }
 
@@ -21,6 +21,12 @@
   align-items: center;
   justify-content: space-between;
   flex: none;
+  gap: 12px;
+  min-height: 38px;
+  background: white;
+  border: 1px solid var(--hs-line);
+  border-radius: 12px;
+  padding: 10px 14px;
 }
 
 .hs-edit-mode-badge {
@@ -30,9 +36,14 @@
   color: var(--hs-green);
   background: var(--hs-green-soft);
   border: 1px solid var(--hs-green-border);
-  border-radius: 4px;
-  padding: 3px 8px;
+  border-radius: 8px;
+  padding: 5px 10px;
 }
+
+.hs-history-actions { display: flex; gap: 6px; flex: none; }
+.hs-history-actions button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--hs-green-border); border-radius: 8px; background: var(--hs-green-softer); color: var(--hs-green); cursor: pointer; }
+.hs-history-actions button:hover:not(:disabled) { background: var(--hs-green-soft); border-color: var(--hs-green); }
+.hs-history-actions svg { width: 18px; height: 18px; }
 
 .hs-canvas-hint {
   font-size: 11px;
@@ -77,32 +88,48 @@
 
 /* ===================== CANVAS PANEL ===================== */
 .canvas-panel {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: transparent;
+  background: #f1f2f5;
+  border: 0;
+  border-radius: 0;
+  padding: 12px;
   align-items: center;
   justify-content: center;
 }
 
 .canvas-wrap {
+  touch-action: none;
   flex: 1;
   width: 100%;
   min-height: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  overflow: auto;
+  padding: 16px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 0;
   background: transparent;
 }
 
+.canvas-zoom-stage { position: relative; flex: none; margin: auto; }
+.canvas-zoom-controls { display: flex; align-items: center; gap: 4px; flex: none; }
+.canvas-zoom-controls button { min-width: 34px; height: 36px; border: 1px solid var(--hs-green-border); border-radius: 8px; background: white; color: var(--hs-ink); font-size: 18px; cursor: pointer; }
+.canvas-zoom-controls .canvas-zoom-value { min-width: 64px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.canvas-zoom-controls button:hover:not(:disabled) { background: var(--hs-green-soft); }
+
 .slide-canvas {
   position: relative;
-  width: min(680px, 100%);
+  width: min(960px, 100%);
   aspect-ratio: 16 / 9;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.07);
   background: #ffffff;
@@ -458,15 +485,18 @@
 
 /* ===================== CANVAS NAVIGATION BAR ===================== */
 .canvas-navigation-bar {
+  position: relative;
+  z-index: 10;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: min(680px, 100%);
+  width: 100%;
   padding: 6px 14px;
   margin-bottom: 8px;
   background: #ffffff;
   border: 1px solid var(--hs-line);
-  border-radius: 9999px;
+  border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
 }
@@ -522,14 +552,3 @@
   white-space: nowrap;
 }
 
-.canvas-active-surface-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}

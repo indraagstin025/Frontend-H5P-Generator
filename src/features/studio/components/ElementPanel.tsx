@@ -3,10 +3,20 @@
  * Menampilkan semua jenis elemen yang bisa ditambahkan ke slide
  * sesuai desain referensi.
  */
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { apiFetch } from '../../../services/api';
+import { apiUpload } from '../../../services/apiUpload';
+import { getAuthToken } from '../../../services/authService';
+import { absUrl } from '../../ingest/api/serverIngest';
 import type { ElementKind } from '../constants/h5pModel';
+
+export type AccountMedia = { fileName: string; assetUrl: string; previewUrl: string; kind: 'image' | 'video' };
 
 type ElementPanelProps = {
   onAddElement: (kind: ElementKind) => void;
+  mode?: 'elements' | 'text' | 'image' | 'video';
+  mediaRevision: string;
+  onAddMedia: (media: AccountMedia) => void;
 };
 
 type DropdownItem = {
@@ -25,19 +35,77 @@ const INTERACTION_ITEMS: Array<{ kind: ElementKind; label: string }> = [
   { kind: 'summary', label: 'Summary' },
 ];
 
-export function ElementPanel({ onAddElement }: ElementPanelProps) {
+export function ElementPanel({ onAddElement, mode = 'elements', mediaRevision, onAddMedia }: ElementPanelProps) {
+  const [media, setMedia] = useState<AccountMedia[]>([]);
+  const [mediaStatus, setMediaStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadRevision, setUploadRevision] = useState(0);
+  const uploadRef = useRef<HTMLInputElement>(null);
+  const mediaGridRef = useRef<HTMLDivElement>(null);
+  const [mediaGridWidth, setMediaGridWidth] = useState(0);
+  const [mediaRatios, setMediaRatios] = useState<Record<string, number>>({});
+  useLayoutEffect(() => {
+    const grid = mediaGridRef.current;
+    if (!grid) return;
+    const observer = new ResizeObserver(() => setMediaGridWidth(grid.clientWidth));
+    observer.observe(grid);
+    setMediaGridWidth(grid.clientWidth);
+    return () => observer.disconnect();
+  }, [mode]);
+  useEffect(() => {
+    if (mode !== 'image' && mode !== 'video') return;
+    let cancelled = false;
+    const urls: string[] = [];
+    setMediaStatus('loading');
+    void apiFetch<{ data: AccountMedia[] }>('/projects/media').then(async (response) => {
+      const token = getAuthToken();
+      const items = await Promise.all(response.data.filter((item) => item.kind === mode).map(async (item) => {
+        const assetUrl = absUrl(item.assetUrl) ?? item.assetUrl;
+        const result = await fetch(assetUrl, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        if (!result.ok) throw new Error('Media tidak dapat dimuat.');
+        const previewUrl = URL.createObjectURL(await result.blob());
+        urls.push(previewUrl);
+        return { ...item, assetUrl, previewUrl };
+      }));
+      if (cancelled) { urls.forEach((url) => URL.revokeObjectURL(url)); return; }
+      setMedia(items);
+      setMediaStatus('ready');
+    }).catch(() => { urls.forEach((url) => URL.revokeObjectURL(url)); if (!cancelled) setMediaStatus('error'); });
+    return () => { cancelled = true; urls.forEach((url) => URL.revokeObjectURL(url)); };
+  }, [mode, mediaRevision, uploadRevision]);
+  const uploadMedia = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    setUploadError('');
+    const failures: string[] = [];
+    for (const file of Array.from(files)) {
+      const form = new FormData();
+      form.append('file', file);
+      try {
+        await apiUpload('/projects/media', form);
+      } catch (error) {
+        failures.push(`${file.name}: ${error instanceof Error ? error.message : 'Unggah gagal.'}`);
+      }
+    }
+    setUploadError(failures.join(' '));
+    setUploadRevision((revision) => revision + 1);
+    setUploading(false);
+  };
+  const title = { elements: 'Tambah elemen', text: 'Teks', image: 'Gambar', video: 'Video' }[mode];
   return (
-    <aside className="hs-element-panel" aria-label="Tambah elemen">
+    <aside className="hs-element-panel" aria-label={title}>
       {/* Header */}
       <div className="hs-ep-header">
-        <h2 className="hs-ep-title">Tambah elemen</h2>
-        <p className="hs-ep-subtitle">Pilih konten untuk slide ini</p>
+        <h2 className="hs-ep-title">{title}</h2>
+        <p className="hs-ep-subtitle">{mode === 'elements' ? 'Pilih konten untuk slide ini' : `Tambahkan ${title.toLowerCase()} ke slide`}</p>
       </div>
+      {(mode === 'image' || mode === 'video') && <input ref={uploadRef} type="file" hidden multiple accept={mode === 'image' ? '.png,.jpg,.jpeg,.gif,.webp,.svg' : '.mp4,.m4v,.webm,.ogv'} onChange={(event) => { void uploadMedia(event.currentTarget.files); event.currentTarget.value = ''; }} />}
 
       {/* ELEMEN DASAR */}
-      <div className="hs-ep-section-label">ELEMEN DASAR</div>
-      <div className="hs-ep-basic-grid">
-        <button
+      {mode === 'elements' && <div className="hs-ep-section-label">ELEMEN DASAR</div>}
+      <div ref={mode === 'image' || mode === 'video' ? mediaGridRef : undefined} className={mode === 'image' || mode === 'video' ? 'hs-media-library' : 'hs-ep-basic-grid'}>
+        {mode === 'text' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('advancedText')}
@@ -45,8 +113,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
         >
           <span className="hs-ep-basic-icon hs-icon-text">T</span>
           <span>Add Text</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('link')}
@@ -59,11 +127,13 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Link</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'image' && <button
           type="button"
-          className="hs-ep-basic-btn"
-          onClick={() => onAddElement('image')}
+          className="hs-add-slide-btn hs-media-add-btn"
+          style={{ gridRowEnd: `span ${Math.max(1, Math.ceil(((mediaGridWidth - 10) / 2 * 10 / 16 + 10) / 14))}` }}
+          onClick={() => uploadRef.current?.click()}
+          disabled={uploading}
           title="Tambah Gambar"
         >
           <span className="hs-ep-basic-icon hs-icon-image">
@@ -74,8 +144,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Image</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('shape')}
@@ -87,11 +157,13 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Shape</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'video' && <button
           type="button"
-          className="hs-ep-basic-btn"
-          onClick={() => onAddElement('video')}
+          className="hs-add-slide-btn hs-media-add-btn"
+          style={{ gridRowEnd: `span ${Math.max(1, Math.ceil(((mediaGridWidth - 10) / 2 * 10 / 16 + 10) / 14))}` }}
+          onClick={() => uploadRef.current?.click()}
+          disabled={uploading}
           title="Tambah Video"
         >
           <span className="hs-ep-basic-icon hs-icon-video">
@@ -101,8 +173,8 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Video</span>
-        </button>
-        <button
+        </button>}
+        {mode === 'elements' && <><button
           type="button"
           className="hs-ep-basic-btn"
           onClick={() => onAddElement('goToSlide')}
@@ -128,9 +200,19 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
             </svg>
           </span>
           <span>Add Audio</span>
-        </button>
+        </button></>}
+      {(mode === 'image' || mode === 'video') && <>
+          {media.filter((item) => item.kind === mode).map((item) => <button key={item.fileName} type="button" className="hs-media-library-item" style={{ gridRowEnd: `span ${Math.max(1, Math.ceil(((mediaGridWidth - 10) / 2 / (mediaRatios[item.fileName] || 1) + 12) / 14))}` }} title={`Tambahkan ${item.fileName}`} aria-label={`Tambahkan ${item.fileName}`} onClick={() => onAddMedia(item)}>
+            {item.kind === 'image' ? <img src={item.previewUrl} alt="" onLoad={(event) => { const ratio = event.currentTarget.naturalWidth / event.currentTarget.naturalHeight; setMediaRatios((ratios) => ({ ...ratios, [item.fileName]: ratio })); }} /> : <video src={item.previewUrl} muted preload="metadata" onLoadedMetadata={(event) => { const ratio = event.currentTarget.videoWidth / event.currentTarget.videoHeight; setMediaRatios((ratios) => ({ ...ratios, [item.fileName]: ratio })); }} />}
+          </button>)}
+      </>}
       </div>
+      {(mode === 'image' || mode === 'video') && mediaStatus === 'loading' && <p>Memuat media…</p>}
+      {(mode === 'image' || mode === 'video') && mediaStatus === 'error' && <p>Media tidak dapat dimuat.</p>}
+      {(mode === 'image' || mode === 'video') && uploading && <p>Mengunggah media…</p>}
+      {(mode === 'image' || mode === 'video') && uploadError && <p role="alert">{uploadError}</p>}
 
+      {mode === 'elements' && <>
       {/* INTERAKSI & KUIS */}
       <div className="hs-ep-section-label" style={{ marginTop: '16px' }}>INTERAKSI & KUIS</div>
       <div className="hs-ep-interaction-list">
@@ -164,6 +246,7 @@ export function ElementPanel({ onAddElement }: ElementPanelProps) {
           </button>
         ))}
       </div>
+      </>}
     </aside>
   );
 }

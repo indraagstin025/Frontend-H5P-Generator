@@ -67,7 +67,26 @@ function syncGoToTargets(prevSlides: Slide[], nextSlides: Slide[]): Slide[] {
 }
 
 export function useProject(initial: Project | null, aspectFallback: AspectRatio = '16:9') {
-  const [project, setProject] = useState<Project>(() => initial ?? createProject('Modul baru', aspectFallback, null));
+  const [history, setHistory] = useState(() => ({
+    present: initial ?? createProject('Modul baru', aspectFallback, null),
+    past: [] as Project[], future: [] as Project[], key: '', time: 0,
+  }));
+  const project = history.present;
+  const setProject = useCallback((update: Project | ((previous: Project) => Project)) => {
+    const time = Date.now();
+    setHistory((previous) => {
+      const next = typeof update === 'function' ? update(previous.present) : update;
+      if (next === previous.present) return previous;
+      const before = previous.present.slides.flatMap((slide) => slide.elements);
+      const after = next.slides.flatMap((slide) => slide.elements);
+      const sameStructure = previous.present.slides.map((slide) => slide.id).join() === next.slides.map((slide) => slide.id).join()
+        && before.map((element) => element.id).join() === after.map((element) => element.id).join();
+      const changed = after.filter((element, index) => element !== before[index]);
+      const key = sameStructure && changed.length === 1 ? changed[0].id : '';
+      const grouped = key && key === previous.key && time - previous.time < 500 && previous.future.length === 0;
+      return { present: next, past: grouped ? previous.past : [...previous.past, previous.present].slice(-100), future: [], key, time };
+    });
+  }, []);
   const [activeSlideId, setActiveSlideId] = useState<string | null>(() => initial?.slides[0]?.id ?? null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
@@ -82,8 +101,24 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   );
 
   const replaceProject = useCallback((next: Project) => {
-    setProject(next);
+    setHistory({ present: next, past: [], future: [], key: '', time: 0 });
     setActiveSlideId(next.slides[0]?.id ?? null);
+    setSelectedElementId(null);
+  }, []);
+
+  const undo = useCallback(() => {
+    setHistory((previous) => {
+      const present = previous.past.at(-1);
+      return present ? { present: touch(present), past: previous.past.slice(0, -1), future: [previous.present, ...previous.future], key: '', time: 0 } : previous;
+    });
+    setSelectedElementId(null);
+  }, []);
+
+  const redo = useCallback(() => {
+    setHistory((previous) => {
+      const present = previous.future[0];
+      return present ? { present: touch(present), past: [...previous.past, previous.present], future: previous.future.slice(1), key: '', time: 0 } : previous;
+    });
     setSelectedElementId(null);
   }, []);
 
@@ -112,8 +147,11 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   const addSlide = useCallback(() => {
     const order = slides.length + 1;
     const slide = createSlide(order, 'Slide baru', project.settings.aspect);
+    slide.chapter = '';
+    slide.keywords = [];
     setSlides([...slides, slide]);
     setActiveSlideId(slide.id);
+    setSelectedElementId(null);
   }, [slides, project.settings.aspect, setSlides]);
 
   const duplicateSlide = useCallback(
@@ -199,9 +237,9 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   );
 
   const addElement = useCallback(
-    (kind: ElementKind) => {
+    (kind: ElementKind, patch?: Partial<SlideElement>) => {
       if (!activeSlide) return;
-      const el = createElement(kind, slides.length);
+      const el = { ...createElement(kind, slides.length), ...patch } as SlideElement;
       // Elemen baru terpilih agar langsung bisa diedit di inspektor
       updateSlide(activeSlide.id, { elements: [...activeSlide.elements, el] });
       setSelectedElementId(el.id);
@@ -241,8 +279,10 @@ export function useProject(initial: Project | null, aspectFallback: AspectRatio 
   }, [slides, setSlides]);
 
   return {
-    state: { project, slides, activeSlide, activeSlideId, selectedElement, selectedElementId },
+    state: { project, slides, activeSlide, activeSlideId, selectedElement, selectedElementId, canUndo: history.past.length > 0, canRedo: history.future.length > 0 },
     actions: {
+      undo,
+      redo,
       replaceProject,
       setTitle,
       updateSettings,

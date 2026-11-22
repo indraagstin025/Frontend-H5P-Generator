@@ -1,0 +1,106 @@
+/* Dashboard User follows AdminTheme.css. The welcome banner keeps its own styling. */
+.db-scope--reference {
+  --db-canvas: #f4f8f4;
+  --db-ink: #163a23;
+  --db-muted: #647469;
+  --db-green-darkest: #163a23;
+  --db-border: #dce8df;
+  --db-green-border: #dce8df;
+  --db-green-primary: #077c1a;
+  --db-green-primary-hover: #075f26;
+}
+
+@media (min-width: 901px) {
+  .db-scope--reference .db-shell { background: #077c1a; }
+  .db-scope--reference .db-main {
+    background: var(--db-canvas);
+    border-radius: 32px 0 0 32px;
+    overflow: clip;
+    min-height: 100dvh;
+  }
+}
+
+.db-scope--reference .db-sidebar {
+  width: 250px;
+  padding: 25px 18px;
+  border: 0;
+  background: radial-gradient(ellipse at 85% 20%, #3da84e55, transparent 55%), linear-gradient(155deg, #075f26, #077c1a 65%, #248b38);
+  color: #fff;
+}
+.db-scope--reference .db-brand {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #ffffff30;
+  margin-bottom: 28px;
+}
+.db-scope--reference .db-brand-title { color: #fff; }
+.db-scope--reference .db-brand-tag { color: #e0f1e3; font-size: 10px; }
+.db-scope--reference .db-nav-label { color: #e0f1e3; margin-top: 0; }
+.db-scope--reference .db-sidebar .db-nav { gap: 7px; }
+.db-scope--reference .db-sidebar .db-nav-btn {
+  position: relative;
+  min-height: 46px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #e8f5ea;
+  font-weight: 600;
+}
+.db-scope--reference .db-sidebar .db-nav-btn:hover { background: #ffffff18; color: #fff; }
+.db-scope--reference .db-sidebar .db-nav-btn.active {
+  background: #fff;
+  color: #075f26;
+  box-shadow: 0 5px 16px #00341520;
+}
+.db-scope--reference .db-sidebar .db-nav-btn.active::before { display: none; }
+.db-scope--reference .db-sidebar .db-nav-badge { color: inherit; background: #ffffff18; border-radius: 8px; }
+.db-scope--reference .db-sidebar .db-nav-btn.active .db-nav-badge { background: #edf8ee; color: #075f26; }
+.db-scope--reference .db-side-foot { border-color: #ffffff30; padding-top: 20px; }
+.db-scope--reference .db-profile-trigger { color: #fff; background: #ffffff12; }
+.db-scope--reference .db-profile-trigger:hover,
+.db-scope--reference .db-profile-trigger[aria-expanded="true"] { background: #ffffff22; }
+.db-scope--reference .db-profile-trigger .db-profile-name strong { color: #fff; }
+.db-scope--reference .db-profile-trigger .db-profile-name small { color: #e0f1e3; }
+.db-scope--reference .db-sidebar .db-avatar { background: #ffffff20; color: #fff; border-color: transparent; border-radius: 9px; }
+.db-scope--reference .db-sidebar :is(a, button):focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.db-scope--reference .db-profile-popup { color: #163a23; }
+.db-scope--reference .db-sidebar .db-profile-popup button:focus-visible { outline-color: #077c1a; }
+
+.db-scope--reference .db-main .db-topbar h1 { font-weight: 700; letter-spacing: -.04em; }
+.db-scope--reference .db-intro-eyebrow { color: #077c1a; font-weight: 700; letter-spacing: .08em; }
+.db-scope--reference .db-overview-item,
+.db-scope--reference .db-card,
+.db-scope--reference .db-main .db-table-wrap {
+  background: #fff;
+  border-color: #dce8df;
+  border-radius: 20px;
+  box-shadow: 0 8px 30px #163a2305;
+}
+.db-scope--reference .db-overview-item > strong { color: #077c1a; }
+.db-scope--reference .db-main .db-table th { background: #f2f8f3; }
+.db-scope--reference .db-main .db-search,
+.db-scope--reference .db-source-filters select { border-color: #dce8df; border-radius: 10px; }
+.db-scope--reference .db-main .db-table-action-btn { border-radius: 10px; color: #077c1a; }
+
+@media (max-width: 900px) {
+  .db-scope--reference .db-mobile-nav {
+    background: linear-gradient(118deg, #075f26, #077c1a 65%, #248b38);
+    border: 0;
+    gap: 8px;
+  }
+  .db-scope--reference .db-mobile-nav .db-nav-btn {
+    flex: none;
+    min-height: 44px;
+    border-radius: 10px;
+    color: #e8f5ea;
+    background: transparent;
+  }
+  .db-scope--reference .db-mobile-nav .db-nav-btn:hover { background: #ffffff18; color: #fff; }
+  .db-scope--reference .db-mobile-nav .db-nav-btn.active { background: #fff; color: #075f26; }
+  .db-scope--reference .db-mobile-nav .db-nav-btn.active::before { display: none; }
+  .db-scope--reference .db-mobile-nav button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+}
+@media (max-width: 700px) {
+  .db-scope--reference .db-overview-item,
+  .db-scope--reference .db-card,
+  .db-scope--reference .db-main .db-table-wrap { border-radius: 18px; }
+}

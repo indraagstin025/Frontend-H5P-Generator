@@ -8,6 +8,30 @@ import { registerMedia } from '../../utils/mediaRegistry';
 import { KIND_LABEL } from './constants';
 import { PositionFields } from './PositionFields';
 
+function FontSizeField({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <label className="field-label">
+      Ukuran font (px)
+      <input type="number" min={1} step={1} value={draft ?? value}
+        onFocus={() => setDraft(String(value))}
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft(raw);
+          const next = event.target.valueAsNumber;
+          if (raw.trim() && Number.isFinite(next) && next >= 1) onChange(next);
+        }}
+        onBlur={() => setDraft(null)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            event.currentTarget.blur();
+          }
+        }} />
+    </label>
+  );
+}
+
 interface ElementContentFieldsProps {
   projectId: string;
   slide: Slide;
@@ -31,26 +55,16 @@ export function ElementContentFields({
 }: ElementContentFieldsProps) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  const pickMedia = (kind: 'image' | 'audio' | 'video', file: File | undefined) => {
+  const pickMedia = (file: File | undefined) => {
     if (!file || !element) return;
     const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-    const okImage = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext);
     const okAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
-    const okVideo = ['mp4', 'm4v', 'webm', 'ogv'].includes(ext);
-    if (kind === 'image' && !okImage) {
-      onNotice('Gambar harus .png/.jpg/.jpeg/.gif/.webp/.svg ya.');
-      return;
-    }
-    if (kind === 'audio' && !okAudio) {
+    if (!okAudio) {
       onNotice('Suara harus .mp3/.wav/.ogg/.m4a ya.');
       return;
     }
-    if (kind === 'video' && !okVideo) {
-      onNotice('Video harus .mp4/.m4v/.webm/.ogv ya.');
-      return;
-    }
-    if (file.size > (kind === 'video' ? 50 : 10) * 1024 * 1024) {
-      onNotice(`File-nya kegedean, maksimal ${kind === 'video' ? 50 : 10} MB.`);
+    if (file.size > 10 * 1024 * 1024) {
+      onNotice('File-nya kegedean, maksimal 10 MB.');
       return;
     }
 
@@ -130,15 +144,20 @@ export function ElementContentFields({
 
   return (
     <>
-      <label className="field-label">
-        Nama (boleh dikosongkan)
-        <input value={element.title} onChange={(e) => patch({ title: e.target.value })} />
-      </label>
       {element.kind === 'advancedText' && (
-        <label className="field-label">
-          Isi teks
-          <textarea rows={4} value={element.text} onChange={(e) => patch({ text: e.target.value })} />
-        </label>
+        <>
+          <FontSizeField key={element.id} value={element.fontSize ?? 13} onChange={(fontSize) => patch({ fontSize })} />
+          <label className="field-label">
+            Isi teks
+            <textarea
+              rows={6}
+              value={element.text}
+              placeholder="Tulis penjelasan di sini…"
+              onChange={(e) => patch({ text: e.target.value })}
+            />
+            <span className="field-hint">Isi teks tetap dapat diedit saat ditampilkan sebagai tombol.</span>
+          </label>
+        </>
       )}
       {element.kind === 'link' && (
         <>
@@ -154,15 +173,6 @@ export function ElementContentFields({
       )}
       {element.kind === 'image' && (
         <>
-          <label className="field-label">
-            File gambar
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
-              disabled={uploadingMedia}
-              onChange={(e) => pickMedia('image', e.target.files?.[0])}
-            />
-          </label>
           {element.objectUrl && <img className="media-preview" src={element.objectUrl} alt={element.alt} />}
           <label className="field-label">
             Deskripsi singkat gambar
@@ -196,15 +206,6 @@ export function ElementContentFields({
       )}
       {element.kind === 'video' && (
         <>
-          <label className="field-label">
-            File video
-            <input
-              type="file"
-              accept=".mp4,.m4v,.webm,.ogv"
-              disabled={uploadingMedia}
-              onChange={(e) => pickMedia('video', e.target.files?.[0])}
-            />
-          </label>
           {element.objectUrl && (
             <video
               className="media-preview"
@@ -227,7 +228,7 @@ export function ElementContentFields({
               type="file"
               accept=".mp3,.wav,.ogg,.m4a"
               disabled={uploadingMedia}
-              onChange={(e) => pickMedia('audio', e.target.files?.[0])}
+              onChange={(e) => pickMedia(e.target.files?.[0])}
             />
           </label>
           {uploadingMedia && <p className="field-hint">Mengunggah media ke server…</p>}
@@ -260,7 +261,7 @@ export function ElementContentFields({
               >
                 {slides.map((s) => (
                   <option key={s.id} value={s.order}>
-                    {String(s.order).padStart(2, '0')} / {s.title}
+                    Slide {s.order}
                   </option>
                 ))}
               </select>
@@ -389,10 +390,22 @@ export function ElementContentFields({
             <input
               type="checkbox"
               checked={element.displayAsButton}
-              onChange={(e) => patch({ displayAsButton: e.target.checked })}
+              onChange={(e) => patch({
+                displayAsButton: e.target.checked,
+                ...(element.kind === 'advancedText' && e.target.checked && !element.buttonLabel.trim()
+                  ? { buttonLabel: 'Baca penjelasan' }
+                  : {}),
+              })}
             />
-            <span>Jadi tombol kecil (diklik baru kebuka)</span>
+            <span>{element.kind === 'advancedText' ? 'Tambahkan button' : 'Jadi tombol kecil (diklik baru kebuka)'}</span>
           </label>
+          {element.kind === 'advancedText' && (
+            <p className="field-hint">
+              {element.displayAsButton
+                ? 'Klik tombol di slide untuk membuka teks sebagai pop-up.'
+                : 'Teks tampil langsung di slide. Centang untuk menampilkannya melalui tombol.'}
+            </p>
+          )}
           {element.displayAsButton && (
             <label className="check-row compact">
               <input
@@ -448,7 +461,7 @@ export function ElementContentFields({
           )}
           {element.displayAsButton && (
             <label className="field-label">
-              Tulisan di tombolnya
+              {element.kind === 'advancedText' ? 'Label tombol' : 'Tulisan di tombolnya'}
               <input
                 value={element.buttonLabel}
                 placeholder={KIND_LABEL[element.kind]}

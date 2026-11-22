@@ -179,6 +179,10 @@ export function ProtectedRoute({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  if (!adminOnly && user?.role === 'ADMIN') {
+    return <Navigate to="/admin/users" replace />;
+  }
+
   if (adminOnly && user?.role !== 'ADMIN') {
     return (
       <main className="auth-denied" role="alert">

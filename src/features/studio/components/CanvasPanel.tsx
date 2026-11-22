@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { ResetIcon } from '@radix-ui/react-icons';
 import type { ElementPosition, Project, Slide, SlideElement } from '../constants/h5pModel';
 import { resizeElement, type ResizeCorner } from '../utils/resizeElement';
 import { ElementPreviewDialog } from './ElementPreviewDialog';
@@ -122,7 +123,7 @@ function renderElementContent(el: SlideElement) {
 
     case 'advancedText':
       return (
-        <div className="canvas-text-preview">
+        <div className="canvas-text-preview" style={{ fontSize: el.fontSize ?? 13 }}>
           {el.text ? (
             <span className="canvas-text-body">{el.text}</span>
           ) : (
@@ -162,11 +163,15 @@ type CanvasPanelProps = {
   slide: Slide;
   total: number;
   selectedElementId: string | null;
-  activeSurface: boolean;
   onSelectElement: (id: string | null) => void;
   onMoveElement: (id: string, x: number, y: number) => void;
   onResizeElement: (id: string, position: ElementPosition) => void;
   onRotateElement: (id: string, rotation: number) => void;
+  onChangeText: (id: string, text: string) => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -190,15 +195,33 @@ export function CanvasPanel({
   slide,
   total,
   selectedElementId,
-  activeSurface,
   onSelectElement,
   onMoveElement,
   onResizeElement,
   onRotateElement,
+  onChangeText,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
   onPrev,
   onNext,
 }: CanvasPanelProps) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<{ slideId: string; elementId: string } | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [fitWidth, setFitWidth] = useState(680);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const aspect = slide.aspect === '4:3' ? 4 / 3 : 16 / 9;
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new ResizeObserver(() => {
+      setFitWidth(Math.max(1, Math.min(960, viewport.clientWidth - 32, (viewport.clientHeight - 32) * aspect)));
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [aspect]);
   const [preview, setPreview] = useState<{ slideId: string; elementId: string } | null>(null);
   const previewElement = preview?.slideId === slide.id
     ? slide.elements.find((el) => el.id === preview.elementId && el.displayAsButton && el.kind !== 'goToSlide')
@@ -209,6 +232,48 @@ export function CanvasPanel({
   const resize = useRef<{ id: string; pointerId: number; x: number; y: number; start: ElementPosition; corner: ResizeCorner; canvasWidth: number; canvasHeight: number; preserveRatio: boolean; rotation: number } | null>(null);
   const selected = slide.elements.find((el) => el.id === selectedElementId);
   const rotate = useRef<{ id: string; pointerId: number; centerX: number; centerY: number; startAngle: number; rotation: number } | null>(null);
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    let distance: number | null = null;
+    const wheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1);
+      setZoom((value) => Math.max(25, Math.min(300, value * Math.exp(-delta * .01))));
+    };
+    const touchDistance = (touches: TouchList) => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    const start = (event: TouchEvent) => {
+      if (event.touches.length !== 2) { distance = null; return; }
+      event.preventDefault();
+      distance = touchDistance(event.touches);
+      drag.current = null;
+      resize.current = null;
+      rotate.current = null;
+      setDragId(null);
+    };
+    const move = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || distance === null) return;
+      event.preventDefault();
+      const next = touchDistance(event.touches);
+      const ratio = distance > 0 ? next / distance : 1;
+      distance = next;
+      setZoom((value) => Math.max(25, Math.min(300, value * ratio)));
+    };
+    const end = () => { distance = null; };
+    viewport.addEventListener('wheel', wheel, { passive: false });
+    viewport.addEventListener('touchstart', start, { passive: false });
+    viewport.addEventListener('touchmove', move, { passive: false });
+    viewport.addEventListener('touchend', end);
+    viewport.addEventListener('touchcancel', end);
+    return () => {
+      viewport.removeEventListener('wheel', wheel);
+      viewport.removeEventListener('touchstart', start);
+      viewport.removeEventListener('touchmove', move);
+      viewport.removeEventListener('touchend', end);
+      viewport.removeEventListener('touchcancel', end);
+    };
+  }, []);
   const startRotate = (el: SlideElement) => (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     event.preventDefault(); event.stopPropagation();
@@ -346,18 +411,29 @@ export function CanvasPanel({
   return (
     <div className="canvas-panel">
       <div className="st-canvas-interaction-tools">
-        <span>Klik untuk memilih, geser untuk memindahkan, tarik sudut untuk mengubah ukuran. Klik dua kali tombol untuk mencoba interaksi.</span>
+        <div className="hs-history-actions" role="group" aria-label="Riwayat perubahan">
+          <button type="button" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Urungkan perubahan"><ResetIcon aria-hidden="true" /></button>
+          <button type="button" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Ulangi perubahan"><ResetIcon aria-hidden="true" style={{ transform: 'scaleX(-1)' }} /></button>
+        </div>
+        <span>Klik dua kali tombol untuk mencoba interaksi.</span>
+        <div className="canvas-zoom-controls" role="group" aria-label="Zoom canvas">
+          <button type="button" aria-label="Perkecil slide" disabled={zoom <= 25} onClick={() => setZoom((value) => Math.max(25, value - 25))}>−</button>
+          <button type="button" className="canvas-zoom-value" aria-label={`Zoom ${Math.round(zoom)} persen, klik untuk menyesuaikan ke area canvas`} title="Sesuaikan ke area canvas" onClick={() => setZoom(100)}>{Math.round(zoom)}%</button>
+          <button type="button" aria-label="Perbesar slide" disabled={zoom >= 300} onClick={() => setZoom((value) => Math.min(300, value + 25))}>+</button>
+        </div>
         {selectedPopup && <button type="button" className="secondary-button" onClick={() => setPreview({ slideId: slide.id, elementId: selectedPopup.id })}>Coba interaksi</button>}
       </div>
-      <div className="canvas-wrap">
+      <div className="canvas-wrap" ref={viewportRef}>
+        <div className="canvas-zoom-stage" style={{ width: fitWidth * zoom / 100, height: fitWidth / aspect * zoom / 100 }}>
         <div
           className={`slide-canvas ${slide.backgroundUrl ? '' : `tone-${slide.tone}`}`}
-          onClick={() => onSelectElement(null)}
+          style={{ width: fitWidth, height: fitWidth / aspect, transform: `scale(${zoom / 100})`, transformOrigin: 'top left' }}
+          onClick={() => { setEditingText(null); onSelectElement(null); }}
         >
           {slide.backgroundUrl && <img className="canvas-bg" src={slide.backgroundUrl} alt="" />}
-          <div className="canvas-grid" aria-hidden="true"></div>
+          {slide.chapter && <div className="canvas-grid" aria-hidden="true"></div>}
 
-          {!slide.backgroundUrl && (
+          {!slide.backgroundUrl && slide.chapter && (
             <div className="canvas-slide-content">
               {slide.chapter && (
                 <div className="canvas-chapter-badge">
@@ -409,6 +485,11 @@ export function CanvasPanel({
               }}
               onClick={(ev) => {
                 ev.stopPropagation();
+                if (selectedElementId === el.id && el.kind === 'advancedText' && !el.displayAsButton) {
+                  setEditingText({ slideId: slide.id, elementId: el.id });
+                } else {
+                  setEditingText(null);
+                }
                 onSelectElement(el.id);
               }}
             >
@@ -446,6 +527,30 @@ export function CanvasPanel({
               )}
             </button>
           ))}
+          {selected?.kind === 'advancedText' && !selected.displayAsButton
+            && editingText?.slideId === slide.id && editingText.elementId === selected.id && (
+            <textarea
+              key={selected.id}
+              autoFocus
+              className="st-canvas-text-editor"
+              aria-label="Edit teks di canvas"
+              value={selected.text}
+              placeholder="Ketik teks di sini…"
+              style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, fontSize: selected.fontSize ?? 13 }}
+              onChange={(event) => onChangeText(selected.id, event.target.value)}
+              onBlur={() => setEditingText(null)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setEditingText(null);
+                }
+              }}
+            />
+          )}
           {selected && (
             <div className="st-resize-frame" style={{ left: `${selected.position.x}%`, top: `${selected.position.y}%`, width: `${selected.position.width}%`, height: `${selected.position.height}%`, transform: `rotate(${selected.rotation ?? 0}deg)`, transformOrigin: 'center' }}>
               <button type="button" className="st-rotate-handle" aria-label={`Putar ${elementLabel(selected)}`}
@@ -459,9 +564,9 @@ export function CanvasPanel({
                   event.preventDefault(); event.stopPropagation();
                   onRotateElement(selected.id, ((selected.rotation ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 15 : 1) + 360) % 360);
                 }}><span aria-hidden="true">↻</span></button>
-              {(['nw', 'ne', 'sw', 'se'] as const).map((corner) => (
+              {(['nw', 'ne', 'sw', 'se', 'w', 'e'] as const).map((corner) => (
                 <button key={corner} type="button" className={`st-resize-handle st-resize-${corner}`}
-                  aria-label={`Ubah ukuran ${elementLabel(selected)} dari sudut ${{ nw: 'kiri atas', ne: 'kanan atas', sw: 'kiri bawah', se: 'kanan bawah' }[corner]}`}
+                  aria-label={`Ubah ukuran ${elementLabel(selected)} dari ${{ nw: 'sudut kiri atas', ne: 'sudut kanan atas', sw: 'sudut kiri bawah', se: 'sudut kanan bawah', w: 'sisi kiri', e: 'sisi kanan' }[corner]}`}
                   title="Tarik untuk mengubah ukuran; tombol panah untuk presisi"
                   onPointerDown={startResize(selected, corner)} onPointerMove={moveResize}
                   onPointerUp={endResize} onPointerCancel={endResize}
@@ -482,17 +587,9 @@ export function CanvasPanel({
           )}
         </div>
       </div>
+      </div>
       <div className="canvas-navigation-bar">
-        <div className="canvas-nav-left">
-          {activeSurface && (
-            <span
-              className="canvas-active-surface-badge"
-              title="Active Surface Mode: Navigasi bawaan dinonaktifkan, gunakan tombol buatan di slide"
-            >
-              Active Surface
-            </span>
-          )}
-        </div>
+        <div className="canvas-nav-left" />
         <div className="canvas-nav-center">
           <button
             type="button"

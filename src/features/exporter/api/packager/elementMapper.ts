@@ -280,7 +280,7 @@ export function toAction(
 ): Record<string, unknown> | null {
   switch (el.kind) {
     case 'advancedText':
-      return { library: actionLibraryFor(el, cpMinor), params: { text: el.text } };
+      return { library: actionLibraryFor(el, cpMinor), params: { text: el.fontSize && Number.isFinite(el.fontSize) ? `<div style="font-size: ${Math.max(1, el.fontSize)}px">${el.text}</div>` : el.text } };
     case 'link': {
       const link = el as LinkElement;
       return {
@@ -655,7 +655,7 @@ export function toCpElement(
   }
   const action = toAction(el, cpMinor, media);
   if (!action) return null;
-  return { ...base, action };
+  return { ...base, action: { ...action, subContentId: el.id } };
 }
 
 export function toContentJson(
@@ -684,6 +684,14 @@ export function toContentJson(
   const content: Record<string, unknown> = {
     presentation: {
       slides,
+      generatorRequireQuestionsBeforeNavigation: project.settings.requireQuestionsBeforeNavigation !== false,
+      generatorAutoAdvance: JSON.stringify(project.settings.autoAdvance?.enabled && project.settings.requireQuestionsBeforeNavigation !== false ? project.slides.map((slide, index) => {
+        const auto = project.settings.autoAdvance!;
+        if (auto.scope === 'selected') return project.slides.findIndex((item) => item.id === auto.rules.find((rule) => rule.sourceId === slide.id)?.targetId);
+        if (auto.targetType === 'next') return index + 1 < n ? index + 1 : -1;
+        if (auto.targetType === 'previous') return index > 0 ? index - 1 : -1;
+        return project.slides.findIndex((item) => item.id === auto.targetSlideId);
+      }) : []),
       keywordListEnabled: project.settings.keywordListEnabled,
       keywordListAlwaysShow: false,
       keywordListAutoHide: false,
