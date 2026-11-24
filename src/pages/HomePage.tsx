@@ -93,6 +93,8 @@ export function HomePage() {
             onNavigateDashboard={() => navigate('/dashboard')}
             onNavigateMateri={() => navigate('/materi')}
             onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
+            onSettings={() => setShowProfileSettings(true)}
+            onLogout={logout}
           />
 
           <main className="db-content">

@@ -19,6 +19,7 @@ import { isBrowserOffline, subscribeOnlineRecovery } from '../../../services/net
 import { isQuizElement } from '../../studio/constants/h5pModel';
 import type { StoredProjectMeta } from '../../projects/hooks/useProjectStore';
 import type { Project } from '../../studio/constants/h5pModel';
+import { ProjectSlideThumbnail } from './ProjectSlideThumbnail';
 
 type DashboardProps = {
   items: StoredProjectMeta[];
@@ -113,6 +114,23 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
 
   return (
     <>
+      <div className="db-mobile-home">
+        <div className="db-mobile-welcome">
+          <span>H5P CONTENT GENERATOR</span>
+          <h2>Mau membuat materi apa hari ini?</h2>
+          <label className="db-mobile-search"><MagnifyingGlassIcon aria-hidden="true" /><input type="search" aria-label="Cari materi" placeholder="Cari materi pembelajaran..." value={query} onChange={(event) => onQueryChange(event.target.value)} /></label>
+        </div>
+        <section className="db-mobile-section" aria-label="Materi terbaru">
+          <div className="db-mobile-section-head"><h2>Lanjutkan membuat materi</h2><button type="button" onClick={onGoMaterials}>Lihat semua</button></div>
+          {filtered.length ? <div className="db-mobile-recent">{filtered.slice(0, 10).map((item) => <button className="db-mobile-material" type="button" key={item.id} onClick={() => onOpen(item.snapshot)}><ProjectSlideThumbnail project={item.snapshot} /><strong>{item.title}</strong><small>{timeAgo(item.updatedAt)}</small></button>)}</div> : <p className="db-mobile-empty">{q ? 'Tidak ada materi yang cocok dengan pencarian.' : 'Belum ada materi. Buat materi pertama Anda.'}</p>}
+        </section>
+        <section className="db-mobile-section" aria-label="Mulai membuat materi">
+          <div className="db-mobile-section-head"><h2>Pilih cara memulai</h2></div>
+          <div className="db-mobile-actions"><button type="button" onClick={create}><span><PlusIcon /></span>Buat materi</button><button type="button" onClick={onGoMaterials}><span><LayersIcon /></span>Materi saya</button><button type="button" onClick={() => guideRef.current?.showModal()}><span><ReaderIcon /></span>Panduan LMS</button></div>
+        </section>
+        <section className="db-mobile-section" aria-label="Ringkasan ruang kerja"><div className="db-mobile-section-head"><h2>Ruang kerja Anda</h2></div><div className="db-mobile-summary"><span><strong>{items.length}</strong> Materi</span><span><strong>{totalSlides}</strong> Slide</span><span><strong>{exports.length}</strong> Ekspor</span></div></section>
+      </div>
+      <div className="db-desktop-home">
       <section className="db-hero" aria-label="Selamat datang di ruang kerja">
         <div className="db-banner-ornaments" aria-hidden="true">
           <span className="db-banner-shape db-banner-square" />
@@ -394,6 +412,8 @@ export function Dashboard({ items, onOpen, onGoMaterials, onCreate, query = '', 
           )}
           </div>
         </section>
+
+      </div>
 
       </div>
 
