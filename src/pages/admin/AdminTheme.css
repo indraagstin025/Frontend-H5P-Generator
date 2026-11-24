@@ -6,13 +6,16 @@
 .admin-sidebar nav a { color: #e8f5ea; border: 1px solid transparent; border-radius: 12px; }
 .admin-sidebar nav a:hover { background: #ffffff18; color: #fff; text-decoration: none; }
 .admin-sidebar nav a[aria-current="page"] { background: #fff; color: #075f26; box-shadow: 0 5px 16px #00341520; }
-.admin-sidebar nav .admin-add-user { border-color: #ffffff55; }
+.admin-nav-label { margin: 28px 0 0; color: #e0f1e3; font-size: 10px; font-weight: 700; letter-spacing: .1em; }
+.admin-sidebar nav { margin-top: 8px; }
 .admin-account { border-color: #ffffff30; }
 .admin-profile-trigger { color: #fff; background: #ffffff12; }
 .admin-sidebar .admin-account small { color: #e0f1e3; }
 .admin-profile-trigger:hover, .admin-profile-trigger:active, .admin-profile-trigger[aria-expanded="true"] { background: #ffffff22; }
-.admin-sidebar .admin-initial { background: #ffffff20; color: white; }
+.admin-sidebar .admin-initial { background: #ffffff20; color: white; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; }
+.admin-sidebar .admin-initial img { width: 100%; height: 100%; object-fit: cover; }
 .admin-profile-popup { color: #163a23; }
+.admin-profile-popup .admin-profile-settings { color: #173d25; }
 .admin-main { max-width: 1440px; margin-inline: auto; }
 .admin-content { min-width: 0; }
 @media (min-width: 951px) {

@@ -24,6 +24,7 @@ export function LoginPage() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleChecking, setGoogleChecking] = useState(true);
   const [oauthExchanging, setOauthExchanging] = useState(false);
+  const exchangedGoogleCode = useRef<string | null>(null);
 
   const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -62,6 +63,8 @@ export function LoginPage() {
     }
 
     if (oauthCode) {
+      if (exchangedGoogleCode.current === oauthCode) return;
+      exchangedGoogleCode.current = oauthCode;
       setOauthExchanging(true);
       setMessage('');
       void loginWithGoogleCode(oauthCode)

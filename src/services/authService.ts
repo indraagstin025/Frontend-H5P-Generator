@@ -228,8 +228,9 @@ export async function uploadProfileAvatar(file: File): Promise<{ avatarUrl: stri
 
 export async function updateUserProfile(input: {
   name: string;
-  birthDate: string;
+  birthDate?: string | null;
   newPassword?: string;
+  currentPassword?: string;
 }): Promise<AuthUser> {
   const res = await apiFetch<{ message: string; data: AuthUser }>('/auth/profile', {
     method: 'PATCH',
@@ -237,6 +238,7 @@ export async function updateUserProfile(input: {
       name: input.name.trim(),
       birthDate: input.birthDate,
       ...(input.newPassword ? { newPassword: input.newPassword } : {}),
+      ...(input.currentPassword ? { currentPassword: input.currentPassword } : {}),
     },
   });
   const activeToken = getAuthToken();

@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { ExitIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
+import { ExitIcon, GearIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config/env';
+import { FloatingShapes } from '../../components/UI/FloatingShapes';
+import { ProfileSettings } from '../home/ProfileSettings';
 import './AdminUsersPage.css';
 import './AdminTheme.css';
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const name = user?.name || 'Administrator';
@@ -38,14 +42,16 @@ export function AdminLayout() {
       <a className="admin-skip" href="#admin-main">
         Lewati ke konten
       </a>
-      <aside className="admin-sidebar" aria-label="Panel administrator">
+      <aside className="admin-sidebar floating-shapes-host" aria-label="Panel administrator">
+        <FloatingShapes />
         <Link to="/admin/users" className="admin-brand">
-          <img src="/dashboard-logo.png" alt="H5P Generator" width={60} height={54} />
+          <img src="/landing-logo.png" alt="H5P Generator" width={68} height={60} />
           <span>
             <strong>H5P Generator</strong>
-            <small>Ruang administrasi</small>
+            <small>Ruang kreasi pembelajaran</small>
           </span>
         </Link>
+        <p className="admin-nav-label">NAVIGASI UTAMA</p>
         <nav aria-label="Navigasi administrator">
           <NavLink to="/admin/users" end>
             <PersonIcon aria-hidden="true" /> Kelola pengguna
@@ -72,7 +78,7 @@ export function AdminLayout() {
             onClick={() => setProfileOpen((open) => !open)}
           >
             <span className="admin-initial" aria-hidden="true">
-              {name.charAt(0).toLocaleUpperCase('id-ID')}
+              {user?.avatarUrl ? <img src={user.avatarUrl.startsWith('/api/') ? `${API_BASE_URL.replace(/\/api$/, '')}${user.avatarUrl}` : user.avatarUrl} alt="" /> : name.charAt(0).toLocaleUpperCase('id-ID')}
             </span>
             <span>
               <strong>{name}</strong>
@@ -81,6 +87,7 @@ export function AdminLayout() {
           </button>
           <div id="admin-profile-popup" className="admin-profile-popup" hidden={!profileOpen}>
             <p>{user?.email ? `${name} (Administrator)` : 'Akun Anda'}</p>
+            <button type="button" className="admin-profile-settings" onClick={() => { setProfileOpen(false); setSettingsOpen(true); }}><GearIcon aria-hidden="true" /><span>Pengaturan Profil</span></button>
             <button
               type="button"
               onClick={() => {
@@ -94,6 +101,7 @@ export function AdminLayout() {
           </div>
         </div>
       </aside>
+      {settingsOpen && user && <ProfileSettings user={user} onClose={() => setSettingsOpen(false)} />}
       <div className="admin-content">
         <main id="admin-main" className="admin-main">
           <Outlet />

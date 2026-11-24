@@ -1,4 +1,4 @@
-import { DashboardIcon, ExitIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, ExitIcon, GearIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
 import { useEffect, useRef, useState } from 'react';
 import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
@@ -13,6 +13,7 @@ interface HomeSidebarProps {
   onNavigateMateri: () => void;
   onNavigateAdmin?: () => void;
   onLogout: () => void;
+  onSettings: () => void;
 }
 
 export function HomeSidebar({
@@ -26,6 +27,7 @@ export function HomeSidebar({
   onNavigateMateri,
   onNavigateAdmin,
   onLogout,
+  onSettings,
 }: HomeSidebarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -120,6 +122,7 @@ export function HomeSidebar({
         </button>
         <div id="db-profile-popup" className="db-profile-popup" hidden={!profileOpen}>
           <p>{userEmail ? `${name} (${roleLabel})` : 'Akun Anda'}</p>
+          <button type="button" style={{ color: '#173d25' }} onClick={() => { setProfileOpen(false); onSettings(); }}><GearIcon aria-hidden="true" /><span>Pengaturan Profil</span></button>
           <button type="button" onClick={() => { setProfileOpen(false); onLogout(); }}>
             <ExitIcon aria-hidden="true" /><span>Keluar</span>
           </button>

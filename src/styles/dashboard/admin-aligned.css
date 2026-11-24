@@ -60,7 +60,8 @@
 .db-scope--reference .db-profile-trigger[aria-expanded="true"] { background: #ffffff22; }
 .db-scope--reference .db-profile-trigger .db-profile-name strong { color: #fff; }
 .db-scope--reference .db-profile-trigger .db-profile-name small { color: #e0f1e3; }
-.db-scope--reference .db-sidebar .db-avatar { background: #ffffff20; color: #fff; border-color: transparent; border-radius: 9px; }
+.db-scope--reference .db-sidebar .db-avatar { position: relative; overflow: hidden; background: #ffffff20; color: #fff; border-color: transparent; border-radius: 50%; }
+.db-scope--reference .db-sidebar .db-avatar img { position: absolute; inset: 0; }
 .db-scope--reference .db-sidebar :is(a, button):focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .db-scope--reference .db-profile-popup { color: #163a23; }
 .db-scope--reference .db-sidebar .db-profile-popup button:focus-visible { outline-color: #077c1a; }
