@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckIcon, CopyIcon, EyeClosedIcon, EyeOpenIcon, UploadIcon } from '@radix-ui/react-icons';
+import { EyeClosedIcon, EyeOpenIcon, UploadIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
 import { uploadProfileAvatar } from '../services/authService';
 import { formatNetworkError, isBrowserOffline } from '../services/network';
@@ -12,15 +12,13 @@ const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 export function CompleteProfilePage() {
   const navigate = useNavigate();
-  const { user, pendingGeneratedPassword, completeProfile, logout } = useAuth();
+  const { user, completeProfile, logout } = useAuth();
 
   const [name, setName] = useState(() => user?.name ?? '');
   const [birthDate, setBirthDate] = useState(() => user?.birthDate ?? '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(() => user?.avatarUrl ?? null);
-  const [showGenerated, setShowGenerated] = useState(false);
-  const [copiedPassword, setCopiedPassword] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,17 +60,6 @@ export function CompleteProfilePage() {
 
     setErrorMsg('');
     setCropFile(file);
-  }
-
-  async function handleCopyGenerated() {
-    if (!pendingGeneratedPassword) return;
-    try {
-      await navigator.clipboard.writeText(pendingGeneratedPassword);
-      setCopiedPassword(true);
-      window.setTimeout(() => setCopiedPassword(false), 2000);
-    } catch {
-      setErrorMsg('Gagal menyalin otomatis. Silakan salin sandi secara manual.');
-    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -205,54 +192,16 @@ export function CompleteProfilePage() {
             />
           </div>
 
-          {pendingGeneratedPassword && (
-            <div className="complete-profile-generated-box" role="region" aria-label="Sandi bawaan akun">
-              <div className="complete-profile-generated-head">
-                <strong>Sandi Bawaan Otomatis</strong>
-                <span>Gunakan untuk login lewat form biasa</span>
-              </div>
-              <div className="complete-profile-generated-row">
-                <input
-                  type={showGenerated ? 'text' : 'password'}
-                  value={pendingGeneratedPassword}
-                  readOnly
-                  aria-label="Sandi bawaan yang dihasilkan otomatis"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowGenerated((v) => !v)}
-                  aria-label={showGenerated ? 'Sembunyikan sandi bawaan' : 'Tampilkan sandi bawaan'}
-                >
-                  {showGenerated ? <EyeClosedIcon /> : <EyeOpenIcon />}
-                </button>
-                <button type="button" onClick={handleCopyGenerated} className="complete-profile-copy-btn">
-                  {copiedPassword ? (
-                    <>
-                      <CheckIcon /> Tersalin
-                    </>
-                  ) : (
-                    <>
-                      <CopyIcon /> Salin
-                    </>
-                  )}
-                </button>
-              </div>
-              <small>
-                Simpan sandi ini atau ubah langsung di bawah agar mudah diingat saat login dengan email &amp; kata sandi.
-              </small>
-            </div>
-          )}
-
           <div className="complete-profile-password-section">
             <div className="complete-profile-field">
-              <label htmlFor="profile-new-password">Ubah Kata Sandi (Opsional)</label>
+              <label htmlFor="profile-new-password">Set Kata Sandi</label>
               <div className="complete-profile-password-wrap">
                 <input
                   id="profile-new-password"
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Kosongkan jika tetap memakai sandi bawaan"
+                  placeholder="Wajib minimal 8 karakter"
                   autoComplete="new-password"
                 />
                 <button
