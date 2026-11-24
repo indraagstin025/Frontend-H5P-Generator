@@ -146,6 +146,7 @@ export function useProjectStore() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [items, setItems] = useState<StoredProjectMeta[]>(() => loadAllForUser(userId));
+  const [syncState, setSyncState] = useState({ userId, loading: Boolean(userId), error: '' });
 
   // Muat ulang daftar draf lokal milik user aktif ketika akun berganti / logout
   useEffect(() => {
@@ -168,14 +169,21 @@ export function useProjectStore() {
     let cancelled = false;
 
     const runSync = () => {
-      if (isBrowserOffline()) return;
+      if (isBrowserOffline()) {
+        setSyncState({ userId, loading: false, error: 'Anda sedang offline. Materi yang tersimpan di perangkat tetap tersedia.' });
+        return;
+      }
+      setSyncState({ userId, loading: true, error: '' });
       apiFetch<{ data: ServerProjectSummary[] }>('/projects')
         .then((res) => {
-          if (cancelled || !Array.isArray(res.data)) return;
+          if (cancelled) return;
+          if (!Array.isArray(res.data)) throw new Error('Respons daftar materi tidak valid.');
           setItems((prev) => mergeServerProjects(prev, res.data, userId));
+          setSyncState({ userId, loading: false, error: '' });
         })
-        .catch(() => {
-          // Tetap gunakan cache terakhir sampai jaringan tersedia kembali
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setSyncState({ userId, loading: false, error: formatNetworkError(err, 'Daftar materi belum dapat dimuat. Muat ulang halaman untuk mencoba lagi.') });
         });
     };
 
@@ -331,5 +339,7 @@ export function useProjectStore() {
     return { ok: true };
   }, []);
 
-  return { items, save, remove, rename, duplicate };
+  const isLoading = Boolean(userId) && (syncState.userId !== userId || syncState.loading);
+  const loadError = syncState.userId === userId ? syncState.error : '';
+  return { items, isLoading, loadError, save, remove, rename, duplicate };
 }

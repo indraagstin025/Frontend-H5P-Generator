@@ -1,0 +1,24 @@
+.materials-skeleton {
+  display: block;
+  max-width: 100%;
+  border-radius: 6px;
+  background: #e3eae4;
+}
+
+.materials-skeleton-preview { width: 100%; aspect-ratio: 16 / 9; border-radius: 0; }
+.materials-skeleton-title { width: 180px; height: 18px; margin-bottom: 10px; }
+.materials-skeleton-detail { width: 120px; height: 14px; }
+.materials-skeleton-date { width: 72px; height: 14px; }
+.materials-skeleton-action { width: 130px; height: 44px; }
+.materials-skeleton-card .materials-skeleton-detail { margin-bottom: 16px; }
+.materials-skeleton-card { pointer-events: none; }
+.materials-loading-status { color: var(--db-text, #243c2b); font-size: 14px; }
+.materials-load-error { color: #8b281e; background: #fff1ef; padding: 14px 16px; border-radius: 8px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .materials-skeleton { animation: materials-skeleton-pulse 1.5s ease-in-out 3; }
+}
+
+@keyframes materials-skeleton-pulse {
+  50% { opacity: .5; }
+}

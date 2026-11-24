@@ -104,6 +104,8 @@ export function HomePage() {
             ) : (
               <ProjectsHome
                 items={store.items}
+                isLoading={store.isLoading}
+                loadError={store.loadError}
                 onOpen={(p, opts) => openProject(p, pathname, { saved: opts?.saved ?? true })}
                 onOpenInNewTab={openStudioInNewTab}
                 onDelete={store.remove}

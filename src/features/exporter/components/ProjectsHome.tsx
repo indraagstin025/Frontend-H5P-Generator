@@ -21,9 +21,12 @@ import { parseH5p } from '../api/h5pPackager';
 import type { ProjectActionResult, StoredProjectMeta } from '../../projects/hooks/useProjectStore';
 import { formatNetworkError, isBrowserOffline } from '../../../services/network';
 import { ProjectSlideThumbnail } from '../../projects/components/ProjectSlideThumbnail';
+import { MaterialsSkeleton } from './MaterialsSkeleton';
 
 type ProjectsHomeProps = {
   items: StoredProjectMeta[];
+  isLoading: boolean;
+  loadError: string;
   onOpen: (project: Project, opts?: { saved?: boolean }) => void;
   onOpenInNewTab: (project: Project) => void;
   onDelete: (id: string) => Promise<ProjectActionResult>;
@@ -53,7 +56,7 @@ function sourceOf(item: StoredProjectMeta): { key: Exclude<SourceFilter, 'all'>;
   return { key: 'manual', label: 'Dari nol' };
 }
 
-export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
+export function ProjectsHome({ items, isLoading, loadError, onOpen, onOpenInNewTab, onDelete, onRename, onDuplicate, onNotice }: ProjectsHomeProps) {
   const [title, setTitle] = useState('');
   const [aspect, setAspect] = useState<AspectRatio>('16:9');
   const [creating, setCreating] = useState(false);
@@ -65,6 +68,7 @@ export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename
   const [draftTitle, setDraftTitle] = useState('');
   const importRef = useRef<HTMLInputElement>(null);
   const recent = [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3);
+  const showSkeleton = isLoading && items.length === 0;
 
   const createNew = async () => {
     if (creating) return;
@@ -135,7 +139,9 @@ export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename
   };
 
   return (
-    <div className="projects-home">
+    <div className="projects-home" aria-busy={showSkeleton}>
+      {showSkeleton && <p className="materials-loading-status" role="status">Memuat materi Anda...</p>}
+      {loadError && <p className="materials-load-error" role="alert">{loadError}</p>}
       <section className="materials-recent" aria-labelledby="materials-recent-title">
         <div className="db-section-head">
           <div>
@@ -143,7 +149,7 @@ export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename
             <p className="db-section-subtitle">Akses cepat ke materi yang terakhir diperbarui.</p>
           </div>
         </div>
-        {recent.length > 0 && <div className="materials-recent-grid">
+        {showSkeleton ? <MaterialsSkeleton variant="recent" /> : recent.length > 0 && <div className="materials-recent-grid">
           {recent.map((item, index) => (
             <article className={`materials-recent-card materials-recent-${index}`} key={item.id}>
               <ProjectSlideThumbnail project={item.snapshot} />
@@ -225,12 +231,12 @@ export function ProjectsHome({ items, onOpen, onOpenInNewTab, onDelete, onRename
       <div className="db-section-head">
         <div>
           <p className="db-section-subtitle">
-            {visible.length} dari {items.length} materi
+            {showSkeleton ? 'Memuat daftar materi...' : `${visible.length} dari ${items.length} materi`}
           </p>
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {showSkeleton ? <MaterialsSkeleton variant="table" /> : loadError && items.length === 0 ? null : visible.length === 0 ? (
         <div className="db-empty">
           <LayersIcon width={26} height={26} aria-hidden="true" />
           <h3>{items.length === 0 ? 'Belum ada materi' : 'Tidak ada yang cocok'}</h3>
