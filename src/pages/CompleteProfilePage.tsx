@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { EyeClosedIcon, EyeOpenIcon, UploadIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
 import { uploadProfileAvatar } from '../services/authService';
 import { formatNetworkError, isBrowserOffline } from '../services/network';
 import { AvatarCropDialog } from '../components/UI/AvatarCropDialog';
-import './CompleteProfilePage.css';
+import './LandingPage.css';
 import './LoginPage.css';
+import './CompleteProfilePage.css';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -142,6 +143,20 @@ export function CompleteProfilePage() {
 
   return (
     <main className="complete-profile-page">
+      <div className="login-background-ornaments complete-profile-mobile-ornaments" aria-hidden="true">
+        <span className="login-ornament login-ornament-square" />
+        <span className="login-ornament login-ornament-circle" />
+        <span className="login-ornament login-ornament-triangle" />
+        <span className="login-ornament login-ornament-ring" />
+        <span className="login-ornament login-ornament-upper-ring" />
+        <span className="login-ornament login-ornament-capsule" />
+      </div>
+      <div className="landing-hero-brand-row login-logo-row complete-profile-mobile-brand">
+        <Link className="landing-hero-brand" to="/" aria-label="H5P Generator, beranda">
+          <span className="landing-hero-logo"><img src="/landing-logo.png" alt="" /></span>
+          <span className="landing-hero-brand-text"><strong>H5P Generator</strong><span>Ruang kreasi pembelajaran</span></span>
+        </Link>
+      </div>
       {cropFile && <AvatarCropDialog file={cropFile} onCancel={() => setCropFile(null)} onApply={(file) => { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); setCropFile(null); }} />}
       <section className="complete-profile-card" aria-labelledby="complete-profile-title">
         <header className="complete-profile-header">

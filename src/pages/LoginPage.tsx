@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type PointerEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
-import { ArrowLeftIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, Cross1Icon, EnvelopeClosedIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
 import { fetchAuthProviders, getGoogleLoginUrl } from '../services/authService';
 import {
@@ -28,6 +28,18 @@ export function LoginPage() {
 
   const ornamentsRef = useRef<HTMLDivElement>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailLoginOpen, setEmailLoginOpen] = useState(false);
+  const mobileEmailRef = useRef<HTMLButtonElement>(null);
+
+  function openEmailLogin() {
+    setEmailLoginOpen(true);
+    requestAnimationFrame(() => document.getElementById('login-email')?.focus());
+  }
+
+  function closeEmailLogin() {
+    setEmailLoginOpen(false);
+    requestAnimationFrame(() => mobileEmailRef.current?.focus());
+  }
   const [message, setMessage] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailTooltipOpen, setEmailTooltipOpen] = useState(false);
@@ -295,15 +307,23 @@ export function LoginPage() {
         </div>
       </section>
       <section className="login-form-panel" aria-labelledby="login-title">
+        <header className="login-mobile-header">
+          <Link className="login-mobile-brand" to="/" aria-label="H5P Generator, beranda">
+            <img src="/landing-logo.png" alt="" /><span>H5P Generator</span>
+          </Link>
+          <Link className="login-mobile-close" to="/" aria-label="Tutup login"><Cross1Icon /></Link>
+        </header>
         <Link to="/" className="login-back"><ArrowLeftIcon /> Kembali ke beranda</Link>
-        <div className="login-card">
-          <h2 id="login-title">Login ke akun Anda</h2>
+        <div className={`login-card${emailLoginOpen ? ' login-card--email-open' : ''}`}>
+          <h2 id="login-title"><span className="login-desktop-title">Login ke akun Anda</span><span className="login-mobile-title">{emailLoginOpen ? 'Masuk dengan email' : 'Masuk ke akun Anda dalam sekejap'}</span></h2>
+          <p className="login-mobile-intro">Masuk untuk membuat materi pembelajaran interaktif dengan H5P Generator.</p>
+          {emailLoginOpen && <button type="button" className="login-mobile-method-back" onClick={closeEmailLogin}><ArrowLeftIcon /> Pilih cara masuk lain</button>}
           {!isOnline && (
             <div className="login-message login-message--offline" role="alert">
               Koneksi internet sedang terputus. Hubungkan kembali jaringan Anda untuk masuk ke sistem.
             </div>
           )}
-          <form noValidate onSubmit={handleSubmit} onChange={() => setMessage('')}>
+          <form id="login-email-form" noValidate onSubmit={handleSubmit} onChange={() => setMessage('')}>
             <label htmlFor="login-email">Email</label>
             <div className="login-email-field">
             <input
@@ -375,6 +395,7 @@ export function LoginPage() {
                   ? 'Lanjutkan dengan Google'
                   : 'Google belum tersedia'}
           </button>
+          <button ref={mobileEmailRef} type="button" className="login-mobile-email" onClick={openEmailLogin} aria-expanded={emailLoginOpen} aria-controls="login-email-form"><EnvelopeClosedIcon /> Email</button>
           {message && <div className="login-message" role="status">{message}</div>}
           <p className="login-help">Butuh akses akun? Hubungi administrator instansi Anda.</p>
         </div>
