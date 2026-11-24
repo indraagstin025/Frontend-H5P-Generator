@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { EyeClosedIcon, EyeOpenIcon, UploadIcon } from '@radix-ui/react-icons';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +7,7 @@ import { uploadProfileAvatar } from '../services/authService';
 import { formatNetworkError, isBrowserOffline } from '../services/network';
 import { AvatarCropDialog } from '../components/UI/AvatarCropDialog';
 import './CompleteProfilePage.css';
+import './LoginPage.css';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
@@ -76,6 +78,10 @@ export function CompleteProfilePage() {
       return;
     }
 
+    if (!newPassword) {
+      setErrorMsg('Kata sandi baru wajib diisi.');
+      return;
+    }
     if (newPassword.length > 0) {
       if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
         setErrorMsg('Kata sandi baru minimal 8 karakter dan wajib mengandung kombinasi huruf dan angka.');
@@ -104,7 +110,28 @@ export function CompleteProfilePage() {
         birthDate,
         ...(newPassword ? { newPassword } : {}),
       });
-      navigate('/dashboard', { replace: true });
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !document.startViewTransition) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+      document.documentElement.classList.add('login-pull-transition');
+      const transition = document.startViewTransition(() => {
+        flushSync(() => navigate('/dashboard', { replace: true }));
+      });
+      void transition.ready.then(() => {
+        const frames = Array.from({ length: 65 }, (_, index) => {
+          const progress = index / 64;
+          const edge = 112 - progress * 124;
+          const points = Array.from({ length: 81 }, (_, point) => {
+            const x = point / 80 * 100;
+            const y = edge + Math.sin(point / 80 * Math.PI * 4 + progress * Math.PI * 3) * 4;
+            return `${x}% ${y}%`;
+          });
+          return { clipPath: `polygon(0% 0%, 100% 0%, ${points.reverse().join(', ')})` };
+        });
+        document.documentElement.animate(frames, { duration: 1600, delay: 300, easing: 'ease-in-out', fill: 'forwards', pseudoElement: '::view-transition-old(root)' });
+      }).catch(() => {});
+      void transition.finished.catch(() => {}).finally(() => document.documentElement.classList.remove('login-pull-transition'));
     } catch (err) {
       setErrorMsg(formatNetworkError(err, 'Gagal menyimpan profil. Silakan coba lagi.'));
       setSubmitting(false);
@@ -203,6 +230,7 @@ export function CompleteProfilePage() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Wajib minimal 8 karakter"
                   autoComplete="new-password"
+                  required
                 />
                 <button
                   type="button"
@@ -224,6 +252,7 @@ export function CompleteProfilePage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ulangi kata sandi baru"
                   autoComplete="new-password"
+                  required
                 />
               </div>
             )}
