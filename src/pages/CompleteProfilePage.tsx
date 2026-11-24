@@ -4,6 +4,7 @@ import { CheckIcon, CopyIcon, EyeClosedIcon, EyeOpenIcon, UploadIcon } from '@ra
 import { useAuth } from '../context/AuthContext';
 import { uploadProfileAvatar } from '../services/authService';
 import { formatNetworkError, isBrowserOffline } from '../services/network';
+import { AvatarCropDialog } from '../components/UI/AvatarCropDialog';
 import './CompleteProfilePage.css';
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -16,6 +17,7 @@ export function CompleteProfilePage() {
   const [name, setName] = useState(() => user?.name ?? '');
   const [birthDate, setBirthDate] = useState(() => user?.birthDate ?? '');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(() => user?.avatarUrl ?? null);
   const [showGenerated, setShowGenerated] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
@@ -46,6 +48,7 @@ export function CompleteProfilePage() {
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
     if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
@@ -58,11 +61,7 @@ export function CompleteProfilePage() {
     }
 
     setErrorMsg('');
-    if (avatarPreview && avatarPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(avatarPreview);
-    }
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setCropFile(file);
   }
 
   async function handleCopyGenerated() {
@@ -129,6 +128,7 @@ export function CompleteProfilePage() {
 
   return (
     <main className="complete-profile-page">
+      {cropFile && <AvatarCropDialog file={cropFile} onCancel={() => setCropFile(null)} onApply={(file) => { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); setCropFile(null); }} />}
       <section className="complete-profile-card" aria-labelledby="complete-profile-title">
         <header className="complete-profile-header">
           <div className="complete-profile-brand">

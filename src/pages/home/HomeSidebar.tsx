@@ -1,10 +1,11 @@
-import { DashboardIcon, ExitIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, ExitIcon, GearIcon, LayersIcon, PersonIcon } from '@radix-ui/react-icons';
 import { useEffect, useRef, useState } from 'react';
 import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
 interface HomeSidebarProps {
   displayName: string;
   userEmail?: string;
+  avatarUrl?: string | null;
   userRole?: 'USER' | 'ADMIN';
   activeNav: 'dashboard' | 'materi';
   itemCount: number;
@@ -12,11 +13,13 @@ interface HomeSidebarProps {
   onNavigateMateri: () => void;
   onNavigateAdmin?: () => void;
   onLogout: () => void;
+  onSettings: () => void;
 }
 
 export function HomeSidebar({
   displayName,
   userEmail,
+  avatarUrl,
   userRole,
   activeNav,
   itemCount,
@@ -24,6 +27,7 @@ export function HomeSidebar({
   onNavigateMateri,
   onNavigateAdmin,
   onLogout,
+  onSettings,
 }: HomeSidebarProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -108,7 +112,7 @@ export function HomeSidebar({
           onClick={() => setProfileOpen((open) => !open)}>
           <span className="db-user-info">
             <span className="db-avatar" aria-hidden="true">
-              {name.charAt(0).toLocaleUpperCase('id-ID')}
+              {avatarUrl ? <img src={avatarUrl.startsWith('/api/') ? `${API_BASE_URL.replace(/\/api$/, '')}${avatarUrl}` : avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : name.charAt(0).toLocaleUpperCase('id-ID')}
             </span>
             <span className="db-profile-name">
               <strong>{name}</strong>
@@ -118,6 +122,7 @@ export function HomeSidebar({
         </button>
         <div id="db-profile-popup" className="db-profile-popup" hidden={!profileOpen}>
           <p>{userEmail ? `${name} (${roleLabel})` : 'Akun Anda'}</p>
+          <button type="button" style={{ color: '#173d25' }} onClick={() => { setProfileOpen(false); onSettings(); }}><GearIcon aria-hidden="true" /><span>Pengaturan Profil</span></button>
           <button type="button" onClick={() => { setProfileOpen(false); onLogout(); }}>
             <ExitIcon aria-hidden="true" /><span>Keluar</span>
           </button>
@@ -126,3 +131,4 @@ export function HomeSidebar({
     </aside>
   );
 }
+import { API_BASE_URL } from '../../config/env';

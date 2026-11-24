@@ -12,6 +12,7 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE_URL } from '../../config/env';
 import {
   formatNetworkError,
   isBrowserOffline,
@@ -379,7 +380,7 @@ export function AdminUsersPage() {
                         <td data-label="Pengguna">
                           <div className="admin-user">
                             <span className="admin-initial" aria-hidden="true">
-                              {entry.role === 'ADMIN' ? 'AD' : 'PD'}
+                              {entry.avatarUrl ? <img src={entry.avatarUrl.startsWith('/api/') ? `${API_BASE_URL.replace(/\/api$/, '')}${entry.avatarUrl}` : entry.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : entry.role === 'ADMIN' ? 'AD' : 'PD'}
                             </span>
                             <span>
                               <strong>

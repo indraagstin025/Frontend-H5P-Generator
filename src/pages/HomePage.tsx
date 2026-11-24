@@ -14,6 +14,7 @@ import { ProjectsHome } from '../features/exporter/components/ProjectsHome';
 import { HomeSidebar } from './home/HomeSidebar';
 import { HomeTopbar } from './home/HomeTopbar';
 import { HomeMobileNav } from './home/HomeMobileNav';
+import { ProfileSettings } from './home/ProfileSettings';
 import type { Project } from '../features/studio/constants/h5pModel';
 
 const NOTICE_TIMEOUT_MS = 2600;
@@ -27,6 +28,7 @@ export function HomePage() {
   const [query, setQuery] = useState('');
   const displayName = user?.name.trim() ?? '';
   const [showNew, setShowNew] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [newNonce, setNewNonce] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +68,7 @@ export function HomePage() {
         <HomeSidebar
           displayName={displayName}
           userEmail={user?.email}
+          avatarUrl={user?.avatarUrl}
           userRole={user?.role}
           activeNav={activeNav}
           itemCount={store.items.length}
@@ -73,7 +76,9 @@ export function HomePage() {
           onNavigateMateri={() => navigate('/materi')}
           onNavigateAdmin={user?.role === 'ADMIN' ? () => navigate('/admin/users') : undefined}
           onLogout={logout}
+          onSettings={() => setShowProfileSettings(true)}
         />
+        {showProfileSettings && user && <ProfileSettings user={user} onClose={() => setShowProfileSettings(false)} />}
 
         <div className="db-main">
           <HomeTopbar

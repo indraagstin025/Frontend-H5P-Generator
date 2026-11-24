@@ -3,6 +3,7 @@
  * Mengelola token, profil pengguna, dan isolasi kunci penyimpanan per userId.
  */
 import { apiFetch } from './api';
+import { apiUpload } from './apiUpload';
 
 export type UserRole = 'USER' | 'ADMIN';
 
@@ -217,10 +218,7 @@ export async function exchangeGoogleCode(code: string): Promise<AuthResponseData
 export async function uploadProfileAvatar(file: File): Promise<{ avatarUrl: string; user: AuthUser }> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await apiFetch<{ message: string; data: { avatarUrl: string; user: AuthUser } }>('/auth/avatar', {
-    method: 'POST',
-    body: formData,
-  });
+  const res = await apiUpload<{ message: string; data: { avatarUrl: string; user: AuthUser } }>('/auth/avatar', formData);
   const activeToken = getAuthToken();
   if (activeToken) {
     setAuthSession(activeToken, res.data.user);
@@ -230,8 +228,9 @@ export async function uploadProfileAvatar(file: File): Promise<{ avatarUrl: stri
 
 export async function updateUserProfile(input: {
   name: string;
-  birthDate: string;
+  birthDate?: string | null;
   newPassword?: string;
+  currentPassword?: string;
 }): Promise<AuthUser> {
   const res = await apiFetch<{ message: string; data: AuthUser }>('/auth/profile', {
     method: 'PATCH',
@@ -239,6 +238,7 @@ export async function updateUserProfile(input: {
       name: input.name.trim(),
       birthDate: input.birthDate,
       ...(input.newPassword ? { newPassword: input.newPassword } : {}),
+      ...(input.currentPassword ? { currentPassword: input.currentPassword } : {}),
     },
   });
   const activeToken = getAuthToken();
