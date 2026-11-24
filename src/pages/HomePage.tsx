@@ -66,6 +66,7 @@ export function HomePage() {
         <HomeSidebar
           displayName={displayName}
           userEmail={user?.email}
+          avatarUrl={user?.avatarUrl}
           userRole={user?.role}
           activeNav={activeNav}
           itemCount={store.items.length}

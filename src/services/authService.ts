@@ -3,6 +3,7 @@
  * Mengelola token, profil pengguna, dan isolasi kunci penyimpanan per userId.
  */
 import { apiFetch } from './api';
+import { apiUpload } from './apiUpload';
 
 export type UserRole = 'USER' | 'ADMIN';
 
@@ -217,10 +218,7 @@ export async function exchangeGoogleCode(code: string): Promise<AuthResponseData
 export async function uploadProfileAvatar(file: File): Promise<{ avatarUrl: string; user: AuthUser }> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await apiFetch<{ message: string; data: { avatarUrl: string; user: AuthUser } }>('/auth/avatar', {
-    method: 'POST',
-    body: formData,
-  });
+  const res = await apiUpload<{ message: string; data: { avatarUrl: string; user: AuthUser } }>('/auth/avatar', formData);
   const activeToken = getAuthToken();
   if (activeToken) {
     setAuthSession(activeToken, res.data.user);

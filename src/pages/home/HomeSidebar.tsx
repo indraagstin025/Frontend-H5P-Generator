@@ -5,6 +5,7 @@ import { FloatingShapes } from '../../components/UI/FloatingShapes';
 interface HomeSidebarProps {
   displayName: string;
   userEmail?: string;
+  avatarUrl?: string | null;
   userRole?: 'USER' | 'ADMIN';
   activeNav: 'dashboard' | 'materi';
   itemCount: number;
@@ -17,6 +18,7 @@ interface HomeSidebarProps {
 export function HomeSidebar({
   displayName,
   userEmail,
+  avatarUrl,
   userRole,
   activeNav,
   itemCount,
@@ -108,7 +110,7 @@ export function HomeSidebar({
           onClick={() => setProfileOpen((open) => !open)}>
           <span className="db-user-info">
             <span className="db-avatar" aria-hidden="true">
-              {name.charAt(0).toLocaleUpperCase('id-ID')}
+              {avatarUrl ? <img src={avatarUrl.startsWith('/api/') ? `${API_BASE_URL.replace(/\/api$/, '')}${avatarUrl}` : avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : name.charAt(0).toLocaleUpperCase('id-ID')}
             </span>
             <span className="db-profile-name">
               <strong>{name}</strong>
@@ -126,3 +128,4 @@ export function HomeSidebar({
     </aside>
   );
 }
+import { API_BASE_URL } from '../../config/env';
