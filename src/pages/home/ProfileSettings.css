@@ -13,3 +13,9 @@
 .profile-settings-error { color: #b42318; margin: 0; }
 .profile-settings-save { border: 0; border-radius: 8px; padding: 12px; color: white; background: #087b2a; cursor: pointer; }
 .profile-settings-save:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 480px) {
+  .profile-settings { box-sizing: border-box; padding: 18px; max-height: calc(100dvh - 24px); }
+  .profile-settings-avatar { flex-wrap: wrap; }
+  .profile-settings-avatar label { min-width: 0; max-width: 100%; }
+  .profile-settings-avatar input[type="file"] { max-width: 100%; }
+}

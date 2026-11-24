@@ -1,4 +1,4 @@
-import { DashboardIcon, LayersIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, ExitIcon, GearIcon, LayersIcon, PersonIcon, PlusIcon } from '@radix-ui/react-icons';
 import { FloatingShapes } from '../../components/UI/FloatingShapes';
 
 interface HomeMobileNavProps {
@@ -8,6 +8,8 @@ interface HomeMobileNavProps {
   onNavigateDashboard: () => void;
   onNavigateMateri: () => void;
   onNavigateAdmin?: () => void;
+  onSettings: () => void;
+  onLogout: () => void;
 }
 
 export function HomeMobileNav({
@@ -17,6 +19,8 @@ export function HomeMobileNav({
   onNavigateDashboard,
   onNavigateMateri,
   onNavigateAdmin,
+  onSettings,
+  onLogout,
 }: HomeMobileNavProps) {
   return (
     <nav className="db-mobile-nav floating-shapes-host" aria-label="Navigasi seluler">
@@ -49,6 +53,8 @@ export function HomeMobileNav({
           <span>Admin</span>
         </button>
       )}
+      <button type="button" className="db-nav-btn" onClick={onSettings}><GearIcon /><span>Pengaturan Profil</span></button>
+      <button type="button" className="db-nav-btn" onClick={onLogout}><ExitIcon /><span>Keluar</span></button>
     </nav>
   );
 }

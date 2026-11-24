@@ -105,3 +105,11 @@
   .db-scope--reference .db-card,
   .db-scope--reference .db-main .db-table-wrap { border-radius: 18px; }
 }
+
+@media (max-width: 900px) {
+  .db-scope--reference .db-mobile-nav { position: fixed; top: auto; bottom: 0; left: 0; right: 0; z-index: 30; gap: 0; overflow: hidden; padding: 6px 0 env(safe-area-inset-bottom); }
+  .db-scope--reference .db-mobile-nav .db-nav-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding: 6px 2px; }
+  .db-scope--reference .db-mobile-nav .db-nav-btn > span { max-width: 100%; white-space: normal; text-align: center; line-height: 1.15; }
+  .db-scope--reference .db-mobile-nav .db-nav-btn svg { width: 20px; height: 20px; }
+  .db-scope--reference .db-main { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+}
